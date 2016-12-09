@@ -1,0 +1,10 @@
+[Unit]
+Description=xcal-device monitor
+
+[Path]
+PathExists=/tmp/ip_acquired
+Unit=xcal-device.service
+
+[Install]
+WantedBy=multi-user.target
+
