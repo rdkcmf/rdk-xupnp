@@ -1885,11 +1885,7 @@ main (int argc, char **argv)
     else
     {
         requirestrm=TRUE;
-#ifndef TRM_USE_SSL
         g_string_printf(trmurl, "ws://%s:9988", ipAddressBuffer);
-#else
-        g_string_printf(trmurl, "wss://%s:9988", ipAddressBuffer); 
-#endif
     }
 #endif
     if(devConf->allowGwy == FALSE)
@@ -2817,11 +2813,7 @@ static GString *get_uri_value()
     initIpAddressBufferCVP2(ipAddressBufferCVP2);
 
     //init uri parameters with current ip address
-#ifndef TRM_USE_SSL
     g_string_printf(trmurlCVP2, "ws://%s:9988", ipAddressBufferCVP2);
-#else
-    g_string_printf(trmurlCVP2, "wss://%s:9988", ipAddressBufferCVP2);
-#endif
     g_string_printf(playbackurlCVP2, "http://%s:8080/hnStreamStart?deviceId=%s&DTCP1HOST=%s&DTCP1PORT=5000", ipAddressBufferCVP2, recv_id->str, ipAddressBufferCVP2);
 
 
