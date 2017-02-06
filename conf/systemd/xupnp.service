@@ -23,6 +23,7 @@ Requires=moca.service sysmgr.service
 
 [Service]
 Type=forking
+SyslogIdentifier="xupnp"
 ExecStart=/bin/sh -c '/usr/bin/xdiscovery /etc/xdiscovery.conf &'
 ExecStartPost=/bin/sh -c 'if [ -f /lib/rdk/updateFireWall.sh ]; then /bin/sh /lib/rdk/updateFireWall.sh xdiscovery ; fi '
 Restart=always

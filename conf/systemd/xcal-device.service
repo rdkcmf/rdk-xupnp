@@ -23,6 +23,7 @@ ConditionPathExists=/tmp/ip_acquired
 
 [Service]
 Type=notify
+SyslogIdentifier="xcal-device"
 ExecStart=/usr/bin/xcal-device /etc/xdevice.conf
 TimeoutStartSec=300
 RestartSec=5
