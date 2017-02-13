@@ -521,7 +521,6 @@ void getSystemValues(void)
 {
     IARM_Bus_SYSMgr_GetSystemStates_Param_t param;
     IARM_Bus_Call(IARM_BUS_SYSMGR_NAME, IARM_BUS_SYSMGR_API_GetSystemStates, &param, sizeof(param));
-    tune_ready=0;
 
 
     if (param.channel_map.state == 2)
@@ -1646,6 +1645,7 @@ main (int argc, char **argv)
     isgateway=TRUE;
     requirestrm=TRUE;
     service_ready=FALSE;
+    tune_ready=FALSE;
     ruiurl = g_string_new("null");
     inDevProfile = g_string_new("null");
     uiFilter = g_string_new("null");
