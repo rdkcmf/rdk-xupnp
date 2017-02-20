@@ -1738,18 +1738,17 @@ main (int argc, char **argv)
 
 //	int result = getipaddress(devConf->bcastIf, ipAddressBuffer);
 #ifndef CLIENT_XCAL_SERVER
-    if( access(devConf->ipv6FileLocation, F_OK ) != -1 ) {
+    if( access(devConf->ipv6FileLocation, F_OK ) != -1 )
         ipv6Enabled=TRUE;
-        int result = getipaddress(devConf->bcastIf,ipAddressBuffer,ipv6Enabled);
-        if (!result)
-        {
-            fprintf(stderr,"In Ipv6 Could not locate the link  local ipv6 address of the broadcast interface %s\n", devConf->bcastIf);
-            g_critical("In Ipv6 Could not locate the link local ipv6 address of the broadcast interface %s\n", devConf->bcastIf);
-            exit(1);
-        }
-        g_string_assign(gwyipv6, ipAddressBuffer);
+    int result = getipaddress(devConf->bcastIf,ipAddressBuffer,TRUE);
+    if (!result)
+    {
+        fprintf(stderr,"In Ipv6 Could not locate the link  local ipv6 address of the broadcast interface %s\n", devConf->bcastIf);
+        g_critical("In Ipv6 Could not locate the link local ipv6 address of the broadcast interface %s\n", devConf->bcastIf);
+        exit(1);
     }
-    int result = getipaddress(devConf->bcastIf,ipAddressBuffer,FALSE);
+    g_string_assign(gwyipv6, ipAddressBuffer);
+    result = getipaddress(devConf->bcastIf,ipAddressBuffer,FALSE);
 
     if (!result)
     {
