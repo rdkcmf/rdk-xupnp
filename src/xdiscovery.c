@@ -393,6 +393,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 //    ret=g_mutex_trylock(devMutex);
 //    if (TRUE == ret)
 //    {
+    g_message("Entering into device_proxy_available_cb ");
     g_message("Found a new gateway device");
     if ((NULL==cp) || (NULL==dproxy))
     {
@@ -405,17 +406,6 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE);
 
-    gupnp_service_proxy_set_subscribed(sproxy, TRUE);
-    if (gupnp_service_proxy_add_notify (sproxy, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
-        g_message("Failed to add url notifications for %s", sno);
-    if (gupnp_service_proxy_add_notify (sproxy, "SystemIds", G_TYPE_STRING, on_last_change, NULL) == FALSE)
-        g_message("Failed to add systemid notifications for %s", sno);
-    if (gupnp_service_proxy_add_notify (sproxy, "DnsConfig", G_TYPE_STRING, on_last_change, NULL) == FALSE)
-        g_message("Failed to add DNS notifications for %s", sno);
-    if (gupnp_service_proxy_add_notify (sproxy, "TimeZone", G_TYPE_STRING, on_last_change, NULL) == FALSE)
-        g_message("Failed to add TimeZone notifications for %s", sno);
-    if (gupnp_service_proxy_add_notify (sproxy, "DataGatewayIPaddress", G_TYPE_STRING, on_last_change, NULL) == FALSE)
-        g_message("Failed to add DataGatewayIPaddress notifications for %s", sno);
 
 
     if (sno != NULL)
@@ -437,11 +427,29 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                     g_free(gwydata);  
                     g_free(receiverid);
     		    g_free(sno);
+    		    g_message("Exting from device_proxy_available_cb since mandatory paramters are not there ");
 		    return;
 		}
                 g_free(receiverid);
             }
         }
+    }
+    gupnp_service_proxy_set_subscribed(sproxy, TRUE);
+    if(g_strrstr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
+    {
+       if (gupnp_service_proxy_add_notify (sproxy, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+           g_message("Failed to add url notifications for %s", sno);
+       if (gupnp_service_proxy_add_notify (sproxy, "SystemIds", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+           g_message("Failed to add systemid notifications for %s", sno);
+       if (gupnp_service_proxy_add_notify (sproxy, "DnsConfig", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+           g_message("Failed to add DNS notifications for %s", sno);
+       if (gupnp_service_proxy_add_notify (sproxy, "TimeZone", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+           g_message("Failed to add TimeZone notifications for %s", sno);
+    }
+    else
+    {
+       if (gupnp_service_proxy_add_notify (sproxy, "DataGatewayIPaddress", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+           g_message("Failed to add DataGatewayIPaddress notifications for %s", sno);
     }
     if (gupnp_service_proxy_get_subscribed(sproxy) == FALSE)
     {
@@ -449,6 +457,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
         g_object_unref(sproxy);
     }
     g_free(sno);
+    g_message("Exting from device_proxy_available_cb ");
 //	    g_mutex_unlock(devMutex);
 //    }
 //    else
@@ -667,6 +676,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     */
     GError *error = NULL;
 
+    g_message("Entering into process_gw_services ");
     gupnp_service_proxy_send_action (sproxy, "GetIsGateway", &error, NULL,"IsGateway", G_TYPE_BOOLEAN, &gwData->isgateway,NULL);
     if (error!=NULL)
     {
@@ -722,6 +732,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     }
     if(g_strrstr(g_strstrip(gwData->devicetype->str),"XI") == NULL )
     {
+    	g_message("Discovered Device is XG or RNG Device ");
     gupnp_service_proxy_send_action (sproxy, "GetBaseUrl", &error,NULL,"BaseUrl",G_TYPE_STRING, gwData->baseurl ,NULL);
     if (error!=NULL)
     {
@@ -861,6 +872,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     }
     else
     {
+    	g_message("Discovered Device is Xi Device ");
     gupnp_service_proxy_send_action (sproxy, "GetDataGatewayIPaddress", NULL,NULL,"DataGatewayIPaddress",G_TYPE_STRING, gwData->dataGatewayIPaddress,NULL);
     g_message("GetDataGatewayIPaddress = %s",gwData->dataGatewayIPaddress->str);
     if (error!=NULL)
@@ -891,6 +903,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
         g_critical("Unable to update the gateway-%s in the device list",gwData->serial_num);
         return FALSE;
     }
+    g_message("Exiting from process_gw_services ");
     return TRUE;
 }
 
