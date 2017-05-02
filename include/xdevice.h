@@ -101,7 +101,7 @@ typedef struct _IARM_Bus_FOG_Param_t
 	char tsbEndpoint[33]; // i.e. http://169.254.228.194:9080/tsb?
 } IARM_Bus_Fog_Param_t;
 
-#define IARM_BUS_FOG_NAME "FOG" 
+#define IARM_BUS_FOG_NAME "FOG"
 #define IARM_BUS_FOG_getCurrentState "getCurrentState"
 
 //netsrvmgr

@@ -31,5 +31,3 @@ AM_LDFLAGS=$(GUPNP_LIBS) $(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $
 bin_PROGRAMS= xcal-device xdiscovery
 xcal_device_SOURCES = xcal-device.c
 xdiscovery_SOURCES = xdiscovery.c
-xcal_discovery_list_SOURCES = xcal-discovery-list.c
-xcal_discovery_list_LDFLAGS = $(AM_LDFLAGS) -lfcgi

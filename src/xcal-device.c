@@ -65,6 +65,7 @@
 
 #define RECEIVER_ID "deviceId"
 #define PARTNER_ID "partnerId"
+#define SLEEP_INTERVAL 7000000
 
 #define BCAST_PORT  50755
 #define DEVICE_PROPERTY_FILE   "/etc/device.properties"
@@ -73,6 +74,7 @@
 #define LOG_FILE    "/opt/logs/xdevice.log"
 #define DEVICE_XML_PATH     "/etc/xupnp/"
 #define DEVICE_XML_FILE     "BasicDevice.xml"
+static  GMainLoop *main_loop;
 
 IARM_Bus_Daemon_SysMode_t sysModeParam;
 //Event Handler for SYSMGR Events
@@ -1619,11 +1621,27 @@ query_usesdaylighttime_cb (GUPnPService *service, char *variable, GValue *value,
     g_value_set_boolean (value, usesDaylightTime);
 }
 
+void* checkMainLoopRunning()
+{
+    guint checkMainLoopCounter=0;
+    while(true)
+    {
+        if (! g_main_loop_is_running(main_loop))
+        {
+          if(checkMainLoopCounter < 7)
+            g_message("TELEMETRY_XUPNP_DEVICE_MAIN_LOOP_NOT_RUNNING");
+          checkMainLoopCounter++;
+        }
+        usleep(SLEEP_INTERVAL);
+    }
+}
 
 int
 main (int argc, char **argv)
 {
-    GMainLoop *main_loop;
+
+    GThread *thread;
+
     GError *error = NULL;
     url = g_string_new("null");
     trmurl = g_string_new("null");
@@ -1714,9 +1732,20 @@ main (int argc, char **argv)
     devConf->useIARM=TRUE;
 #endif
 
-    logoutfile = g_fopen (devConf->logFile, "a");
-    g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_INFO | G_LOG_LEVEL_MESSAGE | \
+    char* logfilename = argv[2];
+    if(logfilename)
+    {
+      logoutfile = g_fopen (logfilename, "a");
+    }
+    else
+    {
+      g_message("xupnp not handling the logging");
+    }
+    if(logoutfile)
+    {
+      g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_INFO | G_LOG_LEVEL_MESSAGE | \
                       G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_ERROR, xupnp_logger, NULL);
+    }
     g_message("Starting xdevice service on interface %s", devConf->bcastIf);
     g_print("Starting xdevice service on interface %s\n", devConf->bcastIf);
 
@@ -2180,6 +2209,7 @@ main (int argc, char **argv)
 
     /* Run the main loop */
     main_loop = g_main_loop_new (NULL, FALSE);
+    thread = g_thread_create(checkMainLoopRunning, NULL,FALSE, NULL);
     g_main_loop_run (main_loop);
 
     /* Cleanup */
@@ -3821,4 +3851,3 @@ gboolean getFogStatus(void)
     }
     return bRet;
 }
-

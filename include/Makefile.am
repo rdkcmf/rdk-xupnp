@@ -17,6 +17,6 @@
 # limitations under the License.
 ##########################################################################
 SUBDIRS = 
-EXTRA_DIST = libxdisc.h  ulisten.h  xdiscovery.h
+EXTRA_DIST = xdiscovery.h
 libxupnp_la_includedir = $(includedir)
-libxupnp_la_include_HEADERS = libxdisc.h  ulisten.h  xdiscovery.h
+libxupnp_la_include_HEADERS = xdiscovery.h

@@ -46,6 +46,7 @@ typedef struct _iarmDeviceData {
     char* pBuffer;
 } IarmDeviceData;
 
+static GMainLoop *main_loop;
 
 #ifdef USE_XUPNP_IARM
 #include "uidev.h"
@@ -424,7 +425,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                 if(!process_gw_services(sproxy, gwydata))
 		{
 		    free_gwydata(gwydata);
-                    g_free(gwydata);  
+                    g_free(gwydata);
                     g_free(receiverid);
     		    g_free(sno);
     		    g_message("Exting from device_proxy_available_cb since mandatory paramters are not there ");
@@ -477,7 +478,7 @@ int main(int argc, char *argv[])
 //#ifndef GUPNP_0_19
 //	GMainContext *main_context;
 //#endif
-    GMainLoop *main_loop;
+
     //GSource* time_source;
     gboolean ipv6Enabled=FALSE;
     gboolean bInterfaceReady=FALSE;
@@ -528,10 +529,10 @@ int main(int argc, char *argv[])
     {
         logoutfile = g_fopen (logfilename, "a");
     }
-    else if (disConf->logFile)
+    /*else if (disConf->logFile)
     {
         logoutfile = g_fopen (disConf->logFile, "a");
-    }
+    }*/
     else
     {
         g_message("xupnp not handling the logging");
@@ -1070,7 +1071,8 @@ gboolean update_gwylist(GwyDeviceData* gwydata)
         g_mutex_unlock(mutex);
         g_message("Inserted new/updated device %s in the list", sno);
         sendDiscoveryResult(disConf->outputJsonFile);
-        g_object_unref(xdevlistitem);
+        if(xdevlistitem)
+          xdevlistitem=NULL;
         return TRUE;
     }
     else
@@ -1104,7 +1106,8 @@ gboolean delete_gwyitem(const char* serial_num)
         xdevlist = g_list_remove(xdevlist, gwdata);
         g_mutex_unlock(mutex);
         g_message("Deleted device %s from the list", serial_num);
-        g_object_unref(lstXdev);
+        if(lstXdev)
+          lstXdev=NULL;
         return TRUE;
     }
     return FALSE;
@@ -1309,6 +1312,7 @@ void* verify_devices()
     guint lenPrevDevList = 0;
     guint lenCurDevList = 0;
     guint lenXdevList = 0;
+    guint checkMainLoopCounter=0;
 //workaround to remove device in second attempt -Start
     guint removeDeviceNo=0;
     guint counter=0;
@@ -1320,6 +1324,12 @@ void* verify_devices()
     while(1)
     {
         //g_main_context_push_thread_default(main_context);
+        if (! g_main_loop_is_running(main_loop))
+        {
+          if(checkMainLoopCounter < 7)
+            g_message("TELEMETRY_XUPNP_DISCOVERY_MAIN_LOOP_NOT_RUNNING");
+          checkMainLoopCounter++;
+        }
         if (gssdp_resource_browser_rescan(GSSDP_RESOURCE_BROWSER(cp))==FALSE)
         {
             //g_print("Forced rescan failed\n");
@@ -1330,6 +1340,7 @@ void* verify_devices()
         //else
         //    g_print("Forced rescan success\n");
         //g_debug("Forced rescan success");
+        usleep(XUPNP_RESCAN_INTERVAL);
         const GList *constLstProxies = gupnp_control_point_list_device_proxies(cp);
         counter++;
         counter1++;
@@ -1358,7 +1369,6 @@ void* verify_devices()
                 preCounter=0;
 
             }
-            usleep(XUPNP_RESCAN_INTERVAL);
             continue;
         }
 
@@ -1504,8 +1514,6 @@ void* verify_devices()
         //After cleaning up, update the prev list length
         lenPrevDevList=lenCurDevList;
         //g_print("\nWaiting Discovery...\n");
-        usleep(XUPNP_RESCAN_INTERVAL);
-
     }
 }
 
@@ -1613,7 +1621,7 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
                     g_message("Updated value is %s ", updated_value);
                     if(g_strcmp0(g_strstrip(updated_value),gwdata->systemids->str) != 0)
                     {
-                        bUpdateDiscoveryResult=TRUE;                 
+                        bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->systemids, updated_value);
                     }
                 }
@@ -1623,7 +1631,7 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
                     g_message("Updated value of DataGatewayIPaddressis %s ", updated_value);
                     if(g_strcmp0(g_strstrip(updated_value),gwdata->dataGatewayIPaddress->str) != 0)
                     {
-                        bUpdateDiscoveryResult=TRUE;                  
+                        bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->dataGatewayIPaddress, updated_value);
                     }
                 }
@@ -1633,7 +1641,7 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
                     g_message("Updated value is %s ", updated_value);
                     if(g_strcmp0(g_strstrip(updated_value),gwdata->dnsconfig->str) != 0)
                     {
-                        bUpdateDiscoveryResult=TRUE;                    
+                        bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->dnsconfig, updated_value);
                     }
                 }
@@ -1643,7 +1651,7 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
                     g_message("Updated value is %s ", updated_value);
                     if(g_strcmp0(g_strstrip(updated_value),gwdata->dsgtimezone->str) != 0)
                     {
-                        bUpdateDiscoveryResult=TRUE;                        
+                        bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->dsgtimezone, updated_value);
 #ifdef USE_XUPNP_TZ_UPDATE
                     if (g_strcmp0(g_strstrip(gwdata->dsgtimezone->str),"null") != 0)
