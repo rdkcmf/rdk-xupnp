@@ -3687,6 +3687,11 @@ void notify_timezone(void)
         g_string_assign(dsgtimezone,"US/Arizona");
         g_message("XUPnP: changing timezone  timezone= %s  dst offset = %d \n",dsgtimezone->str,dstOffset);
     }
+    else if ((g_strcmp0(g_strstrip(dsgtimezone->str),"US/Central") == 0) && (dstOffset == 0))
+    {
+        g_string_assign(dsgtimezone,"Canada/Saskatchewan");
+        g_message("XUPnP: changing timezone  timezone= %s  dst offset = %d \n",dsgtimezone->str,dstOffset);
+    }
 //        	else if ((g_strcmp0(g_strstrip(dsgtimezone->str),"US/Hawaii") == 0) && (dstOffset == 60))  //we wont get dstoffset as 60 for hawaii but just to be safe.
     //      	{
     //            	g_message("XUPnP: changing dstoffset  timezone= %s  dst offset = %d \n",dsgtimezone->str,dstOffset);
