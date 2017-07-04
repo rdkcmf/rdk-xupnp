@@ -104,6 +104,13 @@ typedef struct _IARM_Bus_FOG_Param_t
 #define IARM_BUS_FOG_NAME "FOG"
 #define IARM_BUS_FOG_getCurrentState "getCurrentState"
 
+typedef enum
+{
+	IARM_BUS_FOG_EVENT_STATUS,
+	IARM_BUS_FOG_EVENT_MAX
+} FOG_EventId_t;
+
+
 //netsrvmgr
 
 #define IARM_BUS_NM_SRV_MGR_NAME "NET_SRV_MGR"

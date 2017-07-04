@@ -222,6 +222,27 @@ static char * getGatewayName()
     return getStrValueFromMap(getPartnerID(), ARRAY_COUNT(gatewayNameMap), gatewayNameMap);
 }
 
+static void _fogEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
+{
+    if (data)
+    {
+        IARM_Bus_Fog_Param_t *pFogEventData = (IARM_Bus_Fog_Param_t*)data;
+        gboolean fogStatus = (gboolean) pFogEventData->status;
+
+        if (fogStatus)
+        {
+            g_message("Received FOG Status update as TRUE");
+            g_string_printf(fogtsburl, pFogEventData->tsbEndpoint);
+        }
+        else
+        {
+            g_message("Received FOG Status update as FALSE");
+            g_string_printf(fogtsburl, "");
+        }
+        notify_value_change("FogTsbUrl", fogtsburl->str);
+    }
+}
+
 static void _sysEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     /* Only handle state events */
@@ -483,6 +504,7 @@ gboolean XUPnP_IARM_Init(void)
     }
     else
     {
+        IARM_Bus_RegisterEventHandler(IARM_BUS_FOG_NAME, IARM_BUS_FOG_EVENT_STATUS, _fogEventHandler);
         IARM_Bus_RegisterEventHandler(IARM_BUS_SYSMGR_NAME, IARM_BUS_SYSMGR_EVENT_SYSTEMSTATE, _sysEventHandler);
         IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME,IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA, _routesysEventHandler);
         g_message("<<<<<<<%s - Registered the SYSMGR BUS Events >>>>>>>>",__FUNCTION__);
