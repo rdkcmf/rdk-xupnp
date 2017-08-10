@@ -531,10 +531,12 @@ int main(int argc, char *argv[])
     {
         logoutfile = g_fopen (logfilename, "a");
     }
-    /*else if (disConf->logFile)
+#ifdef ENABLE_LOGFILE
+    else if (disConf->logFile)
     {
         logoutfile = g_fopen (disConf->logFile, "a");
-    }*/
+    }
+#endif
     else
     {
         g_message("xupnp not handling the logging");
