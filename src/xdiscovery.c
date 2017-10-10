@@ -47,7 +47,7 @@ typedef struct _iarmDeviceData {
 } IarmDeviceData;
 
 static GMainLoop *main_loop;
-
+#define WAIT_TIME_SEC 5
 #ifdef USE_XUPNP_IARM
 #include "uidev.h"
 static void *gCtx = NULL;
@@ -58,6 +58,7 @@ static void _GetXUPNPDeviceInfo(void *callCtx, unsigned long methodID, void *arg
 #include "sysMgr.h"
 IARM_Result_t _GetXUPNPDeviceInfo(void *arg);
 #endif
+gboolean checkDevAddInProgress=FALSE;
 
 static IARM_Result_t GetXUPNPDeviceInfo(char *pDeviceInfo, unsigned long length)
 {
@@ -390,7 +391,9 @@ static void
 device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 {
     //g_print("Found a new device\n");
-    gboolean ret;
+    if(!checkDevAddInProgress)
+    {
+        checkDevAddInProgress=TRUE;
 //    ret=g_mutex_trylock(devMutex);
 //    if (TRUE == ret)
 //    {
@@ -400,6 +403,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     {
         g_message("WARNING - Received a null pointer for gateway device");
 //	        g_mutex_unlock(devMutex);
+        checkDevAddInProgress=FALSE;
         return;
     }
     GwyDeviceData *gwydata = g_new(GwyDeviceData,1);
@@ -429,6 +433,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                     g_free(receiverid);
     		    g_free(sno);
     		    g_message("Exting from device_proxy_available_cb since mandatory paramters are not there ");
+                    checkDevAddInProgress=FALSE;
 		    return;
 		}
                 g_free(receiverid);
@@ -461,6 +466,12 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     }
     g_free(sno);
     g_message("Exting from device_proxy_available_cb ");
+    checkDevAddInProgress=FALSE;
+    }
+    else
+    {
+        g_message("Already Existing device addition going on ");
+    }
 //	    g_mutex_unlock(devMutex);
 //    }
 //    else
@@ -1324,6 +1335,7 @@ void* verify_devices()
     guint removeDeviceNo1=0;
     guint counter1=0;
     guint preCounter1=0;
+    guint sleepCounter=1;
 //workaround to remove device in second attempt -Start
     while(1)
     {
@@ -1334,6 +1346,14 @@ void* verify_devices()
             g_message("TELEMETRY_XUPNP_DISCOVERY_MAIN_LOOP_NOT_RUNNING");
           checkMainLoopCounter++;
         }
+        if(checkDevAddInProgress)
+        {
+            sleep(sleepCounter);
+            sleepCounter=sleepCounter*WAIT_TIME_SEC;//increment the sleep time 5 times
+            g_message("Waiting for the processing of gateway services %d",sleepCounter);
+            continue;
+        }
+        sleepCounter=1;
         if (gssdp_resource_browser_rescan(GSSDP_RESOURCE_BROWSER(cp))==FALSE)
         {
             //g_print("Forced rescan failed\n");
@@ -1466,7 +1486,7 @@ void* verify_devices()
             delOldItemsFromList(TRUE);
         }
 
-        /*
+        
                   //Find out newly discovered devices and add to cleaned up list
                 lenXdevList = g_list_length(xdevlist);
                 if (lenCurDevList > 0)
@@ -1499,10 +1519,10 @@ void* verify_devices()
                           //End - Loop through all new found devices
 
                           //Device not found in device list. Mark it for addition.
-        //                  if (existsFlag==FALSE)
-        //                  {
-        //                      device_proxy_available_cb(cp, (GUPnPDeviceProxy *)lstProxies->data);
-        //                  }
+                          if (existsFlag==FALSE)
+                          {
+                              device_proxy_available_cb(cp, (GUPnPDeviceProxy *)lstProxies->data);
+                          }
 
                           //There are still elements to search
                           lstProxies = g_list_next(lstProxies);
@@ -1511,7 +1531,7 @@ void* verify_devices()
 
                       //g_print("Current list is greater\n");
                   }
-        */
+        
 
 
 
