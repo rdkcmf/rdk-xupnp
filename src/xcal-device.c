@@ -762,6 +762,22 @@ get_fogtsb_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
     gupnp_service_action_return (action);
 }
 
+/**
+ * @brief Callback function which is invoked when getvideobaseUrl action is invoked and this sets
+ * the state variable for VideoBase Url.
+ *
+ * @param[in] service Name of the service.
+ * @param[out] action Action to be invoked.
+ * @param[in] user_data Usually null will be passed.
+ * @ingroup XUPNP_XCALDEV_FUNC
+ */
+/* GetVideoBaseUrl */
+G_MODULE_EXPORT void
+get_videobase_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    gupnp_service_action_set (action, "VideoBaseUrl", G_TYPE_STRING, videobaseurl->str, NULL);
+    gupnp_service_action_return (action);
+}
 
 /**
  * @brief Callback function which is invoked when getGatewayIP action is invoked and this sets
@@ -1250,6 +1266,24 @@ query_fogtsb_url_cb (GUPnPService *service, char *variable, GValue *value, gpoin
 }
 
 /**
+ * @brief Callback function which is invoked when VideoBaseUrl action is invoked and this sets
+ * the state variable with a new videobase url.
+ *
+ * @param[in] service Name of the service.
+ * @param[in] variable State(Query) variable.
+ * @param[in] value New value to be assigned.
+ * @param[in] user_data Usually null will be passed.
+ * @ingroup XUPNP_XCALDEV_FUNC
+ */
+/* VideoBaseUrl */
+G_MODULE_EXPORT void
+query_videobase_url_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, videobaseurl->str);
+}
+
+/**
  * @brief Callback function which is invoked when DataGatewayIPaddress action is invoked and this sets
  * the state variable with a new DataGatewayIPaddress.
  *
@@ -1670,6 +1704,7 @@ main (int argc, char **argv)
     trmurlCVP2 = g_string_new("null");
     playbackurl = g_string_new("null");
     fogtsburl = g_string_new("null");
+    videobaseurl = g_string_new("null");
     playbackurlCVP2 = g_string_new("null");
     gwyip = g_string_new("null");
     gwyipv6 = g_string_new("null");
@@ -1989,7 +2024,11 @@ main (int argc, char **argv)
 
 #endif
     if(getFogStatus())
+    {
         g_message(" fog tsb url  %s \n",fogtsburl->str);
+        g_string_printf(videobaseurl, "http://%s/video", ipAddressBuffer);
+        g_message(" video base url  %s \n",videobaseurl->str);
+    }
 
 #ifndef CLIENT_XCAL_SERVER
     if (getetchosts()==TRUE)

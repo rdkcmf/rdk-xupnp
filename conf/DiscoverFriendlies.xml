@@ -103,7 +103,7 @@
         </argument>
       </argumentList>
     </action>
-<action>
+    <action>
       <name>GetBcastMacAddress</name>
       <argumentList>
         <argument>
@@ -163,7 +163,6 @@
         </argument>
       </argumentList>
     </action>
-    
     <action>
       <name>GetHostMacAddress</name>
       <argumentList>
@@ -277,6 +276,16 @@
         </argument>
       </argumentList>
     </action>
+    <action>
+      <name>GetVideoBaseUrl</name>
+      <argumentList>
+        <argument>
+          <name>VideoBaseUrl</name>
+          <relatedStateVariable>VideoBaseUrl</relatedStateVariable>
+          <direction>out</direction>
+        </argument>
+      </argumentList>
+    </action>
   </actionList>
   <serviceStateTable>
     <stateVariable sendEvents="yes">
@@ -338,18 +347,18 @@
       <name>HostMacAddress</name>
       <dataType>string</dataType>
       <defaultValue>NoData</defaultValue>
-    </stateVariable> 
-	<stateVariable sendEvents="yes">
+    </stateVariable>
+    <stateVariable sendEvents="yes">
       <name>DnsConfig</name>
       <dataType>string</dataType>
       <defaultValue>NoData</defaultValue>
     </stateVariable>
-	<stateVariable sendEvents="yes">
+    <stateVariable sendEvents="yes">
       <name>SystemIds</name>
       <dataType>string</dataType>
       <defaultValue>null</defaultValue>
     </stateVariable>
-	<stateVariable sendEvents="yes">
+    <stateVariable sendEvents="yes">
       <name>TimeZone</name>
       <dataType>string</dataType>
       <defaultValue>null</defaultValue>
@@ -359,7 +368,6 @@
       <dataType>int</dataType>
       <defaultValue>0</defaultValue>
     </stateVariable>
-
     <stateVariable sendEvents="yes">
       <name>DSTSavings</name>
       <dataType>int</dataType>
@@ -370,13 +378,12 @@
       <dataType>int</dataType>
       <defaultValue>0</defaultValue>
     </stateVariable>
-
     <stateVariable sendEvents="yes">
       <name>DSTSavings</name>
       <dataType>int</dataType>
       <defaultValue>0</defaultValue>
     </stateVariable>
-        <stateVariable sendEvents="yes">
+    <stateVariable sendEvents="yes">
       <name>UsesDaylightTime</name>
       <dataType>boolean</dataType>
       <defaultValue>0</defaultValue>
@@ -391,33 +398,35 @@
       <dataType>string</dataType>
       <defaultValue>NoData</defaultValue>
     </stateVariable>
-    
     <stateVariable sendEvents="yes">
       <name>BuildVersion</name>
       <dataType>string</dataType>
       <defaultValue>NoData</defaultValue>
     </stateVariable>
-    
     <stateVariable sendEvents="yes">
       <name>DeviceType</name>
       <dataType>string</dataType>
       <defaultValue>NoData</defaultValue>
     </stateVariable>
-
-  	<stateVariable sendEvents="yes">
+    <stateVariable sendEvents="yes">
       <name>Hosts</name>
       <dataType>string</dataType>
       <defaultValue>null</defaultValue>
     </stateVariable>               
-  	<stateVariable sendEvents="yes">
+    <stateVariable sendEvents="yes">
       <name>IsGateway</name>
       <dataType>boolean</dataType>
       <defaultValue>0</defaultValue>
     </stateVariable>   
- 	<stateVariable sendEvents="yes">
+    <stateVariable sendEvents="yes">
       <name>RequiresTRM</name>
       <dataType>boolean</dataType>
       <defaultValue>1</defaultValue>
     </stateVariable>   
+    <stateVariable sendEvents="yes">
+      <name>VideoBaseUrl</name>
+      <dataType>string</dataType>
+      <defaultValue>NoData</defaultValue>
+    </stateVariable>
   </serviceStateTable>
 </scpd>

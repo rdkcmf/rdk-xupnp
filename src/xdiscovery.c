@@ -716,7 +716,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
         g_clear_error(&error);
 //        return FALSE;
     }
-    gupnp_service_proxy_send_action (sproxy, "GetFogTsbUrl", NULL,NULL,"FogTsbUrl",G_TYPE_STRING, gwData->fogtsburl ,NULL);
+    gupnp_service_proxy_send_action (sproxy, "GetFogTsbUrl",&error,NULL,"FogTsbUrl",G_TYPE_STRING, gwData->fogtsburl ,NULL);
     g_message("GetFogTsbUrl = %s",gwData->fogtsburl->str);
     if (error!=NULL)
     {
@@ -767,6 +767,13 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
         g_clear_error(&error);
         return FALSE;
     }
+    gupnp_service_proxy_send_action (sproxy, "GetVideoBaseUrl", &error,NULL,"VideoBaseUrl",G_TYPE_STRING, gwData->videobaseurl,NULL);
+    if (error!=NULL)
+    {
+        g_message (" GetVideoBaseUrl process gw services Error: %s\n", error->message);
+        g_clear_error(&error);
+//        return FALSE;
+    }
 
     //Do not return error as the boxes which are not running single step tuning code base could still exist in the network
 
@@ -808,7 +815,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
         g_clear_error(&error);
 //        return FALSE;
     }
-    gupnp_service_proxy_send_action (sproxy, "GetPlaybackUrl", NULL,NULL,"PlaybackUrl",G_TYPE_STRING, gwData->playbackurl ,NULL);
+    gupnp_service_proxy_send_action (sproxy, "GetPlaybackUrl", &error,NULL,"PlaybackUrl",G_TYPE_STRING, gwData->playbackurl ,NULL);
     g_message("GetPlaybackUrl = %s",gwData->playbackurl->str);
     if (error!=NULL)
     {
@@ -889,14 +896,14 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     else
     {
     	g_message("Discovered Device is Xi Device ");
-    gupnp_service_proxy_send_action (sproxy, "GetDataGatewayIPaddress", NULL,NULL,"DataGatewayIPaddress",G_TYPE_STRING, gwData->dataGatewayIPaddress,NULL);
-    g_message("GetDataGatewayIPaddress = %s",gwData->dataGatewayIPaddress->str);
+    gupnp_service_proxy_send_action (sproxy, "GetDataGatewayIPaddress",&error,NULL,"DataGatewayIPaddress",G_TYPE_STRING, gwData->dataGatewayIPaddress,NULL);
     if (error!=NULL)
     {
         g_message (" GetDataGatewayIPaddress process gw services Error: %s\n", error->message);
         g_clear_error(&error);
         //return FALSE;
     }
+    g_message("GetDataGatewayIPaddress = %s",gwData->dataGatewayIPaddress->str);
     }
 #ifndef CLIENT_XCAL_SERVER
     g_message("Host mac address is %s", gwData->hostmacaddress->str);
@@ -973,6 +980,7 @@ gboolean init_gwydata(GwyDeviceData* gwydata)
     gwydata->basetrmurl = g_string_new(NULL);
     gwydata->playbackurl = g_string_new(NULL);
     gwydata->fogtsburl = g_string_new(NULL);
+    gwydata->videobaseurl = g_string_new(NULL);
     gwydata->dnsconfig = g_string_new(NULL);
     gwydata->etchosts = g_string_new(NULL);
     gwydata->systemids = g_string_new(NULL);
@@ -1012,6 +1020,7 @@ gboolean free_gwydata(GwyDeviceData* gwydata)
         g_string_free(gwydata->basetrmurl, TRUE);
         g_string_free(gwydata->playbackurl, TRUE);
         g_string_free(gwydata->fogtsburl, TRUE);
+        g_string_free(gwydata->videobaseurl, TRUE);
         g_string_free(gwydata->dnsconfig, TRUE);
         g_string_free(gwydata->etchosts, TRUE);
         g_string_free(gwydata->systemids, TRUE);
@@ -1206,6 +1215,7 @@ gboolean sendDiscoveryResult(const char* outfilename)
 	            g_string_append_printf(localOutputContents,"\t\t\t\"systemids\":\"%s\",\n", gwdata->systemids->str);
 	            //"receiverid":"T0100113218"
 	            //g_print("\t\t\t\"receiverid\":\"%s\"\n\t\t}", gwdata->receiverid->str);
+	            g_string_append_printf(localOutputContents,"\t\t\t\"videoBaseUrl\":\"%s\",\n", gwdata->videobaseurl->str);
 	     }
 	     else
 	     {
