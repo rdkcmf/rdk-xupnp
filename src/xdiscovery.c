@@ -349,7 +349,7 @@ gboolean checkDeviceExists(const char* sno)
             //There are still elements to search
             element = g_list_next(element);
         }
-        if (element) g_object_unref(element);
+//        if (element) g_object_unref(element);
     }
     return retval;
 }
