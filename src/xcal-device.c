@@ -2168,6 +2168,7 @@ main (int argc, char **argv)
     g_signal_connect (service, "action-invoked::GetPlaybackUrl", G_CALLBACK (get_playback_url_cb), NULL);
     g_signal_connect (service, "action-invoked::GetDataGatewayIPaddress", G_CALLBACK (get_dataGatewayIPaddress_cb), NULL);
     g_signal_connect (service, "action-invoked::GetFogTsbUrl", G_CALLBACK (get_fogtsb_url_cb), NULL);
+    g_signal_connect (service, "action-invoked::GetVideoBaseUrl", G_CALLBACK (get_videobase_url_cb), NULL);
     g_signal_connect (service, "action-invoked::GetDeviceName", G_CALLBACK (get_devicename_cb), NULL);
     g_signal_connect (service, "action-invoked::GetIsGateway", G_CALLBACK (get_isgateway_cb), NULL);
     g_signal_connect (service, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
@@ -2194,6 +2195,7 @@ main (int argc, char **argv)
     g_signal_connect (service, "query-variable::PlaybackUrl", G_CALLBACK (query_playback_url_cb), NULL);
     g_signal_connect (service, "query-variable::DataGatewayIPaddress", G_CALLBACK (query_dataGatewayIPaddress_cb), NULL);
     g_signal_connect (service, "query-variable::FogTsbUrl", G_CALLBACK (query_fogtsb_url_cb), NULL);
+    g_signal_connect (service, "query-variable::VideoBaseUrl", G_CALLBACK (query_videobase_url_cb), NULL);
     g_signal_connect (service, "query-variable::DeviceName", G_CALLBACK (query_devicename_cb), NULL);
     g_signal_connect (service, "query-variable::IsGateway", G_CALLBACK (query_isgateway_cb), NULL);
     g_signal_connect (service, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
