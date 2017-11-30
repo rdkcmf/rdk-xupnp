@@ -99,6 +99,7 @@ typedef struct _IARM_Bus_FOG_Param_t
 	bool status; // if true, FOG is active
 	int fogVersion;
 	char tsbEndpoint[33]; // i.e. http://169.254.228.194:9080/tsb?
+        bool bIPDVRSupported;
 } IARM_Bus_Fog_Param_t;
 
 #define IARM_BUS_FOG_NAME "FOG"
