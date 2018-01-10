@@ -131,7 +131,7 @@ typedef struct _IARM_Bus_RouteSrvMgr_RouteData_Param_t {
 } IARM_Bus_RouteSrvMgr_RouteData_Param_t;
 
 typedef enum _NetworkManager_Route_EventId_t {
-        IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA,
+        IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA=10,
         IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_MAX,
 } IARM_Bus_NetworkManager_Route_EventId_t;
 
