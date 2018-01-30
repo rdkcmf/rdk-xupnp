@@ -16,7 +16,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS = 
+SUBDIRS =
+
+if VIDEO_SUPPORT
+AM_CFLAGS=$(GUPNP_CFLAGS) -D$(GUPNP_VERSION)  $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS)\
+    $(GCRYPT_CFLAGS) $(GNUTLS_CFLAGS) $(LIBGSSDP_CFLAGS) $(LIBXML_CFLAGS) $(LIBFFI_CFLAGS) $(SQLITE_CFLAGS) \
+	-I$(top_srcdir)/include 
+AM_LDFLAGS=$(GUPNP_LIBS) $(GTHREAD_LIBS) $(GCRYPT_LIBS) \
+           $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lgcrypt -lgpg-error  $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS)
+AM_CFLAGS+=$(GUPNP_CFLAGS) -D$(GUPNP_VERSION) ${IARM_CFLAGS} $(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS)\
+    $(GCRYPT_CFLAGS) $(GNUTLS_CFLAGS) $(LIBGSSDP_CFLAGS) $(LIBXML_CFLAGS) $(LIBFFI_CFLAGS) $(SQLITE_CFLAGS) \
+	-I$(top_srcdir)/include -I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmbus \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs-hal \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/sysmgr \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/ir
+AM_LDFLAGS+=$(GUPNP_LIBS) $(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GCRYPT_LIBS) \
+           $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lgcrypt -lgpg-error  $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS)
+else
+if BROADBAND_SUPPORT 
+AM_CFLAGS=$(GUPNP_CFLAGS) -D$(GUPNP_VERSION)  $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS)\
+    $(GCRYPT_CFLAGS) $(GNUTLS_CFLAGS) $(LIBGSSDP_CFLAGS) $(LIBXML_CFLAGS) $(LIBFFI_CFLAGS) $(SQLITE_CFLAGS) \
+	-I$(top_srcdir)/include 
+AM_LDFLAGS=$(GUPNP_LIBS) $(GTHREAD_LIBS) $(GCRYPT_LIBS) \
+           $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lgcrypt -lgpg-error  $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS)
+AM_CFLAGS+=$(GUPNP_CFLAGS) -D$(GUPNP_VERSION) ${IARM_CFLAGS} $(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS)\
+    $(GCRYPT_CFLAGS) $(GNUTLS_CFLAGS) $(LIBGSSDP_CFLAGS) $(LIBXML_CFLAGS) $(LIBFFI_CFLAGS) $(SQLITE_CFLAGS) \
+	-I$(top_srcdir)/include -I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmbus \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs-hal \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/sysmgr \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/ir
+AM_LDFLAGS+=$(GUPNP_LIBS) $(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GCRYPT_LIBS) \
+           $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lgcrypt -lgpg-error  $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS)
+else
 AM_CFLAGS=$(GUPNP_CFLAGS) -D$(GUPNP_VERSION) ${IARM_CFLAGS} $(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS)\
     $(GCRYPT_CFLAGS) $(GNUTLS_CFLAGS) $(LIBGSSDP_CFLAGS) $(LIBXML_CFLAGS) $(LIBFFI_CFLAGS) $(SQLITE_CFLAGS) \
 	-I$(top_srcdir)/include -I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmbus \
@@ -27,7 +60,24 @@ AM_CFLAGS=$(GUPNP_CFLAGS) -D$(GUPNP_VERSION) ${IARM_CFLAGS} $(DBUS_CFLAGS) $(GTH
 
 AM_LDFLAGS=$(GUPNP_LIBS) $(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GCRYPT_LIBS) \
            $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lgcrypt -lgpg-error  $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS)
-
+endif
+endif
+if BROADBAND_SUPPORT
+xcal_device_LDADD = $(top_builddir)/broadband/lib/libxdevice.la
+endif
+if VIDEO_SUPPORT
+xcal_device_LDADD = $(top_builddir)/video/lib/libxdevice.la
+endif
 bin_PROGRAMS= xcal-device xdiscovery
+if VIDEO_SUPPORT
+xcal_device_SOURCES = ../xcal-device-main.c
+else
+if BROADBAND_SUPPORT
+xcal_device_SOURCES = ../xcal-device-main.c
+else
 xcal_device_SOURCES = xcal-device.c
+endif
+endif
 xdiscovery_SOURCES = xdiscovery.c
+
+

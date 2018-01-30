@@ -16,9 +16,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
+if VIDEO_SUPPORT
+SUBDIRS = video conf src include
+DIST_SUBDIRS = video cfg conf src include
+else
+if BROADBAND_SUPPORT
+SUBDIRS = broadband conf src include
+DIST_SUBDIRS = cfg broadband conf src include
+else
 SUBDIRS = src include conf
 DIST_SUBDIRS = cfg src include conf
-
+endif
+endif
 distcleancheck_listfiles = *-libtool
 
 ## IPK Generation Support
@@ -26,6 +35,8 @@ IPK_GEN_PATH = $(abs_top_builddir)/ipk
 IPK_GEN_STAGING_DIR=$(abs_top_builddir)/staging_dir
 IPK_GEN_INPUT  = debian-binary control.tar.gz data.tar.gz
 IPK_GEN_OUTPUT = xupnp.ipk
+
+AM_CFLAGS = $(IARM_CFLAGS)
 
 package_ipk:
 	@echo "Generating IPK Package"

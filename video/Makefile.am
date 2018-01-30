@@ -1,0 +1,2 @@
+SUBDIRS = lib
+DIST_SUBDIRS = lib

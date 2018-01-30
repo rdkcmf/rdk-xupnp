@@ -38,7 +38,10 @@
 //#define GUPNP_0_14
 const char* localHostIP="127.0.0.1";
 
-
+static GMainLoop *main_loop;
+gboolean checkDevAddInProgress=FALSE;
+#define WAIT_TIME_SEC 5
+guint deviceAddNo=0;
 #if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
 
 typedef struct _iarmDeviceData {
@@ -46,7 +49,7 @@ typedef struct _iarmDeviceData {
     char* pBuffer;
 } IarmDeviceData;
 
-static GMainLoop *main_loop;
+//static GMainLoop *main_loop;
 #define WAIT_TIME_SEC 5
 #ifdef USE_XUPNP_IARM
 #include "uidev.h"
@@ -58,7 +61,6 @@ static void _GetXUPNPDeviceInfo(void *callCtx, unsigned long methodID, void *arg
 #include "sysMgr.h"
 IARM_Result_t _GetXUPNPDeviceInfo(void *arg);
 #endif
-guint  deviceAddNo=0;
 
 static IARM_Result_t GetXUPNPDeviceInfo(char *pDeviceInfo, unsigned long length)
 {
@@ -642,9 +644,8 @@ int main(int argc, char *argv[])
         //g_print("IARM init failure");
         g_critical("XUPNP IARM init failed");
     }
-#endif
-
     broadcastIPModeChange();
+#endif
     //context = gupnp_context_new (main_context, host_ip, host_port, NULL);
     gupnp_context_set_subscription_timeout(context, 5);
 
@@ -1285,7 +1286,9 @@ gboolean sendDiscoveryResult(const char* outfilename)
 
                 if (ipModeStateChanged == TRUE)
                 {
+#if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
                     broadcastIPModeChange();
+#endif
                 }
 
                 #ifdef USE_XUPNP_TZ_UPDATE
@@ -2036,6 +2039,7 @@ gboolean checkvalidhostname( char* hostname)
     return FALSE;
 }
 
+#if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
 void broadcastIPModeChange(void)
 {
     IARM_Bus_SYSMgr_EventData_t eventData;
@@ -2047,6 +2051,7 @@ void broadcastIPModeChange(void)
     IARM_Bus_BroadcastEvent(IARM_BUS_SYSMGR_NAME, (IARM_EventId_t) IARM_BUS_SYSMGR_EVENT_SYSTEMSTATE, (void *)&eventData, sizeof(eventData));
     g_message("sent event for ipmode= %s",ipMode->str);
 }
+#endif
 
 #ifdef USE_XUPNP_TZ_UPDATE
 void broadcastTimeZoneChange(GwyDeviceData *gwdata)

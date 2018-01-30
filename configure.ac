@@ -24,7 +24,7 @@ AC_INIT(xupnp, version-1.0, balaji_punnuru@cable.comcast.com,xupnp)
 AC_CONFIG_HEADERS([cfg/config.h])
 AC_CONFIG_MACRO_DIR([cfg])
 AC_CONFIG_AUX_DIR([cfg])
-AM_INIT_AUTOMAKE([foreign no-dist-gzip dist-bzip2 1.9])
+AM_INIT_AUTOMAKE([foreign no-dist-gzip dist-bzip2 1.9 subdir-objects])
 LT_INIT
 
 # Checks for programs.
@@ -44,7 +44,7 @@ IARM_CFLAGS=" "
 
 # Checks for library functions.
 #Add the subdirectories to be considered for building.
-SUBDIRS="src include"
+#SUBDIRS="src include"
 #to setup m4 macros
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])],
 [AM_DEFAULT_VERBOSITY=1
@@ -106,6 +106,44 @@ AC_ARG_ENABLE([fog],
                 esac
               ],
               [echo "fog is disabled"])
+LIBRARY_SUPPORT=" "
+AC_ARG_ENABLE([library-support],
+        AS_HELP_STRING([--enable-library-support],[This will enable/disable library support.]),
+        [
+          case "${enableval}" in
+           yes) LIBRARY_SUPPORT=true ;;
+           no) LIBRARY_SUPPORT=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-library-support ]) ;;
+           esac
+           ],
+         [echo "library-support is enable"])
+AM_CONDITIONAL([LIBRARY_SUPPORT], [test x$LIBRARY_SUPPORT = xtrue])
+
+VIDEO_SUPPORT=" "
+AC_ARG_ENABLE([video-support],
+        AS_HELP_STRING([--enable-video-support],[This will enable/disable video library support.]),
+        [
+          case "${enableval}" in
+           yes) VIDEO_SUPPORT=true ;;
+           no) VIDEO_SUPPORT=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-video-support ]) ;;
+           esac
+           ],
+         [echo "video-support is enable"])
+AM_CONDITIONAL([VIDEO_SUPPORT], [test x$VIDEO_SUPPORT = xtrue])
+BROADBAND_SUPPORT=" "
+AC_ARG_ENABLE([broadband-support],
+        AS_HELP_STRING([--enable-broadband-support],[This will enable/disable broadband library support.]),
+        [
+          case "${enableval}" in
+           yes) BROADBAND_SUPPORT=true
+                CFLAGS+=" -DCLIENT_XCAL_SERVER";;
+           no) BROADBAND_SUPPORT=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-broadband-support ]) ;;
+           esac
+           ],
+         [echo "broadband-support is enable"])
+AM_CONDITIONAL([BROADBAND_SUPPORT], [test x$BROADBAND_SUPPORT = xtrue])
 PKG_CHECK_MODULES([LIBXML], [libxml-2.0 >= 2.7.8])
 PKG_CHECK_MODULES([LIBGSSDP], [gssdp-1.0] >= 0.10.0)
 PKG_CHECK_MODULES([LIBSOUP], [libsoup-2.4 >= 0.22])
@@ -121,7 +159,14 @@ AC_CONFIG_FILES([Makefile
 include/Makefile
 conf/Makefile
 cfg/Makefile
-src/Makefile])
+src/Makefile
+video/Makefile
+video/lib/Makefile
+video/lib/src/Makefile
+broadband/Makefile
+broadband/lib/Makefile])
 AC_SUBST(IARM_CFLAGS)
 AC_SUBST(GUPNP_VERSION)
+AC_SUBST(VIDEO_SUPPORT)
+AC_SUBST(BROADBAND_SUPPORT)
 AC_OUTPUT
