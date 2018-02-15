@@ -3882,13 +3882,24 @@ gboolean getdevicename(void)
             {
                 result=TRUE;
                 g_string_printf(devicename,"%s",g_strstrip(tokens[loopvar+1]));
-                g_message("device name =  %s",devicename->str);
+//                g_message("device name =  %s",devicename->str);
                 devicenamematch=TRUE;
 
                 break;
             }
             loopvar++;
         }
+	if(strstr(devicename->str,"\"")||strstr(devicename->str,"\\"))
+        {
+            char *ptr = NULL;
+            ptr = g_strescape(devicename->str,"\b\n");
+            if(ptr)
+            {
+                g_string_printf(devicename,"%s",ptr);
+                g_free(ptr);
+            }
+        }
+	g_message("device name =  %s",devicename->str);
         g_strfreev(tokens);
         if(devicenamematch == FALSE)
         {
