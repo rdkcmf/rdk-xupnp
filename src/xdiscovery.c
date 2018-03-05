@@ -424,21 +424,30 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
             if (g_strrstr(udn,"uuid:"))
             {
                 gchar* receiverid = g_strndup(udn+5, strlen(udn)-5);
-                g_string_assign(gwydata->receiverid, receiverid);
-                g_message("gateway device receiver id is %s",receiverid);
-                if(!process_gw_services(sproxy, gwydata))
-		{
-		    free_gwydata(gwydata);
-                    g_free(gwydata);
-                    g_free(receiverid);
-    		    g_free(sno);
-    		    g_message("Exting from device_proxy_available_cb since mandatory paramters are not there ");
-                    checkDevAddInProgress=FALSE;
-		    return;
-		}
-                g_free(receiverid);
+                if(receiverid)
+                {
+                    g_string_assign(gwydata->receiverid, receiverid);
+                    g_message("gateway device receiver id is %s",receiverid);
+                
+                    if(!process_gw_services(sproxy, gwydata))
+		    {
+		        free_gwydata(gwydata);
+                        g_free(gwydata);
+                        g_free(receiverid);
+    		        g_free(sno);
+    		        g_message("Exting from device_proxy_available_cb since mandatory paramters are not there ");
+                        checkDevAddInProgress=FALSE;
+		        return;
+		    }
+                    else
+                        g_free(receiverid);
+                }
+                else
+                    g_message("gateway device receiver id is NULL");
             }
         }
+        else
+            g_message("gateway UDN is NULL");
     }
     gupnp_service_proxy_set_subscribed(sproxy, TRUE);
     if(g_strrstr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
