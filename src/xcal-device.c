@@ -1781,6 +1781,7 @@ main (int argc, char **argv)
         devConf->devXmlFile=g_strdup(DEVICE_XML_FILE);
     devConf->allowGwy=FALSE;
     devConf->useIARM=TRUE;
+    devConf->useGliDiag=TRUE;
 #endif
 
     char* logfilename = argv[2];
