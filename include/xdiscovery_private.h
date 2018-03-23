@@ -21,7 +21,7 @@
 #define XDISCOVERY_PRIVATE_H_
 
 #define G_LOG_DOMAIN "XUPNP"
-#define XUPNP_RESCAN_INTERVAL 5000000
+#define XUPNP_RESCAN_INTERVAL 10000000
 #define XDISC_SERVICE "urn:schemas-upnp-org:service:DiscoverFriendlies:1"
 
 struct ProxyMapping {
