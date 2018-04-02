@@ -1176,10 +1176,16 @@ gboolean sendDiscoveryResult(const char* outfilename)
 
     GString *localOutputContents=g_string_new(NULL);
     g_string_printf(localOutputContents, "{\n\"xmediagateways\":\n\t[");
-    if (g_list_length(xdevlist) > 0)
+
+    GList *xdevlistDup;
+    g_mutex_lock(mutex);
+    xdevlistDup = g_list_copy(xdevlist);
+    g_mutex_unlock(mutex);
+
+    if (g_list_length(xdevlistDup) > 0)
     {
         GList *element;
-        element = g_list_first(xdevlist);
+        element = g_list_first(xdevlistDup);
         while(element)
         {
             //      {
@@ -1311,6 +1317,10 @@ gboolean sendDiscoveryResult(const char* outfilename)
 	if(element)
           g_list_free(element);
     }
+    if(xdevlistDup)
+    {
+        g_list_free(xdevlistDup);
+    }
     //g_print("\n\t]\n}\n");
     g_string_append_printf(localOutputContents,"\n\t]\n}\n");
     //g_print("\nOutput is\n%s", outputcontents->str);
@@ -1429,9 +1439,17 @@ void* verify_devices()
             }
             continue;
         }
+	GList *xdevlistDup;
 
         lenCurDevList = g_list_length(constLstProxies);
-        lenXdevList = g_list_length(xdevlist);
+	if(xdevlist)
+	{
+	    g_mutex_lock(mutex);
+	    xdevlistDup = g_list_copy(xdevlist);
+	    g_mutex_unlock(mutex);
+	    lenXdevList = g_list_length(xdevlistDup);
+	}
+//        lenXdevList = g_list_length(xdevlist);
         //g_message("Current list length is %u\n",lenCurDevList);
 
         if (lenCurDevList > 0)
@@ -1441,9 +1459,9 @@ void* verify_devices()
             {
                 gboolean existsFlag = FALSE;
                 gboolean delCheckFlag = FALSE;
-                GList *element;
+                GList *element = NULL;
 
-                element = g_list_first(xdevlist);
+                element = g_list_first(xdevlistDup);
                 while(element)
                 {
                     GwyDeviceData *gwdata = (GwyDeviceData *)element->data;
@@ -1519,7 +1537,10 @@ void* verify_devices()
             g_message("Current dev length is empty ");
             delOldItemsFromList(TRUE);
         }
-
+	if(xdevlistDup)
+	{
+	    g_list_free(xdevlistDup);
+	}
 /*        
                   //Find out newly discovered devices and add to cleaned up list
                 lenXdevList = g_list_length(xdevlist);
