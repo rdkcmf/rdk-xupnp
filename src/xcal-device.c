@@ -233,6 +233,8 @@ static void _fogEventHandler(const char *owner, IARM_EventId_t eventId, void *da
         {
             g_message("Received FOG Status update as TRUE");
             g_string_printf(fogtsburl, pFogEventData->tsbEndpoint);
+            g_string_printf(videobaseurl, "http://%s/video", gwyip->str);
+            g_message("_fogEventHandler: setting VideoBaseUrl:%s \n",videobaseurl->str);
         }
         else
         {
@@ -240,6 +242,7 @@ static void _fogEventHandler(const char *owner, IARM_EventId_t eventId, void *da
             g_string_printf(fogtsburl, "");
         }
         notify_value_change("FogTsbUrl", fogtsburl->str);
+        notify_value_change("VideoBaseUrl", videobaseurl->str);
     }
 }
 

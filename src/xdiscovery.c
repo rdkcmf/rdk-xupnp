@@ -461,15 +461,19 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
            g_message("Failed to add DNS notifications for %s", sno);
        if (gupnp_service_proxy_add_notify (sproxy, "TimeZone", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add TimeZone notifications for %s", sno);
+       if (gupnp_service_proxy_add_notify (sproxy, "VideoBaseUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+           g_message("Failed to add VideoBaseUrl notifications for %s", sno);
     }
     else
     {
        if (gupnp_service_proxy_add_notify (sproxy, "DataGatewayIPaddress", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add DataGatewayIPaddress notifications for %s", sno);
-       if (gupnp_service_proxy_add_notify (sproxy, "FogTsbUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
-           g_message("Failed to add FogTsbUrl notifications for %s", sno);
     }
+    if (gupnp_service_proxy_add_notify (sproxy, "FogTsbUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+           g_message("Failed to add FogTsbUrl notifications for %s", sno);
+
     gupnp_service_proxy_set_subscribed(sproxy, TRUE);
+
     if (gupnp_service_proxy_get_subscribed(sproxy) == FALSE)
     {
         g_message("Failed to register for notifications on %s", sno);
@@ -1719,6 +1723,17 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
                         g_string_assign(gwdata->fogtsburl, updated_value);
                     }
                 }
+                if (g_strcmp0(g_strstrip(variable_name), "VideoBaseUrl") == 0)
+                {
+                    updated_value = g_value_get_string(value);
+                    g_message("Updated value is %s ", updated_value);
+                    if(g_strcmp0(g_strstrip(updated_value), gwdata->videobaseurl->str) != 0)
+                    {
+                        bUpdateDiscoveryResult=TRUE;
+                        g_string_assign(gwdata->videobaseurl, updated_value);
+                    }
+                }
+
                 //update_gwylist(gwdata);
                 g_free(receiverid);
                 if(bUpdateDiscoveryResult)
