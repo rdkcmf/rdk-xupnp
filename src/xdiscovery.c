@@ -357,7 +357,7 @@ gboolean checkDeviceExists(const char* sno)
 }
 
 
-/*static void
+static void
 device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 {
     const gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
@@ -374,7 +374,7 @@ device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
         gupnp_service_proxy_remove_notify(sproxy, "SystemIds", on_last_change, NULL);
       }
 
-    if (checkDeviceExists(sno))
+/*    if (checkDeviceExists(sno))
       {
         if (delete_gwyitem(sno) == FALSE)
         {
@@ -386,8 +386,8 @@ device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
             g_message("Deleted %s from list", sno);
             sendDiscoveryResult(disConf->outputJsonFile);
           }
-      }
-}*/
+      }*/
+}
 
 static void
 device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
@@ -412,8 +412,12 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     init_gwydata(gwydata);
     gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE);
-
-
+    GList* xdevlistitem = g_list_find_custom(xdevlist,sno,(GCompareFunc)g_list_find_sno);
+    if(xdevlistitem!=NULL)
+    {
+	g_message("Existing as SNO is present in list so no update of devices %s",sno);
+	return;
+    }
 
     if (sno != NULL)
     {
@@ -651,11 +655,11 @@ int main(int argc, char *argv[])
     broadcastIPModeChange();
 #endif
     //context = gupnp_context_new (main_context, host_ip, host_port, NULL);
-    gupnp_context_set_subscription_timeout(context, 5);
+    gupnp_context_set_subscription_timeout(context, 0);
 
     cp = gupnp_control_point_new(context, "urn:schemas-upnp-org:device:BasicDevice:1");
     g_signal_connect (cp,"device-proxy-available", G_CALLBACK (device_proxy_available_cb), NULL);
-//    g_signal_connect (cp,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb), NULL);
+    g_signal_connect (cp,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb), NULL);
     gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp), TRUE);
 
 #ifdef GUPNP_0_19
