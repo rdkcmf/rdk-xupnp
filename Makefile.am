@@ -38,6 +38,19 @@ IPK_GEN_OUTPUT = xupnp.ipk
 
 AM_CFLAGS = $(IARM_CFLAGS)
 
+if BROADBAND_SUPPORT
+package_ipk:
+	@echo "Generating IPK Package"
+	$(MAKE) prefix=${abs_top_builddir}/staging_dir install
+	$(mkdir_p) $(IPK_GEN_STAGING_DIR)/etc/xupnp/
+	$(mkdir_p) $(IPK_GEN_STAGING_DIR)/usr/bin/
+	$(mkdir_p) $(IPK_GEN_STAGING_DIR)/lib/rdk/
+	cp -af ${abs_top_builddir}/conf/*.xml $(IPK_GEN_STAGING_DIR)/etc/xupnp/
+	cp -af ${abs_top_builddir}/conf/broadband/start_upnp.sh $(IPK_GEN_STAGING_DIR)/lib/rdk/
+	cp -af ${abs_top_builddir}/conf/broadband/start-upnp-service $(IPK_GEN_STAGING_DIR)/lib/rdk/
+	cp -af ${abs_top_builddir}/conf/broadband/processPID.sh $(IPK_GEN_STAGING_DIR)/lib/rdk/
+	cp -af $(IPK_GEN_STAGING_DIR)/bin/* $(IPK_GEN_STAGING_DIR)/usr/bin/
+else
 package_ipk:
 	@echo "Generating IPK Package"
 	$(MAKE) prefix=${abs_top_builddir}/staging_dir install
@@ -55,3 +68,4 @@ package_ipk:
 	rm -rf ${abs_top_builddir}/staging_dir
 	rm -rf $(abs_top_builddir)/ipk/control.tar.gz
 	rm -rf $(abs_top_builddir)/ipk/data.tar.gz
+endif

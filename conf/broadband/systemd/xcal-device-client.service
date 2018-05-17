@@ -16,18 +16,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS =  
-AM_CFLAGS=$(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS) \
-	-I$(top_srcdir)/include -I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmbus \
-	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb \
-	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs-hal \
-	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/sysmgr \
-	-I$(top_srcdir)/broadband/lib/include \
-	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/ccsp
+[Unit]
+Description=A daemon that creates a device
+After=network-online.target
 
-AM_LDFLAGS=$(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(LIBSOUP_LIBS) -lccsp_common -lhal_platform -lhal_moca -lhal_msomgmt
-AM_LDFLAGS+=-lhal_ethsw
+[Service]
+SyslogIdentifier="xcal-device"
+Environment="LOG4C_RCPATH=/etc"
+EnvironmentFile=/etc/device.properties
+ExecStartPre=/bin/sh -c "/lib/rdk/start_upnp.sh "
+ExecStart=/bin/sh -c "/usr/bin/xcal-device "
+ExecStop=/bin/sh -c 'echo "`date`: Stopping/Restarting Xcal-Device Service" >> ${PROCESS_RESTART_LOG}'
+Restart=always
 
-noinst_LTLIBRARIES = libxdevice.la
-libxdevice_la_SOURCES = src/xcal-device-library.c
-
+[Install]
+WantedBy=multi-user.target

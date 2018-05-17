@@ -718,12 +718,7 @@ get_rui_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user
 /*
  * State Variable query handlers
  */
-/*
- *State variable query handlers are called with the name of the variable and a GValue.
- *This value should be initialized with the relevant type and then set to the current value.
- *Again signal detail can be used to connect handlers to specific state variable callbacks.
- *For EX:g_signal_connect (service, "query-variable::Url", G_CALLBACK (query_url_cb), NULL);
- */
+
 /**
  * @brief Callback function which is invoked when getUrl action is invoked.
  *

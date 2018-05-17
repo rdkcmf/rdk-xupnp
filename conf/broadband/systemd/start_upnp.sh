@@ -22,7 +22,7 @@ x=""
 while [ "started" != "$x" ]
 do
    x=`sysevent get lan-status`
-   echo $x
+   echo "sysevent status = $x"
    sleep 2
 done
 status=""
@@ -52,7 +52,6 @@ if [ -f $RDK_PATH/commonUtils.sh ]; then
 fi
 WAREHOUSE_ENV="$RAMDISK_PATH/warehouse_mode_active"
 LOG_PATH="/rdklogs/logs"
-
 export LD_LIBRARY_PATH=/usr/local/lib:/usr/lib:/lib:$LD_LIBRARY_PATH
 if [ "$FS_DBUS_SIGNAL_HANDLER" = "false" ]; then
     export FSARGS="no-sighandler"
@@ -85,6 +84,7 @@ fi
 if [ -f /tmp/wifi-on ]; then
     XCAL_DEF_INTERFACE=`getWiFiInterface`
 fi
+
 mkdir -p /nvram/xupnp
 stbIp=""
 mocaIpWait()
@@ -222,44 +222,3 @@ else
 fi
 echo "Starting Xcal UPNP client xcal-discovery-list"
 
-/usr/bin/xdiscovery $xcalDiscoveryConfig $XDISC_LOG_FILE $XCAL_DEF_INTERFACE  &
-/usr/bin/xcal-device &
-echo "Starting Xcal UPNP client xdiscovery"
-if [ "$GATEWAY_DEVICE" = "yes" ] || [ "$DEVICE_TYPE" = "hybrid" ] ;then
-     estbIpWait
-     /usr/bin/xcal-device &
-fi
-sleep 30
-loop=0
-flag=0
-while [ $loop -eq 0 ]
-do
-   output1=`pidof xdiscovery`
-   if [ ! "$output1" ]; then
-        /usr/bin/xdiscovery $xcalDiscoveryConfig $XDISC_LOG_FILE $XCAL_DEF_INTERFACE &
-        flag=1
-   fi
-   output2=`pidof xcal-device`
-   if [ ! "$output2" ]; then
-        /usr/bin/xcal-device  &
-        flag=1
-   fi
-   if [ "$GATEWAY_DEVICE" = "yes" ] || [ "$DEVICE_TYPE" = "hybrid" ];then
-           output1=`pidof xcal-device`
-           if [ ! "$output1" ]; then
-                 /usr/bin/xcal-device $xcalDeviceConfig $XDEVICE_LOG &
-                 flag=1
-           fi
-   fi
-   if [ "$HDD_ENABLED" = "true" ] && [ $flag -eq 1 ]; then
-        sleep 1
-        export crashTS=`date +%Y-%m-%d-%H-%M-%S`
-        if [ "$POTOMAC_SVR" != "" ] && [ "$BUILD_TYPE" != "dev" ]; then
-           nice -n 19 sh $RDK_PATH/uploadDumps.sh $crashTS 1 $POTOMAC_SVR &
-        else
-           nice -n 19 sh $RDK_PATH/uploadDumps.sh $crashTS 1&
-        fi
-        flag=0
-   fi
-   sleep 30
-done

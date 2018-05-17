@@ -24,10 +24,11 @@ AM_CFLAGS=$(GUPNP_CFLAGS) -D$(GUPNP_VERSION) ${IARM_CFLAGS} $(DBUS_CFLAGS) $(GTH
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs-hal \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/sysmgr \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/ir \
-	-I$(top_srcdir)/broadband/lib/include
+	-I$(top_srcdir)/broadband/lib/include \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/ccsp
 
 AM_LDFLAGS=$(GUPNP_LIBS) $(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(GCRYPT_LIBS) \
-           $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lgcrypt -lgpg-error  $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS)
+           $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lhal_platform -lgcrypt -lgpg-error  $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS)
 
 noinst_LTLIBRARIES = libxdevice.la
 libxdevice_la_SOURCES = xcal-device-library.c

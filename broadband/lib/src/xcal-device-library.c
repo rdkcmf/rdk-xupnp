@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-//#######
 #include <glib.h>
 #include <sys/types.h>
 #include <libsoup/soup.h>
@@ -32,12 +31,7 @@
 #include "xdevice-library-private.h"
 
 #include <platform_hal.h>
-//########
-#ifdef CLIENT_XCAL_SERVER
-//#include "mfrMgr.h"
-#endif
 
-//###############
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 46
 #endif
@@ -46,21 +40,19 @@
 #define BOOL  unsigned char
 #endif
 
-#define XUPNP_IF "brlan0:0"
-#define WIFI_IF "brlan0"
+#define ISOLATION_IF "brlan10"
+#define WIFI_IF "brlan0:0"
 #define UDN_IF "erouter0"
 #define PARTNER_ID "partnerId"
 #define RECEIVER_ID "deviceId"
 #define BCAST_PORT  50755
-#define LOG_FILE    "/opt/logs/xdevice.log"
+#define LOG_FILE    "/rdklogs/logs/xdevice.log"
 #define DEVICE_XML_PATH     "/etc/xupnp/"
 #define DEVICE_XML_FILE     "BasicDevice.xml"
 
 #ifndef F_OK
 #define F_OK 0
 #endif
-
-//################
 
 #ifndef BOOL
 #define BOOL  unsigned char
@@ -160,12 +152,12 @@ gboolean getserialnum(GString* serial_num)
     gboolean result = FALSE;
     if ( platform_hal_GetSerialNumber(serial_num->str) == 0)
     {
-        g_message("serialNumber returned from hal:%s\n", serial_num->str);
+        g_message("serialNumber returned from hal:%s", serial_num->str);
 	result = TRUE;
     }
     else
     {
-            g_error("Unable to get SerialNumber\n");
+            g_error("Unable to get SerialNumber");
     }
     return result;
 }
@@ -408,7 +400,7 @@ gboolean readDevFile(const char *deviceFile)
         }
         g_strfreev(tokens);
     }
-    g_string_printf(mocaIface,"%s",XUPNP_IF);
+    g_string_printf(mocaIface,"%s",ISOLATION_IF);
     g_string_printf(wifiIface,"%s",WIFI_IF);
     if(result == FALSE)
     {
@@ -493,8 +485,12 @@ BOOL getBaseUrl(char *outValue)
     if (check_empty(gwyip->str) && check_empty(recv_id->str)) {
     g_string_printf(url, "http://%s:8080/videoStreamInit?recorderId=%s",
                     gwyip->str, recv_id->str);
-        g_print ("The url is now %s.\n", url->str);
+        g_message ("The url is now %s.", url->str);
         result = TRUE;
+    }
+    else
+    {
+	g_message("getBaseUrl : Empty url");
     }
     return result;
 }
@@ -594,6 +590,10 @@ BOOL getDeviceType(char *outValue)
         strcpy(outValue, devicetype->str);
         result = TRUE;
     }
+    else
+    {
+	g_message("getDeviceType : Empty device type");
+    }
     return result;
 }
 /**
@@ -616,7 +616,7 @@ BOOL getBcastMacAddress(char *outValue)
     if (devConf->bcastIf != NULL ) {
         const gchar *bcastmac = (gchar *)getmacaddress(devConf->bcastIf);
         if (bcastmac) {
-            g_message("Broadcast MAC address in  interface: %s  %s \n", devConf->bcastIf,
+            g_message("Broadcast MAC address in  interface: %s  %s ", devConf->bcastIf,
                       bcastmac);
         } else {
             g_message("failed to retrieve macaddress on interface %s ", devConf->bcastIf);
@@ -626,6 +626,10 @@ BOOL getBcastMacAddress(char *outValue)
         g_message("bcast mac address is %s", bcastmacaddress->str);
         strcpy(outValue, bcastmacaddress->str);
         result = TRUE;
+    }
+    else
+    {
+	g_message("getBcastMacAddress : Empty broadcast interface");
     }
     return result;
 
@@ -701,6 +705,10 @@ BOOL getGatewayIp(char *outValue)
         strcpy(outValue, gwyip->str);
         result = TRUE;
     }
+    else
+    {
+	g_message("getGatewayIp : Empty gateway ip");
+    }
     return result;
 }
 /**
@@ -724,6 +732,10 @@ BOOL getRecvDevType(char *outValue)
         strcpy(outValue, recvdevtype->str);
         result = TRUE;
     }
+    else
+    {
+	g_message("getRecvDevType : Empty receiver device type");
+    }
     return result;
 }
 BOOL getBuildVersion(char *outValue)
@@ -736,6 +748,10 @@ BOOL getBuildVersion(char *outValue)
     if (check_empty(buildversion->str)) {
         strcpy(outValue, buildversion->str);
         result = TRUE;
+    }
+    else
+    {
+	g_message("getBuildVersion : Empty Build version");
     }
     return result;
 }
@@ -750,7 +766,7 @@ BOOL getHostMacAddress(char *outValue)
     if (devConf->hostMacIf != NULL) {
         const gchar *hostmac = (gchar *)getmacaddress(devConf->hostMacIf);
         if (hostmac) {
-            g_message("MAC address in  interface: %s  %s \n", devConf->hostMacIf, hostmac);
+            g_message("MAC address in  interface: %s  %s ", devConf->hostMacIf, hostmac);
         } else {
             g_message("failed to retrieve macaddress on interface %s ",
                       devConf->hostMacIf);
@@ -788,6 +804,10 @@ BOOL getSystemsIds(char *outValue)
     if (check_empty(systemids->str)) {
         strcpy(outValue, systemids->str);
         result = TRUE;
+    }
+    else
+    {
+	g_message("getSystemsIds : empty system ids");
     }
     return result;
 }
@@ -849,6 +869,10 @@ BOOL getTimeZone(char *outValue)
         strcpy(outValue, dsgtimezone->str);
         result = TRUE;
     }
+    else
+    {
+	g_message("getTimeZone : Empty timezone");
+    }
     return result;
 }
 BOOL getRawOffSet(int *outValue)
@@ -878,7 +902,7 @@ BOOL getHosts(char *outValue)
         g_message("getHosts : NULL string !");
         return result;
     }
-    if (getetchosts()) {
+    if (check_empty(etchosts->str)) {
         strcpy(outValue, etchosts->str);
         result = TRUE;
     } else {
@@ -906,6 +930,10 @@ BOOL getBcastIp(char *outValue)
     if (check_empty(gwyip->str)) {
         strcpy(outValue, gwyip->str);
         result = TRUE;
+    }
+    else
+    {
+	g_message("getBcastIp : Empty Broadcast Ip");
     }
     return result;
 }
@@ -972,28 +1000,33 @@ BOOL getPartnerId(char *outValue)
         g_message("getPartnerId : NULL string !");
         return result;
     } else {
-        partner_id = getID(PARTNER_ID);
         if (check_null(partner_id) && check_empty(partner_id->str)) {
             strcpy(outValue, partner_id->str);
             result = TRUE;
         }
+	else
+	{
+		g_message("getPartnerId : No partnerId available");
+	}
     }
     return result;
 }
 
 BOOL getUidfromRecvId()
 {
-	guint loopvar = 0;	
-	gchar **tokens = g_strsplit_set(eroutermacaddress->str, "':''\n'", -1);
-        guint toklength = g_strv_length(tokens);
-        while (loopvar < toklength) {
-             if (!g_strrstr(g_strstrip(tokens[loopvar]), "\0")) {
-                 g_string_printf(recv_id, "ebf5a0a0-1dd1-11b2-a90f-%s%s%s%s%s%s", g_strstrip(tokens[loopvar]), g_strstrip(tokens[loopvar + 1]),g_strstrip(tokens[loopvar + 2]),g_strstrip(tokens[loopvar + 3]),g_strstrip(tokens[loopvar + 4]),g_strstrip(tokens[loopvar + 5]));
-                 g_message("device uid =  %s", recv_id->str);
-                 break;
-             }
-         }
-         g_strfreev(tokens);
+    BOOL result = FALSE;
+    guint loopvar = 0;
+    gchar **tokens = g_strsplit_set(eroutermacaddress->str, "':''\n'", -1);
+    guint toklength = g_strv_length(tokens);
+    while (loopvar < toklength)
+    {
+        g_string_printf(recv_id, "ebf5a0a0-1dd1-11b2-a90f-%s%s%s%s%s%s", g_strstrip(tokens[loopvar]), g_strstrip(tokens[loopvar + 1]),g_strstrip(tokens[loopvar + 2]),g_strstrip(tokens[loopvar + 3]),g_strstrip(tokens[loopvar + 4]),g_strstrip(tokens[loopvar + 5]));
+        g_message("getUidfromRecvId: recvId: %s", recv_id->str);
+	result = TRUE;
+	break;
+    }
+    g_strfreev(tokens);
+    return result;
 }
 BOOL getUUID(char *outValue)
 {
@@ -1003,14 +1036,18 @@ BOOL getUUID(char *outValue)
         return result;
     }
     if (getUidfromRecvId()){
-    if( (check_empty(recv_id->str))) {
-        sprintf(outValue, "uuid:%s", recv_id->str);
-        result = TRUE;
-    }
+        if( (check_empty(recv_id->str))) {
+            sprintf(outValue, "uuid:%s", recv_id->str);
+            result = TRUE;
+        }
+	else
+	{
+	    g_message("getUUID : empty recvId");
+	}
     }
     else
     {
-        g_message("getUUID : could not get UUID\n");
+        g_message("getUUID : could not get UUID");
     }
     return result;
 }
@@ -1028,6 +1065,14 @@ BOOL getReceiverId(char *outValue)
             strcpy(outValue, recv_id->str);
             result = TRUE;
         }
+	else
+	{
+	    g_message("getReceiverId :  empty recvId");
+	}
+    }
+    else
+    {
+        g_message("getUUID : could not get UUID");
     }
     return result;
 }
@@ -1042,7 +1087,7 @@ BOOL getTrmUrl(char *outValue)
         strcpy(outValue, trmurl->str);
         result = TRUE;
     } else {
-        g_message("getTrmUrl : No trmurl found\n");
+        g_message("getTrmUrl : No trmurl found");
     }
     return result;
 }
@@ -1062,6 +1107,10 @@ BOOL getPlaybackUrl(char *outValue)
         strcpy(outValue, playbackurl->str);
         result = TRUE;
     }
+    else
+    {
+	g_message("getPlaybackUrl: Empty plabackurl");
+    }
     return result;
 }
 BOOL getVideoBasedUrl(char *outValue)
@@ -1075,7 +1124,7 @@ BOOL getVideoBasedUrl(char *outValue)
         strcpy(outValue, videobaseurl->str);
         result = TRUE;
     } else {
-        g_message("getVideoBasedUrl : No VideoBasedUrl found\n");
+        g_message("getVideoBasedUrl : No VideoBasedUrl found");
     }
     return result;
 }
@@ -1107,7 +1156,7 @@ BOOL getCVPIp(char *outValue)
                 devConf->cvpIf);
         return FALSE;
     }
-    g_message("ipaddress of the CVP2 interface %s\n", ipAddressBuffer);
+    g_message("ipaddress of the CVP2 interface %s", ipAddressBuffer);
     strcpy(outValue, ipAddressBuffer);
     return TRUE;
 }
@@ -1124,7 +1173,7 @@ BOOL getCVPIf(char *outValue)
     }
     else
     {
-        g_message("getCVPIf : Failed to get the CVP Interface\n");
+        g_message("getCVPIf : Failed to get the CVP Interface");
     }
     return result;
 }
@@ -1155,7 +1204,7 @@ BOOL getCVPXmlFile(char *outValue)
     }
     else
     {
-        g_message("getCVPXmlFile : Failed to get the CVP XmlFile\n");
+        g_message("getCVPXmlFile : Failed to get the CVP XmlFile");
     }
     return result;
 }
@@ -1168,7 +1217,6 @@ BOOL getRouteDataGateway(char *outValue)
         g_message("getRouteDataGateway : NULL string !");
         return result;
     }
-//####    if (getRouteData()) {
     if(check_empty(dataGatewayIPaddress->str)) {
         strcpy(outValue, dataGatewayIPaddress->str);
         result = TRUE;
@@ -1201,7 +1249,7 @@ BOOL getEstbMacAddr(char *outValue)
     if (!check_empty(hostmacaddress->str)) {
         const gchar *hostmac = (gchar *)getmacaddress(devConf->hostMacIf);
         if (hostmac) {
-            g_message("MAC address in  interface: %s  %s \n", devConf->hostMacIf, hostmac);
+            g_message("MAC address in  interface: %s  %s ", devConf->hostMacIf, hostmac);
             strcpy(hostmacaddress->str, hostmac);
             result = TRUE;
         } else {
@@ -1249,9 +1297,7 @@ BOOL checkCVP2Enabled()
 }
 BOOL xdeviceInit(char *devConfFile, char *devLogFile)
 {
-//#######################
     GError *error = NULL;
-//#######################
 
     url = g_string_new(NULL);
     trmurl = g_string_new(NULL);
@@ -1300,23 +1346,13 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
 #ifndef CLIENT_XCAL_SERVER
         if(readconffile(devConfFile)==FALSE)
         {
-                g_message("inside %s readconffile returned FALSE\n",__FUNCTION__);
+                g_message("readconffile returned FALSE");
                  devConf = g_new(ConfSettings, 1);
-        }
-        else
-        {
-                g_message("inside %s readconffile returned TRUE \n",__FUNCTION__);
         }
 #else
     devConf = g_new(ConfSettings, 1);
 #endif
-//    const char *configfilename = argv[1];
-//    if (readconffile(configfilename) == FALSE) {
-//#ifndef CLIENT_XCAL_SERVER
-//        g_message("Unable to find xdevice config, giving up\n");
-//        exit(1);
-//#endif
-//    }
+
 #ifdef CLIENT_XCAL_SERVER
     if (! (devConf->bcastPort))
         devConf->bcastPort = BCAST_PORT;
@@ -1339,11 +1375,9 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     if (check_null(devLogFile)) {
         logoutfile = g_fopen (devLogFile, "a");
     }
-#ifdef ENABLE_LOGFILE
     else if (devConf->logFile) {
         logoutfile = g_fopen (devConf->logFile, "a");
     }
-#endif
     else {
         g_message("xupnp not handling the logging");
     }
@@ -1355,19 +1389,17 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     g_message("Starting xdevice service on interface %s", devConf->bcastIf);
     if (devConf->devPropertyFile != NULL) {
         if (readDevFile(devConf->devPropertyFile) == TRUE) {
-            g_message("Receiver Type : %s Build Version :  %s Device Type: %s moca %s wifi %s \n",
+            g_message("Receiver Type : %s Build Version :  %s Device Type: %s moca %s wifi %s ",
                       recvdevtype->str, buildversion->str, devicetype->str, mocaIface->str,
                       wifiIface->str);
         } else {
-            g_message(" ERROR in getting Receiver Type : %s Build Version :  %s \n",
+            g_message(" ERROR in getting Receiver Type : %s Build Version :  %s ",
                       recvdevtype->str, buildversion->str);
-            g_message("Receiver Type : %s Build Version :  %s Device Type: %s moca %s wifi %s \n",
+            g_message("Receiver Type : %s Build Version :  %s Device Type: %s moca %s wifi %s ",
                       recvdevtype->str, buildversion->str, devicetype->str, mocaIface->str,
                       wifiIface->str);
         }
     }
-    g_string_assign(devConf->bcastIf, mocaIface->str);
-//    g_string_assign(mocaIface,"brlan0:0");
 #ifndef CLIENT_XCAL_SERVER
     int result;
     if ( access(devConf->ipv6FileLocation, F_OK ) != -1 )
@@ -1391,12 +1423,12 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
                    devConf->bcastIf);
         exit(1);
     } else
-        g_message("ipaddress of the interface %s\n", ipAddressBuffer);
+        g_message("ipaddress of the interface %s", ipAddressBuffer);
 #else
     ipAddressBuffer[0] = '\0';
     int result = getipaddress(mocaIface->str, ipAddressBuffer, FALSE);
     if (!result) {
-        g_message("Could not locate the ipaddress of the broadcast interface %s",
+        g_message("Could not locate the ipaddress of the broadcast moca isolation interface %s",
                   mocaIface->str);
         result = getipaddress(wifiIface->str, ipAddressBuffer, FALSE);
         if (!result) {
@@ -1411,10 +1443,10 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     } else {
         devConf->bcastIf = g_strdup(mocaIface->str);
     }
-    g_message("Starting xdevice service on interface %s", devConf->bcastIf);
+    g_message("Starting xdevice service on interface %s ipAddressBuffer= %s", devConf->bcastIf,ipAddressBuffer);
 #endif
-    g_message("Broadcast Network interface: %s\n", devConf->bcastIf);
-    g_message("Dev XML File Name: %s\n", devConf->devXmlFile);
+    g_message("Broadcast Network interface: %s", devConf->bcastIf);
+    g_message("Dev XML File Name: %s", devConf->devXmlFile);
     g_string_assign(gwyip, ipAddressBuffer);
     //Init IARM Events
 #if defined(USE_XUPNP_IARM_BUS)
@@ -1446,7 +1478,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     if (devConf->bcastIf != NULL ) {
         const gchar *bcastmac = (gchar *)getmacaddress(devConf->bcastIf);
         if (bcastmac) {
-            g_message("Broadcast MAC address in  interface: %s  %s \n", devConf->bcastIf,
+            g_message("Broadcast MAC address in  interface: %s  %s ", devConf->bcastIf,
                       bcastmac);
         } else {
             g_message("failed to retrieve macaddress on interface %s ", devConf->bcastIf);
@@ -1457,7 +1489,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     const gchar *eroutermac = (gchar *)getmacaddress(UDN_IF);
     if(eroutermac)
     {
-	g_message("Erouter0 MAC address in interface: %s %s\n",UDN_IF,
+	g_message("Erouter0 MAC address in interface: %s %s",UDN_IF,
 		  eroutermac);
     }
     else
@@ -1466,14 +1498,6 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     }
     g_string_assign(eroutermacaddress,eroutermac);
     g_message("erouter0 mac address is %s",eroutermacaddress->str);
-/*    if (devConf->deviceNameFile != NULL) {
-//####        if (getdevicename() == TRUE) {
-	if (getDeviceName(devicename->str) == TRUE) {
-            g_message("Device Name : %s ", devicename->str);
-        } else {
-            g_message(" ERROR in getting Device Name ");
-        }
-    }*/
     if(devicename->str != NULL)
     {
 	g_message("Device Name : %s ", devicename->str);
@@ -1482,8 +1506,6 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     {
 	g_message(" ERROR in getting Device Name ");
     }
-    //status = FALSE;
-    //g_string_assign(recv_id, argv[2]);
 #ifndef CLIENT_XCAL_SERVER
     if (devConf->enableTRM == FALSE) {
         requirestrm = FALSE;
@@ -1504,7 +1526,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
         g_print("Contents of dnsconfig is %s\n", dnsconfig->str);
     }
     if (updatesystemids() == TRUE) {
-        g_message("System ids are %s\n", systemids->str);
+        g_message("System ids are %s", systemids->str);
     } else {
         g_warning("Error in finding system ids\n");
     }
@@ -1516,24 +1538,23 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     g_message("Received Serial Number:%s", serial_num->str);
 #else
     if (getserialnum(serial_num) == TRUE) {
-        g_print("Serial Number is %s\n", serial_num->str);
+        g_message("Serial Number is %s", serial_num->str);
     }
 #endif
 #else
     if (getserialnum(serial_num) == TRUE) {
-        g_print("Serial Number is %s\n", serial_num->str);
+        g_message("Serial Number is %s", serial_num->str);
     }
 #endif
-//    if (getFogStatus())
-//        g_message(" fog tsb url  %s \n", fogtsburl->str);
+
 #ifndef CLIENT_XCAL_SERVER
     if (getetchosts() == TRUE) {
-        g_print("EtcHosts Content is \n%s\n", etchosts->str);
+        g_message("EtcHosts Content is %s", etchosts->str);
     } else {
-        g_print("Error in getting etc hosts\n");
+        g_message("Error in getting etc hosts");
     }
 #else
-//####    getRouteData();
+
 #endif
 #ifndef CLIENT_XCAL_SERVER
     if (devConf->disableTuneReady == FALSE) {
@@ -1569,12 +1590,6 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     }
 #endif
 }
-
-//#######################
-//typedef INT (*xdevice_service_callback)(enum serviceListCb , char *data);
-
-//void xdevice_service_register(xdevice_service_callback callback_proc);
-//#########################
 
 /**
  * @brief This function is used to get the Receiver Id & Partner Id.
@@ -2317,8 +2332,7 @@ gboolean parseserialnum(GString *serial_num)
     return result;
 #else
     bool bRet;
-  /*
-    IARM_Bus_MFRLib_GetSerializedData_Param_t param;
+/*    IARM_Bus_MFRLib_GetSerializedData_Param_t param;
     IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
     memset(&param, 0, sizeof(param));
     param.type = mfrSERIALIZED_TYPE_SERIALNUMBER;
@@ -2337,8 +2351,7 @@ gboolean parseserialnum(GString *serial_num)
         bRet = false;
         g_message(  "IARM CALL failed  for mfrtype \n");
     }
-    */
-    return bRet;
+    return bRet;*/
 #endif
 }
 

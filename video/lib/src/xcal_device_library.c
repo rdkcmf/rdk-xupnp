@@ -614,11 +614,14 @@ static void _fogEventHandler(const char *owner, IARM_EventId_t eventId,
         if (fogStatus) {
             g_message("Received FOG Status update as TRUE");
             g_string_printf(fogtsburl, pFogEventData->tsbEndpoint);
+	    g_string_printf(videobaseurl, "http://%s/video", gwyip->str);
+	    g_message("_fogEventHandler: setting VideoBaseUrl:%s \n",videobaseurl->str);
         } else {
             g_message("Received FOG Status update as FALSE");
             g_string_printf(fogtsburl, "");
         }
 	(*eventCallback)("FogTsbUrl", fogtsburl->str);
+	(*eventCallback)("VideoBaseUrl", videobaseurl->str);
     }
 }
 /**
@@ -1874,6 +1877,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
         devConf->devXmlFile = g_strdup(DEVICE_XML_FILE);
     devConf->allowGwy = FALSE;
     devConf->useIARM = TRUE;
+    devConf->useGliDiag=TRUE;
 #endif
     if (check_null(devLogFile)) {
         logoutfile = g_fopen (devLogFile, "a");

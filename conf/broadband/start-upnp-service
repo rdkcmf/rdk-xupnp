@@ -20,7 +20,7 @@
 ### BEGIN INIT INFO
 # Provides:          start-upnp-service
 # Should-Start:
-# Required-Start:    disable-hyperthreading
+# Required-Start:
 # Required-Stop:
 # Default-Start:     3
 # Default-Stop:
@@ -62,8 +62,7 @@ fi
 
 start_function() {
     pre_start "$INIT_SCRIPT_LOGFILE" ">>"
-#    sh /etc/start_upnp.sh $XDISCOVERY_PIPE &
-    sh /tmp/start_upnp.sh $XDISCOVERY_PIPE &
+    sh /lib/rdk/start_upnp.sh $XDISCOVERY_PIPE &
     post_start $?
 }
 stop_function() {
@@ -89,5 +88,4 @@ case "$1" in
     exit 1
   ;;
 esac
-
 
