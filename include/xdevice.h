@@ -55,8 +55,8 @@ GString *trmurlCVP2, *playbackurlCVP2, *gwyipCVP2;
 unsigned long channelmap_id, dac_id, plant_id, vodserver_id;
 GString *dsgtimezone, *etchosts;
 GUPnPRootDevice *dev, *cvpdev;
-GUPnPServiceInfo *service, *cvpservice;
-GUPnPContext *context, *cvpcontext;
+GUPnPServiceInfo *upnpService, *cvpservice;
+GUPnPContext *upnpContext, *cvpcontext;
 
 gboolean isgateway, tune_ready, service_ready, requirestrm, usesDaylightTime;
 gint dstOffset, rawOffset, dstSavings;

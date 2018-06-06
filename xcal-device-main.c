@@ -196,7 +196,7 @@ void notify_value_change(const char* varname, const char* strvalue)
         g_value_init(&value, G_TYPE_STRING);
         g_value_set_static_string(&value, strvalue);
         g_message("Sending value change notification Name %s - Value: %s", varname, strvalue);
-        gupnp_service_notify_value(service, varname, &value);
+        gupnp_service_notify_value(upnpService, varname, &value);
         //g_value_unset(&value);
     }
     return;
@@ -1228,8 +1228,7 @@ main (int argc, char **argv)
     else
         fprintf(stderr,"Updated the device xml file %s\n", xmlfilename);
         fprintf(stderr,"Updated the struuid value %s\n",struuid);
-    /* Create the UPnP context */
-    context = gupnp_context_new (NULL, devBcastIf, devBcastPort, &error);
+    upnpContext = gupnp_context_new (NULL, devBcastIf, devBcastPort, &error);
     if (error) {
         g_printerr ("Error creating the Broadcast context: %s\n",
                     error->message);
@@ -1237,9 +1236,8 @@ main (int argc, char **argv)
         g_clear_error(&error);
         return EXIT_FAILURE;
     }
-    gupnp_context_set_subscription_timeout(context, 0);
-    /* Create root device */
-    dev = gupnp_root_device_new (context, devXMlFile, devXMlPath);
+    gupnp_context_set_subscription_timeout(upnpContext, 0);
+    dev = gupnp_root_device_new (upnpContext, devXMlFile, devXMlPath);
 #ifndef CLIENT_XCAL_SERVER
     if(!getDisableTuneReadyStatus())
     {
@@ -1250,10 +1248,9 @@ main (int argc, char **argv)
     }
 #endif
     gupnp_root_device_set_available (dev, TRUE);
-    /* Get the discover friendlies service from the root device */
-    service = gupnp_device_info_get_service
+    upnpService = gupnp_device_info_get_service
               (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:DiscoverFriendlies:1");
-    if (!service) {
+    if (!upnpService) {
         g_printerr ("Cannot get DiscoverFriendlies service\n");
         return EXIT_FAILURE;
     }
@@ -1263,69 +1260,62 @@ main (int argc, char **argv)
               "MAINPID=%lu",
               (unsigned long) getpid());
 #endif
-    /* Autoconnect the action and state variable handlers.  This connects
-         query_target_cb and query_status_cb to the Target and Status state
-         variables query callbacks, and set_target_cb, get_target_cb and
-         get_status_cb to SetTarget, GetTarget and GetStatus actions
-         respectively. */
-    /*gupnp_service_signals_autoconnect (GUPNP_SERVICE (service), NULL, &error);
-    if (error) {
-      g_printerr ("Failed to autoconnect signals: %s\n", error->message);
-      g_error_free (error);
-      return EXIT_FAILURE;
-    }*/
-    g_signal_connect (service, "action-invoked::GetBaseUrl", G_CALLBACK (get_url_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetBaseTrmUrl", G_CALLBACK (get_trm_url_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetGatewayIP", G_CALLBACK (get_gwyip_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetGatewayIPv6", G_CALLBACK (get_gwyipv6_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetIpv6Prefix", G_CALLBACK (get_ipv6prefix_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetDnsConfig", G_CALLBACK (get_dnsconfig_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetSystemIds", G_CALLBACK (get_systemids_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetTimeZone", G_CALLBACK (get_timezone_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetHosts", G_CALLBACK (get_hosts_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetRequiresTRM", G_CALLBACK (get_requirestrm_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetHostMacAddress", G_CALLBACK (get_hostmacaddress_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetRawOffSet", G_CALLBACK (get_rawoffset_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetDSTOffset", G_CALLBACK (get_dstoffset_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetDSTSavings", G_CALLBACK (get_dstsavings_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetUsesDaylightTime", G_CALLBACK (get_usesdaylighttime_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetPlaybackUrl", G_CALLBACK (get_playback_url_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetDataGatewayIPaddress", G_CALLBACK (get_dataGatewayIPaddress_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetFogTsbUrl", G_CALLBACK (get_fogtsb_url_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetVideoBaseUrl", G_CALLBACK (get_videobase_url_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetDeviceName", G_CALLBACK (get_devicename_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetIsGateway", G_CALLBACK (get_isgateway_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetRecvDevType", G_CALLBACK (get_recvdevtype_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetDeviceType", G_CALLBACK (get_devicetype_cb), NULL);
-    g_signal_connect (service, "action-invoked::GetBuildVersion", G_CALLBACK (get_buildversion_cb), NULL);
-    g_signal_connect (service, "query-variable::Url", G_CALLBACK (query_url_cb), NULL);
-    g_signal_connect (service, "query-variable::TrmUrl", G_CALLBACK (query_trm_url_cb), NULL);
-    g_signal_connect (service, "query-variable::GatewayIP", G_CALLBACK (query_gwyip_cb), NULL);
-    g_signal_connect (service, "query-variable::GatewayIPv6", G_CALLBACK (query_gwyipv6_cb), NULL);
-    g_signal_connect (service, "query-variable::Ipv6Prefix", G_CALLBACK (query_ipv6prefix_cb), NULL);
-    g_signal_connect (service, "query-variable::GatewayStbIP", G_CALLBACK (query_gwystbip_cb), NULL);
-    g_signal_connect (service, "query-variable::DnsConfig", G_CALLBACK (query_dnsconfig_cb), NULL);
-    g_signal_connect (service, "query-variable::SystemIds", G_CALLBACK (query_systemids_cb), NULL);
-    g_signal_connect (service, "query-variable::TimeZone", G_CALLBACK (query_timezone_cb), NULL);
-    g_signal_connect (service, "query-variable::Hosts", G_CALLBACK (query_hosts_cb), NULL);
-    g_signal_connect (service, "query-variable::RequiresTRM", G_CALLBACK (query_requirestrm_cb), NULL);
-    g_signal_connect (service, "query-variable::HostMacAddress", G_CALLBACK (query_hostmacaddress_cb), NULL);
-    g_signal_connect (service, "query-variable::RawOffSet", G_CALLBACK (query_rawoffset_cb), NULL);
-    g_signal_connect (service, "query-variable::DSTOffset", G_CALLBACK (query_dstoffset_cb), NULL);
-    g_signal_connect (service, "query-variable::DSTSavings", G_CALLBACK (query_dstsavings_cb), NULL);
-    g_signal_connect (service, "query-variable::UsesDaylightTime", G_CALLBACK (query_usesdaylighttime_cb), NULL);
-    g_signal_connect (service, "query-variable::PlaybackUrl", G_CALLBACK (query_playback_url_cb), NULL);
-    g_signal_connect (service, "query-variable::DataGatewayIPaddress", G_CALLBACK (query_dataGatewayIPaddress_cb), NULL);
-    g_signal_connect (service, "query-variable::FogTsbUrl", G_CALLBACK (query_fogtsb_url_cb), NULL);
-    g_signal_connect (service, "query-variable::VideoBaseUrl", G_CALLBACK (query_videobase_url_cb), NULL);
-    g_signal_connect (service, "query-variable::DeviceName", G_CALLBACK (query_devicename_cb), NULL);
-    g_signal_connect (service, "query-variable::IsGateway", G_CALLBACK (query_isgateway_cb), NULL);
-    g_signal_connect (service, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
-    g_signal_connect (service, "query-variable::RecvDevType", G_CALLBACK (query_recvdevtype_cb), NULL);
-    g_signal_connect (service, "query-variable::DeviceType", G_CALLBACK (query_devicetype_cb), NULL);
-    g_signal_connect (service, "query-variable::BuildVersion", G_CALLBACK (query_buildversion_cb), NULL);
+
+    g_signal_connect (upnpService, "action-invoked::GetBaseUrl", G_CALLBACK (get_url_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetBaseTrmUrl", G_CALLBACK (get_trm_url_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetGatewayIP", G_CALLBACK (get_gwyip_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetGatewayIPv6", G_CALLBACK (get_gwyipv6_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetIpv6Prefix", G_CALLBACK (get_ipv6prefix_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetDnsConfig", G_CALLBACK (get_dnsconfig_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetSystemIds", G_CALLBACK (get_systemids_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetTimeZone", G_CALLBACK (get_timezone_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetHosts", G_CALLBACK (get_hosts_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetRequiresTRM", G_CALLBACK (get_requirestrm_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetHostMacAddress", G_CALLBACK (get_hostmacaddress_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetRawOffSet", G_CALLBACK (get_rawoffset_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetDSTOffset", G_CALLBACK (get_dstoffset_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetDSTSavings", G_CALLBACK (get_dstsavings_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetUsesDaylightTime", G_CALLBACK (get_usesdaylighttime_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetPlaybackUrl", G_CALLBACK (get_playback_url_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetDataGatewayIPaddress", G_CALLBACK (get_dataGatewayIPaddress_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetFogTsbUrl", G_CALLBACK (get_fogtsb_url_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetVideoBaseUrl", G_CALLBACK (get_videobase_url_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetDeviceName", G_CALLBACK (get_devicename_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetIsGateway", G_CALLBACK (get_isgateway_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetRecvDevType", G_CALLBACK (get_recvdevtype_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetDeviceType", G_CALLBACK (get_devicetype_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetBuildVersion", G_CALLBACK (get_buildversion_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::Url", G_CALLBACK (query_url_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::TrmUrl", G_CALLBACK (query_trm_url_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::GatewayIP", G_CALLBACK (query_gwyip_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::GatewayIPv6", G_CALLBACK (query_gwyipv6_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::Ipv6Prefix", G_CALLBACK (query_ipv6prefix_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::GatewayStbIP", G_CALLBACK (query_gwystbip_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::DnsConfig", G_CALLBACK (query_dnsconfig_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::SystemIds", G_CALLBACK (query_systemids_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::TimeZone", G_CALLBACK (query_timezone_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::Hosts", G_CALLBACK (query_hosts_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::RequiresTRM", G_CALLBACK (query_requirestrm_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::HostMacAddress", G_CALLBACK (query_hostmacaddress_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::RawOffSet", G_CALLBACK (query_rawoffset_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::DSTOffset", G_CALLBACK (query_dstoffset_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::DSTSavings", G_CALLBACK (query_dstsavings_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::UsesDaylightTime", G_CALLBACK (query_usesdaylighttime_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::PlaybackUrl", G_CALLBACK (query_playback_url_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::DataGatewayIPaddress", G_CALLBACK (query_dataGatewayIPaddress_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::FogTsbUrl", G_CALLBACK (query_fogtsb_url_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::VideoBaseUrl", G_CALLBACK (query_videobase_url_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::DeviceName", G_CALLBACK (query_devicename_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::IsGateway", G_CALLBACK (query_isgateway_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::RecvDevType", G_CALLBACK (query_recvdevtype_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::DeviceType", G_CALLBACK (query_devicetype_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::BuildVersion", G_CALLBACK (query_buildversion_cb), NULL);
     service_ready=TRUE;
 
 #ifndef CLIENT_XCAL_SERVER
@@ -1373,7 +1363,6 @@ main (int argc, char **argv)
         gupnp_context_set_subscription_timeout(cvpcontext, 0);
 	cvpdev = gupnp_root_device_new (cvpcontext, cvPXmlFile, devXMlPath);
         gupnp_root_device_set_available (cvpdev, TRUE);
-        /* Get the CVP service from the root device */
         cvpservice = gupnp_device_info_get_service
                      (GUPNP_DEVICE_INFO (cvpdev), "urn:schemas-upnp-org:service:RemoteUIServer:1");
         if (!cvpservice) {
@@ -1397,9 +1386,9 @@ main (int argc, char **argv)
     g_main_loop_run (main_loop);
     /* Cleanup */
     g_main_loop_unref (main_loop);
-    g_object_unref (service);
+    g_object_unref (upnpService);
     g_object_unref (dev);
-    g_object_unref (context);
+    g_object_unref (upnpContext);
     return EXIT_SUCCESS;
 }
 

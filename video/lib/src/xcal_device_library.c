@@ -1890,7 +1890,6 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     else {
         g_message("xupnp not handling the logging");
     }
-    g_message("Starting xdevice service on interface %s", devConf->bcastIf);
     if (devConf->devPropertyFile != NULL) {
         if (readDevFile(devConf->devPropertyFile) == TRUE) {
             g_message("Receiver Type : %s Build Version :  %s Device Type: %s moca %s wifi %s \n",
