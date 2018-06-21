@@ -32,6 +32,9 @@
 #ifdef ENABLE_BREAKPAD
 #include "breakpadWrapper.h"
 #endif
+#ifdef BROADBAND
+#include "breakpad_wrapper.h"
+#endif
 #ifdef ENABLE_SD_NOTIFY
 #include <systemd/sd-daemon.h>
 #endif
@@ -1216,6 +1219,9 @@ main (int argc, char **argv)
 	g_message("devBcastIf=%sdevBcastPort=%d",devBcastIf,devBcastPort);
 #ifdef ENABLE_BREAKPAD
     installExceptionHandler();
+#endif
+#ifdef BROADBAND
+    breakpad_ExceptionHandler();
 #endif
     char* xmlfilename = devXMlFile;
     const char* struuid = uUid;

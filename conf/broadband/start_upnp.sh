@@ -189,7 +189,7 @@ if [ "$GATEWAY_DEVICE" = "yes" ] || [ "$DEVICE_TYPE" = "hybrid" ]; then
    fi
 else
    echo "Mediaclient Execution..!"
-   if [ -s /etc/xupnp/BasicDevice.xml ] || [ -f /etc/xupnp/BasicDevice.xml ] ; then
+   if [ -s /etc/xupnp/BasicDevice.xml ] || [ -f /etc/xupnp/BasicDevice.xml ]; then
 	cp /etc/xupnp/BasicDevice.xml /nvram/xupnp/BasicDevice.xml
 	chmod +x /etc/xupnp/BasicDevice.xml
 	mount --bind /nvram/xupnp/BasicDevice.xml /etc/xupnp/BasicDevice.xml

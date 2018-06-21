@@ -32,6 +32,9 @@
 #ifdef ENABLE_BREAKPAD
 #include "breakpadWrapper.h"
 #endif
+#ifdef BROADBAND
+#include "breakpad_wrapper.h"
+#endif
 //Symbols defined in makefile (via defs.mk)
 //#define USE_XUPNP_IARM
 //#define GUPNP_0_19
@@ -528,7 +531,9 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_BREAKPAD
     installExceptionHandler();
 #endif
-
+#ifdef BROADBAND
+    breakpad_ExceptionHandler();
+#endif
 //   outputfilename = g_string_new("null");
     outputcontents = g_string_new(NULL);
     ipMode = g_string_new("ipv4");

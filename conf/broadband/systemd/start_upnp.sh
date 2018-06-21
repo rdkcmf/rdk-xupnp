@@ -189,23 +189,19 @@ if [ "$GATEWAY_DEVICE" = "yes" ] || [ "$DEVICE_TYPE" = "hybrid" ]; then
    fi
 else
    echo "Mediaclient Execution..!"
-   if [ -s /etc/xupnp/BasicDevice.xml ] || [ -f /etc/xupnp/BasicDevice.xml ] ; then
+   if [ -s /etc/xupnp/BasicDevice.xml ] || [ -f /etc/xupnp/BasicDevice.xml ]; then
 	cp /etc/xupnp/BasicDevice.xml /nvram/xupnp/BasicDevice.xml
 	chmod +x /etc/xupnp/BasicDevice.xml
-	mount --bind /nvram/xupnp/BasicDevice.xml /etc/xupnp/BasicDevice.xml
    fi
    if [ -f /etc/xupnp/DiscoverFriendlies.xml ]; then
         cp /etc/xupnp/DiscoverFriendlies.xml  /nvram/xupnp/DiscoverFriendlies.xml
-	mount --bind /nvram/xupnp/DiscoverFriendlies.xml /etc/xupnp/DiscoverFriendlies.xml
    fi
    if [ -f /etc/xupnp/RemoteUIServerDevice.xml ]; then
          cp /etc/xupnp/RemoteUIServerDevice.xml /nvram/xupnp/RemoteUIServerDevice.xml
          chmod +x /nvram/xupnp/RemoteUIServerDevice.xml
-	 mount --bind /nvram/xupnp/RemoteUIServerDevice.xml /etc/xupnp/RemoteUIServerDevice.xml
    fi
    if [ -f /etc/xupnp/RemoteUIServer.xml ]; then
          cp /etc/xupnp/RemoteUIServer.xml /nvram/xupnp/RemoteUIServer.xml
-	 mount --bind /nvram/xupnp/RemoteUIServer.xml /etc/xupnp/RemoteUIServer.xml
    fi
 fi
 mocaIpWait

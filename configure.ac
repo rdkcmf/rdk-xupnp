@@ -137,7 +137,8 @@ AC_ARG_ENABLE([broadband-support],
         [
           case "${enableval}" in
            yes) BROADBAND_SUPPORT=true
-                CFLAGS+=" -DCLIENT_XCAL_SERVER";;
+                CFLAGS+=" -DCLIENT_XCAL_SERVER"
+		CFLAGS+=" -DBROADBAND";;
            no) BROADBAND_SUPPORT=false ;;
           *) AC_MSG_ERROR([bad value ${enableval} for --enable-broadband-support ]) ;;
            esac
