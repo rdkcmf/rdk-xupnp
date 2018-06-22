@@ -416,6 +416,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     if(xdevlistitem!=NULL)
     {
 	g_message("Existing as SNO is present in list so no update of devices %s",sno);
+        deviceAddNo--;
 	return;
     }
 
@@ -1388,14 +1389,13 @@ void* verify_devices()
         }
         if(deviceAddNo)
         {
-            sleepCounter++;
-            if(sleepCounter > 24)
-                g_message("TELEMETRY_XUPNP_DISCOVERY_MAIN_LOOP_HANGED");
-            else
+            if((sleepCounter > 6) && (sleepCounter < 12)) //wait for device addition to complete in 60 seconds and print only for another 60 seconds if there is a hang
             {
-                usleep(XUPNP_RESCAN_INTERVAL);
-                continue;
+                g_message("TELEMETRY_XUPNP_DISCOVERY_MAIN_LOOP_HANGED");
             }
+            sleepCounter++;
+            usleep(XUPNP_RESCAN_INTERVAL);
+            continue;
         }
         sleepCounter=0;
         if (gssdp_resource_browser_rescan(GSSDP_RESOURCE_BROWSER(cp))==FALSE)
