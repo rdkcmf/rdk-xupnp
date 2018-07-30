@@ -395,17 +395,16 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     //g_print("Found a new device\n");
 //    if(!checkDevAddInProgress)
 //    {
-    deviceAddNo++;
 //    ret=g_mutex_trylock(devMutex);
 //    if (TRUE == ret)
 //    {
-    g_message("Entering into device_proxy_available_cb ");
-    g_message("Found a new gateway device");
+    g_message("Found a new gateway device. deviceAddNo = %u ",deviceAddNo);
+    deviceAddNo++;
     if ((NULL==cp) || (NULL==dproxy))
     {
-        g_message("WARNING - Received a null pointer for gateway device");
 //	        g_mutex_unlock(devMutex);
         deviceAddNo--;
+        g_message("WARNING - Received a null pointer for gateway device device no %u",deviceAddNo);
         return;
     }
     GwyDeviceData *gwydata = g_new(GwyDeviceData,1);
@@ -415,9 +414,9 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     GList* xdevlistitem = g_list_find_custom(xdevlist,sno,(GCompareFunc)g_list_find_sno);
     if(xdevlistitem!=NULL)
     {
-	g_message("Existing as SNO is present in list so no update of devices %s",sno);
         deviceAddNo--;
-	return;
+        g_message("Existing as SNO is present in list so no update of devices %s device no %u",sno,deviceAddNo);
+        return;
     }
 
     if (sno != NULL)
@@ -442,8 +441,9 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                         g_free(gwydata);
                         g_free(receiverid);
     		        g_free(sno);
-    		        g_message("Exting from device_proxy_available_cb since mandatory paramters are not there ");
-                        deviceAddNo--;
+                    deviceAddNo--;
+    		        g_message("Exting from device_proxy_available_cb since mandatory paramters are not there  device no %u",deviceAddNo);
+
 		        return;
 		    }
                     else
@@ -485,8 +485,9 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
         g_object_unref(sproxy);
     }
     g_free(sno);
-    g_message("Exting from device_proxy_available_cb ");
     deviceAddNo--;
+    g_message("Exting from device_proxy_available_cb deviceAddNo = %u",deviceAddNo);
+
 //    }
 //    else
 //    {
@@ -1392,6 +1393,7 @@ void* verify_devices()
             if((sleepCounter > 6) && (sleepCounter < 12)) //wait for device addition to complete in 60 seconds and print only for another 60 seconds if there is a hang
             {
                 g_message("TELEMETRY_XUPNP_DISCOVERY_MAIN_LOOP_HANGED");
+                g_message("Device Addition %u going in main loop",deviceAddNo);
             }
             sleepCounter++;
             usleep(XUPNP_RESCAN_INTERVAL);
@@ -1622,7 +1624,10 @@ void delOldItemsFromList(gboolean bDeleteAll)
             {
                 if (gwdata->devFoundFlag==FALSE || bDeleteAll==TRUE)
                 {
-                    g_message("Removing Gateway Device %s from the device list", gwdata->serial_num->str);
+                    if(gwdata->isgateway == TRUE)
+                        g_message("Removing Gateway Device %s from the device list", gwdata->serial_num->str);
+                    else
+                        g_message("Removing Client Device %s from the device list", gwdata->serial_num->str);
 #ifdef ENABLE_ROUTE
                     if ((disConf->enableGwSetup == TRUE) && (gwdata->isRouteSet) && checkvalidip(gwdata->gwyip->str))
                     {
