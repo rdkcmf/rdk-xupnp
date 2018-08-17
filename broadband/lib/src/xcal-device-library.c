@@ -150,14 +150,22 @@ void xupnpEventCallback_register(xupnpEventCallback callback_func)
 gboolean getserialnum(GString* serial_num)
 {
     gboolean result = FALSE;
-    if ( platform_hal_GetSerialNumber(serial_num->str) == 0)
+    if ( platform_hal_PandMDBInit() == 0)
     {
-        g_message("serialNumber returned from hal:%s", serial_num->str);
-	result = TRUE;
+	g_message("getserialnum: hal PandMDB initiated successfully");
+	if ( platform_hal_GetSerialNumber(serial_num->str) == 0)
+        {
+            g_message("getserialnum: serialNumber from hal:%s", serial_num->str);
+	    result = TRUE;
+        }
+        else
+        {
+                g_error("getserialnum: Unable to get SerialNumber");
+        }
     }
     else
     {
-            g_error("Unable to get SerialNumber");
+	g_message("getserialnum: Failed to initiate hal DB to fetch SerialNumber");
     }
     return result;
 }
@@ -985,7 +993,7 @@ BOOL getSerialNum(char *outValue)
         g_message("getSerialNum : NULL string !");
         return result;
     }
-    if(getserialnum(serial_num)) {
+    if(check_empty(serial_num->str)) {
         strcpy(outValue, serial_num->str);
         result = TRUE;
     } else {
@@ -1317,8 +1325,8 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     etchosts = g_string_new(NULL);
     serial_num = g_string_new(NULL);
     channelmap_id = dac_id = plant_id = vodserver_id = 0;
-    isgateway = TRUE;
-    requirestrm = TRUE;
+    isgateway = FALSE;
+    requirestrm = FALSE;
     service_ready = FALSE;
     tune_ready = FALSE;
     ruiurl = g_string_new(NULL);

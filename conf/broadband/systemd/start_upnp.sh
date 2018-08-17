@@ -29,14 +29,23 @@ status=""
 while [ "X$status" == "X" ]
 do
         status=`psmcli get dmsb.l2net.HomeNetworkIsolation`
+
+	#Handle PSM fallback case
+        if [ "$status" == "" ];
+	then
+	      status=0
+ 	fi
+
         if [ $status == "0" ];
         then
                 echo "Moca Isolation disabled creating new interface brlan0:0"
 		busybox zcip brlan0 /lib/rdk/zcip.script
 		MOCA_INTERFACE="brlan0:0"
+                XCAL_DEF_INTERFACE="brlan0:0"
         else
                 echo "Moca Isolation Enabled, using brlan10 interface"
 		MOCA_INTERFACE="brlan10"
+                XCAL_DEF_INTERFACE="brlan10"
         fi
         echo "Success"
 done
@@ -67,22 +76,6 @@ fi
 XDISC_LOG_FILE=""
 if [ "$1" != "" ]; then
      XDISC_LOG_FILE="$1"
-fi
-
-if [ "$DEVICE_TYPE" != "mediaclient" ]; then
-    if [ -f /opt/upnp_interface ] ; then
-         export XCAL_DEF_INTERFACE=`cat /opt/upnp_interface`
-    else
-         export XCAL_DEF_INTERFACE=$MOCA_INTERFACE
-    fi
-    if [ ! "$XCAL_DEF_INTERFACE" ] ; then
-         export XCAL_DEF_INTERFACE=brlan0:0
-    fi
-else
-    XCAL_DEF_INTERFACE=$MOCA_INTERFACE
-fi
-if [ -f /tmp/wifi-on ]; then
-    XCAL_DEF_INTERFACE=`getWiFiInterface`
 fi
 
 mkdir -p /nvram/xupnp
