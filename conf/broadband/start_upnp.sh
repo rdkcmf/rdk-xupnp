@@ -29,6 +29,13 @@ status=""
 while [ "X$status" == "X" ]
 do
         status=`psmcli get dmsb.l2net.HomeNetworkIsolation`
+
+	#Handle PSM fallback case
+        if [ "$status" == "" ];
+	then
+	      status=0
+ 	fi
+
         if [ $status == "0" ];
         then
                 echo "Moca Isolation disabled creating new interface brlan0:0"
