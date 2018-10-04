@@ -2125,77 +2125,81 @@ GString *getID( const gchar *id )
     SoupSession *session = soup_session_sync_new();
     GString *jsonData = g_string_new(NULL);
     GString *value = g_string_new(NULL);
+    while(TRUE)
+    {
 //    if (IARM_BUS_SYS_MODE_WAREHOUSE == sysModeParam)
 #if defined(USE_XUPNP_IARM_BUS)
-    if (( devConf->wareHouseMode == TRUE )
-            || (IARM_BUS_SYS_MODE_WAREHOUSE == sysModeParam)) {
-        const gchar *bcastmac = (gchar *)getmacaddress(devConf->bcastIf);
-        g_string_assign(value, bcastmac);
-        g_message("In WareHouse Mode recvid  %s bcastmac %s \n ", recv_id->str,
-                  bcastmac);
-        g_string_free(jsonData, TRUE);
-        soup_session_abort (session);
-        return value;
-    }
+        if (( devConf->wareHouseMode == TRUE )
+                || (IARM_BUS_SYS_MODE_WAREHOUSE == sysModeParam)) {
+            const gchar *bcastmac = (gchar *)getmacaddress(devConf->bcastIf);
+            g_string_assign(value, bcastmac);
+            g_message("In WareHouse Mode recvid  %s bcastmac %s \n ", recv_id->str,
+                      bcastmac);
+            g_string_free(jsonData, TRUE);
+            soup_session_abort (session);
+            return value;
+        }
 #endif //#if defined(USE_XUPNP_IARM_BUS)
-    SoupMessage *msg = soup_message_new ("GET", devConf->authServerUrl);
-    if (msg != NULL) {
-        soup_session_send_message (session, msg);
-        if (SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
-            if ((msg->response_body->data[0] == '\0') && (counter < MAX_DEBUG_MESSAGE)) {
-                counter ++;
-                g_message("No Json string found in Auth url  %s \n" ,
-                          msg->response_body->data);
-            } else {
-                g_string_assign(jsonData, msg->response_body->data);
-                gchar **tokens = g_strsplit_set(jsonData->str, "{}:,\"", -1);
-                guint tokLength = g_strv_length(tokens);
-                guint loopvar = 0;
-                for (loopvar = 0; loopvar < tokLength; loopvar++) {
-                    if (g_strrstr(g_strstrip(tokens[loopvar]), id)) {
-                        //"deviceId": "T00xxxxxxx" so omit 3 tokens ":" fromDeviceId
-                        if ((loopvar + 3) < tokLength ) {
-                            g_string_assign(value, g_strstrip(tokens[loopvar + 3]));
-                            if (value->str[0] != '\0') {
-                                isDevIdPresent = TRUE;
-                                break;
+        SoupMessage *msg = soup_message_new ("GET", devConf->authServerUrl);
+        if (msg != NULL) {
+            soup_session_send_message (session, msg);
+            if (SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
+                if ((msg->response_body->data[0] == '\0') && (counter < MAX_DEBUG_MESSAGE)) {
+                    counter ++;
+                    g_message("No Json string found in Auth url  %s \n" ,
+                              msg->response_body->data);
+                } else {
+                    g_string_assign(jsonData, msg->response_body->data);
+                    gchar **tokens = g_strsplit_set(jsonData->str, "{}:,\"", -1);
+                    guint tokLength = g_strv_length(tokens);
+                    guint loopvar = 0;
+                    for (loopvar = 0; loopvar < tokLength; loopvar++) {
+                        if (g_strrstr(g_strstrip(tokens[loopvar]), id)) {
+                            //"deviceId": "T00xxxxxxx" so omit 3 tokens ":" fromDeviceId
+                            if ((loopvar + 3) < tokLength ) {
+                                g_string_assign(value, g_strstrip(tokens[loopvar + 3]));
+                                if (value->str[0] != '\0') {
+                                    isDevIdPresent = TRUE;
+                                    break;
+                                }
                             }
                         }
                     }
-                }
-                if (!isDevIdPresent) {
-                    if (g_strrstr(id, PARTNER_ID)) {
-                        g_message("%s not found in Json string in Auth url %s \n ", id, jsonData->str);
+                    if (!isDevIdPresent) {
+                        if (g_strrstr(id, PARTNER_ID)) {
+                            g_message("%s not found in Json string in Auth url %s \n ", id, jsonData->str);
+                            return value;
+                        }
+                        if (counter < MAX_DEBUG_MESSAGE ) {
+                            counter++;
+                            g_message("%s not found in Json string in Auth url %s \n ", id, jsonData->str);
+                        }
+                    } else {
+                        g_message("Successfully fetched %s %s \n ", id, value->str);
+                        g_string_free(jsonData,TRUE);
+                        soup_session_abort (session);
                         return value;
                     }
-                    if (counter < MAX_DEBUG_MESSAGE ) {
-                        counter++;
-                        g_message("%s not found in Json string in Auth url %s \n ", id, jsonData->str);
-                    }
-                } else {
-                    g_message("Successfully fetched %s %s \n ", id, value->str);
-                    g_string_free(jsonData,TRUE);
-                    soup_session_abort (session);
-                    return value;
+                    g_strfreev(tokens);
                 }
-                g_strfreev(tokens);
-            }
+            } else {
+                 if (g_strrstr(id, PARTNER_ID)) {
+                 g_message("Partner ID lib soup error %d  while fetching the Auth url %s \n ",
+                           msg->status_code, devConf->authServerUrl);
+                 return value;
+              }
+              if (counter < MAX_DEBUG_MESSAGE) {
+                  g_message("lib soup error %d  while fetching the Auth url %s \n ",
+                            msg->status_code, devConf->authServerUrl);
+                  counter ++;
+              }
+           }
+           g_object_unref(msg);
         } else {
-            if (g_strrstr(id, PARTNER_ID)) {
-                g_message("Partner ID lib soup error %d  while fetching the Auth url %s \n ",
-                          msg->status_code, devConf->authServerUrl);
-                return value;
+            g_message("The Auth url %s can't be processed", devConf->authServerUrl);
             }
-            if (counter < MAX_DEBUG_MESSAGE) {
-                g_message("lib soup error %d  while fetching the Auth url %s \n ",
-                          msg->status_code, devConf->authServerUrl);
-                counter ++;
-            }
-        }
-        g_object_unref(msg);
-    } else {
-        g_message("The Auth url %s can't be processed", devConf->authServerUrl);
-    }
+        sleep(5);
+    } // end while
     g_string_free(jsonData, TRUE);
     soup_session_abort (session);
     return value;
