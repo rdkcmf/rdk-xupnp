@@ -1396,7 +1396,6 @@ void* verify_devices()
         {
             if((sleepCounter > 6) && (sleepCounter < 12)) //wait for device addition to complete in 60 seconds and print only for another 60 seconds if there is a hang
             {
-                g_message("TELEMETRY_XUPNP_DISCOVERY_MAIN_LOOP_HANGED");
                 g_message("Device Addition %u going in main loop",deviceAddNo);
             }
             sleepCounter++;
