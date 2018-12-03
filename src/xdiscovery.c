@@ -1180,13 +1180,12 @@ gboolean sendDiscoveryResult(const char* outfilename)
     GString *localOutputContents=g_string_new(NULL);
     g_string_printf(localOutputContents, "{\n\"xmediagateways\":\n\t[");
 
-    GList *xdevlistDup;
+    GList *xdevlistDup=NULL;
     g_mutex_lock(mutex);
-    xdevlistDup = g_list_copy(xdevlist);
-    g_mutex_unlock(mutex);
-
-    if (g_list_length(xdevlistDup) > 0)
+    if((xdevlist) && (g_list_length(xdevlist) > 0))
     {
+        xdevlistDup = g_list_copy(xdevlist);
+        g_mutex_unlock(mutex);
         GList *element;
         element = g_list_first(xdevlistDup);
         while(element)
@@ -1319,11 +1318,15 @@ gboolean sendDiscoveryResult(const char* outfilename)
         }
 	if(element)
           g_list_free(element);
-    }
     if(xdevlistDup)
-    {
         g_list_free(xdevlistDup);
     }
+    else
+    {
+        g_message("Send Discovery Result : Device List Null or Empty");
+        g_mutex_unlock(mutex);
+    }
+
     //g_print("\n\t]\n}\n");
     g_string_append_printf(localOutputContents,"\n\t]\n}\n");
     //g_print("\nOutput is\n%s", outputcontents->str);
@@ -1442,16 +1445,18 @@ void* verify_devices()
             }
             continue;
         }
-	GList *xdevlistDup;
+        GList *xdevlistDup=NULL;
 
         lenCurDevList = g_list_length(constLstProxies);
-	if(xdevlist)
-	{
-	    g_mutex_lock(mutex);
-	    xdevlistDup = g_list_copy(xdevlist);
-	    g_mutex_unlock(mutex);
-	    lenXdevList = g_list_length(xdevlistDup);
-	}
+        g_mutex_lock(mutex);
+        if((xdevlist) && (g_list_length(xdevlist) > 0))
+        {
+            xdevlistDup = g_list_copy(xdevlist);
+            lenXdevList = g_list_length(xdevlistDup);
+        }
+        g_mutex_unlock(mutex);
+
+
 //        lenXdevList = g_list_length(xdevlist);
         //g_message("Current list length is %u\n",lenCurDevList);
 
