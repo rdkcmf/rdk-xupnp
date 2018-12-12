@@ -2072,8 +2072,9 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
 #endif
 #ifndef CLIENT_XCAL_SERVER
     if (devConf->disableTuneReady == FALSE) {
-        if (FALSE == tune_ready) {
+        while (FALSE == tune_ready) {
             g_message("XUPnP: Tune Ready Not Yet Received.\n");
+	    usleep(5000000);
         }
     } else {
         g_message("Tune Ready check is disabled - Setting tune_ready to TRUE");
@@ -2081,12 +2082,14 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     }
     if ((devConf->allowGwy == TRUE) && (ipv6Enabled == TRUE)
             && (devConf->ipv6PrefixFile != NULL)) {
-        if (access(devConf->ipv6PrefixFile, F_OK ) == -1 ) {
+        while (access(devConf->ipv6PrefixFile, F_OK ) == -1 ) {
             g_message("IPv6 Prefix File Not Yet Created.");
+            usleep(5000000);
         }
-        if (getipv6prefix() == FALSE) {
+        while (getipv6prefix() == FALSE) {
             g_message(" V6 prefix is not yet updated in file %s ",
                       devConf->ipv6PrefixFile);
+            usleep(2000000);
         }
         g_message("IPv6 prefix : %s ", ipv6prefix->str);
     } else {
