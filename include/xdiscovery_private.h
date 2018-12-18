@@ -60,6 +60,7 @@ typedef struct _gwyDeviceData {
     gboolean devFoundFlag;
     gboolean isRouteSet;
     gboolean isOwnGateway;
+    GUPnPServiceInfo* sproxy;
 } GwyDeviceData;
 
 GList* xdevlist= NULL;
@@ -126,5 +127,5 @@ gboolean replace_local_device_ip(GwyDeviceData* gwydata);
 gboolean checkvalidip( char* ipAddress);
 gboolean checkvalidhostname( char* hostname);
 void broadcastIPModeChange(void);
-
+void logMilestone(const char *msg_code);
 #endif /* XDISCOVERY_PRIVATE_H_ */
