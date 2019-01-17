@@ -44,7 +44,7 @@
 typedef struct
 {
     gchar *bcastIf, *streamIf, *trmIf, *gwIf, *cvpIf, *ruiPath, *uriOverride, *hostMacIf;
-    gchar *oemFile, *dnsFile, *dsgFile, *diagFile, *hostsFile, *wbFile, *devXmlPath, *devXmlFile, *cvpXmlFile, *logFile, *authServerUrl,*devPropertyFile,*ipv6FileLocation,*ipv6PrefixFile,*deviceNameFile;
+    gchar *oemFile, *dnsFile, *dsgFile, *diagFile, *hostsFile, *devXmlPath, *devXmlFile, *cvpXmlFile, *logFile, *authServerUrl,*devPropertyFile,*ipv6FileLocation,*ipv6PrefixFile,*deviceNameFile;
     gboolean enableCVP2, useIARM, allowGwy, enableTRM, useGliDiag, disableTuneReady,enableHostMacPblsh,rmfCrshSupp,wareHouseMode;
     gint bcastPort, cvpPort;
 } ConfSettings;

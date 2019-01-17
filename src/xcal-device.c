@@ -1935,22 +1935,14 @@ main (int argc, char **argv)
     }
     //status = FALSE;
     //g_string_assign(recv_id, argv[2]);
-    if(devConf->authServerUrl == NULL)
-    {
-        result = g_file_get_contents(devConf->wbFile, &recv_id->str, NULL, &error);
-        g_message("Legacy way of getting the receiver id");
-    }
-    else
+    if(devConf->authServerUrl != NULL)
     {
         g_message("getting the receiver id from %s",devConf->authServerUrl);
         recv_id=getID(RECEIVER_ID);
     }
-
-
-    if(error)
+    else
     {
-        /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
-        g_clear_error(&error);
+        g_message("ERROR in getting Receiver Id as authserver url is NULL..!!!");
     }
 
     g_string_printf(url, "http://%s:8080/videoStreamInit?recorderId=%s", ipAddressBuffer, recv_id->str);
@@ -3244,7 +3236,6 @@ gboolean readconffile(const char* configfile)
     DsgFile=//tmp//dsgproxy_slp_attributes.txt
     DiagFile=//tmp//mnt/diska3//persistent//usr//1112//703e//diagnostics.json
     HostsFile=//etc//hosts
-    WbFile=/opt/www/whitebox/wbdevice.dat
     DevXmlPath=/opt/xupnp/
     DevXmlFile=BasicDevice.xml
     LogFile=/opt/logs/xdevice.log
@@ -3260,7 +3251,6 @@ gboolean readconffile(const char* configfile)
     devConf->dnsFile = g_key_file_get_string          (keyfile, "DataFiles","DnsFile", NULL);
     devConf->dsgFile = g_key_file_get_string             (keyfile, "DataFiles","DsgFile", NULL);
     devConf->diagFile = g_key_file_get_string             (keyfile, "DataFiles","DiagFile", NULL);
-    devConf->wbFile = g_key_file_get_string             (keyfile, "DataFiles","WbFile", NULL);
     devConf->devXmlPath = g_key_file_get_string             (keyfile, "DataFiles","DevXmlPath", NULL);
     devConf->devXmlFile = g_key_file_get_string             (keyfile, "DataFiles","DevXmlFile", NULL);
     devConf->cvpXmlFile = g_key_file_get_string             (keyfile, "DataFiles","CvpXmlFile", NULL);
@@ -3311,7 +3301,7 @@ gboolean readconffile(const char* configfile)
     g_key_file_free(keyfile);
 #ifndef CLIENT_XCAL_SERVER
     if ((devConf->bcastIf == NULL)|| (devConf->bcastPort == 0) || (devConf->devXmlPath == NULL) ||
-            (devConf->devXmlFile == NULL) || (devConf->wbFile == NULL))
+            (devConf->devXmlFile == NULL))
     {
         g_warning("Invalid or no values found for mandatory parameters\n");
         return FALSE;
