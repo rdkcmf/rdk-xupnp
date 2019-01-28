@@ -387,6 +387,7 @@ device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
             if (getSoupStatusFromUrl(gwyPlayUrl))
             {
                 g_message("Network Multicast issue for device %s",sno);
+                return;
             }
             else
             {
