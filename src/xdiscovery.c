@@ -45,7 +45,6 @@ static GMainLoop *main_loop;
 gboolean checkDevAddInProgress=FALSE;
 #define WAIT_TIME_SEC 5
 guint deviceAddNo=0;
-int getSoupStatusFromUrl(char* url);
 #if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
 
 typedef struct _iarmDeviceData {
@@ -327,7 +326,7 @@ g_list_compare_sno(GwyDeviceData* gwData1, GwyDeviceData* gwData2, gpointer user
  * @ingroup XUPNP_XDISCOVERY_FUNC
  */
 //Find a device with given serial number is in our list of gateways
-gboolean checkDeviceExists(const char* sno,char* outPlayUrl)
+gboolean checkDeviceExists(const char* sno)
 {
     gboolean retval = FALSE;
     if (g_list_length(xdevlist) > 0)
@@ -341,10 +340,6 @@ gboolean checkDeviceExists(const char* sno,char* outPlayUrl)
             if (result==0)
             {
                 retval = TRUE;
-                if((((GwyDeviceData *)element->data)->isgateway) == TRUE)
-                {
-                    strcpy(outPlayUrl,g_strstrip(((GwyDeviceData *)element->data)->baseurl->str));
-                }
                 break;
             }
             //Past the search string value in sorted list
@@ -365,7 +360,6 @@ gboolean checkDeviceExists(const char* sno,char* outPlayUrl)
 static void
 device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 {
-    char gwyPlayUrl[100]={0};
     const gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
 
     g_message ("Device %s went down",sno);
@@ -373,41 +367,26 @@ device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE);
 
     if (gupnp_service_proxy_get_subscribed(sproxy) == TRUE)
-    {
+      {
         g_message("Removing notifications on %s", sno);
         gupnp_service_proxy_set_subscribed(sproxy, FALSE);
         gupnp_service_proxy_remove_notify(sproxy, "PlaybackUrl", on_last_change, NULL);
         gupnp_service_proxy_remove_notify(sproxy, "SystemIds", on_last_change, NULL);
-    }
+      }
 
-    if (checkDeviceExists(sno,gwyPlayUrl))
-    {
-        if(gwyPlayUrl != NULL)
-        {
-            if (getSoupStatusFromUrl(gwyPlayUrl))
-            {
-                g_message("Network Multicast issue for device %s",sno);
-            }
-            else
-            {
-                g_message("Can't reach device %s",sno);
-            }
-        }
-        else
-        {
-            g_message("GW playback url is NULL");
-        }
-
+/*    if (checkDeviceExists(sno))
+      {
         if (delete_gwyitem(sno) == FALSE)
         {
             g_message("%s found, but unable to delete it from list", sno);
+            return FALSE;
         }
         else
-        {
+          {
             g_message("Deleted %s from list", sno);
             sendDiscoveryResult(disConf->outputJsonFile);
-        }
-    }
+          }
+      }*/
 }
 
 static void
@@ -1166,10 +1145,6 @@ gboolean delete_gwyitem(const char* serial_num)
     if (lstXdev)
     {
         GwyDeviceData *gwdata = lstXdev->data;
-        if(gwdata->isgateway == TRUE)
-            g_message("Removing Gateway Device %s from the device list", gwdata->serial_num->str);
-        else
-            g_message("Removing Client Device %s from the device list", gwdata->serial_num->str);
         g_mutex_lock(mutex);
         free_gwydata(gwdata);
         g_free(gwdata);
@@ -1179,10 +1154,6 @@ gboolean delete_gwyitem(const char* serial_num)
         if(lstXdev)
           lstXdev=NULL;
         return TRUE;
-    }
-    else
-    {
-        g_message("Device %s to be removed not in the discovered device list", serial_num);
     }
     return FALSE;
 }
@@ -1435,7 +1406,7 @@ void* verify_devices()
         sleepCounter=0;
         if (gssdp_resource_browser_rescan(GSSDP_RESOURCE_BROWSER(cp))==FALSE)
         {
-            g_message("Forced rescan failed\n");
+            //g_print("Forced rescan failed\n");
             //g_debug("Forced rescan failed, sleeping");
             usleep(XUPNP_RESCAN_INTERVAL);
             continue;
@@ -1444,7 +1415,7 @@ void* verify_devices()
         //    g_print("Forced rescan success\n");
         //g_debug("Forced rescan success");
         usleep(XUPNP_RESCAN_INTERVAL);
-/*        const GList *constLstProxies = gupnp_control_point_list_device_proxies(cp);
+        const GList *constLstProxies = gupnp_control_point_list_device_proxies(cp);
         counter++;
         counter1++;
         if (NULL == constLstProxies)
@@ -1628,7 +1599,7 @@ void* verify_devices()
 
 
         //After cleaning up, update the prev list length
-//        lenPrevDevList=lenCurDevList;
+        lenPrevDevList=lenCurDevList;
         //g_print("\nWaiting Discovery...\n");
     }
 }
@@ -2189,28 +2160,3 @@ void broadcastTimeZoneChange(GwyDeviceData *gwdata)
     }
 }
 #endif
-
-int getSoupStatusFromUrl(char* url)
-{
-    int ret=0;
-    SoupSession *session = soup_session_sync_new_with_options (SOUP_SESSION_TIMEOUT,1, NULL); //timeout 1 secs
-    if(session)
-    {
-        SoupMessage *msg = soup_message_new ("HEAD", url);
-        if(msg != NULL)
-        {
-            soup_session_send_message (session, msg);
-            if (SOUP_STATUS_IS_SUCCESSFUL(msg->status_code))
-            {
-                g_message("soup status for %s success\n",url);
-                ret=1;
-            }
-        }
-        else
-            g_message("soup message creation failed url %s \n",url);
-        soup_session_abort (session);
-    }
-    else
-        g_message("soup session creation failed\n");
-    return ret;
-}
