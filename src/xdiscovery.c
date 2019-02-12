@@ -65,6 +65,33 @@ static void _GetXUPNPDeviceInfo(void *callCtx, unsigned long methodID, void *arg
 IARM_Result_t _GetXUPNPDeviceInfo(void *arg);
 #endif
 
+/* get uptime in milliseconds */
+unsigned long getUptimeMS(void)
+{
+    FILE *fp = fopen("/proc/uptime", "r");
+    double uptime = 0;
+    char buf[256] = {0x0};
+    if(fp != NULL)
+    {
+          fgets(buf, sizeof(buf), fp);
+          fclose(fp);
+          uptime = atof(buf);
+    }
+    return uptime*1000;
+}
+
+/* log rdk milestones */
+void logMilestone(const char *msg_code)
+{
+    FILE *fp = NULL;
+    fp = fopen("/opt/logs/rdk_milestones.log", "a+");
+    if (fp != NULL)
+    {
+      fprintf(fp, "[%ld] %s\n", getUptimeMS(), msg_code);
+      fclose(fp);
+    }
+}
+
 static IARM_Result_t GetXUPNPDeviceInfo(char *pDeviceInfo, unsigned long length)
 {
     g_mutex_lock(devMutex);
@@ -667,6 +694,7 @@ int main(int argc, char *argv[])
     g_signal_connect (cp,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb), NULL);
     gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp), TRUE);
 
+    logMilestone("UPNP_START_DISCOVERY");
 #ifdef GUPNP_0_19
     main_loop = g_main_loop_new (NULL, FALSE);
 #else
@@ -822,6 +850,13 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
         g_message (" GetIpv6Prefix process gw services Error: %s\n", error->message);
         g_clear_error(&error);
 //        return FALSE;
+    }
+    else 
+    {
+        if (gwData && gwData->ipv6prefix && gwData->ipv6prefix->str && (g_strcmp0(gwData->ipv6prefix->str, "") != 0))
+        {
+            logMilestone("UPNP_RECV_IPV6_PREFIX");
+        }
     }
     gupnp_service_proxy_send_action (sproxy, "GetPlaybackUrl", &error,NULL,"PlaybackUrl",G_TYPE_STRING, gwData->playbackurl ,NULL);
     g_message("GetPlaybackUrl = %s",gwData->playbackurl->str);
