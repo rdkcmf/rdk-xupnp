@@ -397,7 +397,7 @@ gboolean checkDeviceExists(const char* sno,char* outPlayUrl)
 static void
 device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 {
-    char gwyPlayUrl[100]={0};
+    char gwyPlayUrl[100]={'\0'};
     const gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
 
     g_message ("Device %s went down",sno);
@@ -414,7 +414,7 @@ device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 
     if (checkDeviceExists(sno,gwyPlayUrl))
     {
-        if(gwyPlayUrl != NULL)
+        if(gwyPlayUrl[0] != '\0')
         {
             if (getSoupStatusFromUrl(gwyPlayUrl))
             {
@@ -2358,6 +2358,7 @@ int getSoupStatusFromUrl(char* url)
         else
             g_message("soup message creation failed url %s \n",url);
         soup_session_abort (session);
+        g_object_unref (session);
     }
     else
         g_message("soup session creation failed\n");
