@@ -54,8 +54,8 @@
 static  GMainLoop *main_loop;
 
 char devBcastIf[MAXSIZE],serial_Num[MAXSIZE], cvpInterface[MAXSIZE], cvPXmlFile[MAXSIZE],playBackUrl[URLSIZE],devXMlPath[MAXSIZE],uUid[MAXSIZE],ruiUrl[RUIURLSIZE];
-char devXMlFile [MAXSIZE],devBcastIf[MAXSIZE],serial_Num[MAXSIZE],cvpInterface[MAXSIZE],cvPXmlFile[MAXSIZE],fogtsbUrl[MAXSIZE],ipv6preFix[MAXSIZE],trmUrl[MAXSIZE],urL[MAXSIZE];
-char videobaseUrl[MAXSIZE],gwyIp[MAXSIZE],gwyIpv6[MAXSIZE],gwystbIp[MAXSIZE],hostMacaddress[MAXSIZE],bcastMacaddress[MAXSIZE],recvdevType[MAXSIZE],deviceType[MAXSIZE];
+char devXMlFile [MAXSIZE],devBcastIf[MAXSIZE],serial_Num[MAXSIZE],cvpInterface[MAXSIZE],cvPXmlFile[MAXSIZE],ipv6preFix[MAXSIZE],trmUrl[MAXSIZE],urL[MAXSIZE];
+char gwyIp[MAXSIZE],gwyIpv6[MAXSIZE],gwystbIp[MAXSIZE],hostMacaddress[MAXSIZE],bcastMacaddress[MAXSIZE],recvdevType[MAXSIZE],deviceType[MAXSIZE];
 char buildVersion[MAXSIZE],dnsConfig[MAXSIZE],systemIds[MAXSIZE],dataGatewayIPAddress[MAXSIZE],dsgtimeZone[MAXSIZE],deviceName[MAXSIZE],etcHosts[RUIURLSIZE];
 gint rawoffset, dstoffset, dstsavings, devBcastPort, cvpPort;
 gboolean usedaylightsavings,allowgwy,requiresTrm;
@@ -291,41 +291,6 @@ get_playback_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer
         //g_message ("Got a call back for playback url, Sending NULL\n", playbackurl->str);
         gupnp_service_action_set (action, "PlaybackUrl", G_TYPE_STRING, "NULL", NULL);
     }
-    gupnp_service_action_return (action);
-}
-/**
- * @brief Callback function which is invoked when getFogTsbUrl action is invoked and this sets
- * the state variable for FogTsb Url.
- *
- * @param[in] service Name of the service.
- * @param[out] action Action to be invoked.
- * @param[in] user_data Usually null will be passed.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
-/* GetFogTsbUrl */
-G_MODULE_EXPORT void
-get_fogtsb_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
-{
-    getFogTsbUrl(fogtsbUrl);
-    gupnp_service_action_set (action, "FogTsbUrl", G_TYPE_STRING, fogtsbUrl, NULL);
-    gupnp_service_action_return (action);
-}
-
-/**
- * @brief Callback function which is invoked when getvideobaseUrl action is invoked and this sets
- * the state variable for VideoBase Url.
- *
- * @param[in] service Name of the service.
- * @param[out] action Action to be invoked.
- * @param[in] user_data Usually null will be passed.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
-/* GetVideoBaseUrl */
-G_MODULE_EXPORT void
-get_videobase_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
-{
-    getVideoBasedUrl(videobaseUrl);
-    gupnp_service_action_set (action, "VideoBaseUrl", G_TYPE_STRING, videobaseUrl, NULL);
     gupnp_service_action_return (action);
 }
 
@@ -781,41 +746,6 @@ query_playback_url_cb (GUPnPService *service, char *variable, GValue *value, gpo
         g_value_init (value, G_TYPE_STRING);
         g_value_set_string (value, "NULL");
     }
-}
-/**
- * @brief Callback function which is invoked when fogTsbUrl action is invoked and this sets
- * the state variable with a new fogtsb url.
- *
- * @param[in] service Name of the service.
- * @param[in] variable State(Query) variable.
- * @param[in] value New value to be assigned.
- * @param[in] user_data Usually null will be passed.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
-/* FogTsbUrl */
-G_MODULE_EXPORT void
-query_fogtsb_url_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
-{
-    g_value_init (value, G_TYPE_STRING);
-    g_value_set_string (value, fogtsbUrl);
-}
-
-/**
- * @brief Callback function which is invoked when VideoBaseUrl action is invoked and this sets
- * the state variable with a new videobase url.
- *
- * @param[in] service Name of the service.
- * @param[in] variable State(Query) variable.
- * @param[in] value New value to be assigned.
- * @param[in] user_data Usually null will be passed.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
-/* VideoBaseUrl */
-G_MODULE_EXPORT void
-query_videobase_url_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
-{
-    g_value_init (value, G_TYPE_STRING);
-    g_value_set_string (value, videobaseUrl);
 }
 
 /**
@@ -1285,8 +1215,6 @@ main (int argc, char **argv)
     g_signal_connect (upnpService, "action-invoked::GetUsesDaylightTime", G_CALLBACK (get_usesdaylighttime_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetPlaybackUrl", G_CALLBACK (get_playback_url_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetDataGatewayIPaddress", G_CALLBACK (get_dataGatewayIPaddress_cb), NULL);
-    g_signal_connect (upnpService, "action-invoked::GetFogTsbUrl", G_CALLBACK (get_fogtsb_url_cb), NULL);
-    g_signal_connect (upnpService, "action-invoked::GetVideoBaseUrl", G_CALLBACK (get_videobase_url_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetDeviceName", G_CALLBACK (get_devicename_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetIsGateway", G_CALLBACK (get_isgateway_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
@@ -1311,8 +1239,6 @@ main (int argc, char **argv)
     g_signal_connect (upnpService, "query-variable::UsesDaylightTime", G_CALLBACK (query_usesdaylighttime_cb), NULL);
     g_signal_connect (upnpService, "query-variable::PlaybackUrl", G_CALLBACK (query_playback_url_cb), NULL);
     g_signal_connect (upnpService, "query-variable::DataGatewayIPaddress", G_CALLBACK (query_dataGatewayIPaddress_cb), NULL);
-    g_signal_connect (upnpService, "query-variable::FogTsbUrl", G_CALLBACK (query_fogtsb_url_cb), NULL);
-    g_signal_connect (upnpService, "query-variable::VideoBaseUrl", G_CALLBACK (query_videobase_url_cb), NULL);
     g_signal_connect (upnpService, "query-variable::DeviceName", G_CALLBACK (query_devicename_cb), NULL);
     g_signal_connect (upnpService, "query-variable::IsGateway", G_CALLBACK (query_isgateway_cb), NULL);
     g_signal_connect (upnpService, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);

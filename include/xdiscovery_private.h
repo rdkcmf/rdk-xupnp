@@ -52,8 +52,6 @@ typedef struct _gwyDeviceData {
     GString* baseurl;
     GString* basetrmurl;
     GString* playbackurl;
-    GString* fogtsburl;
-    GString* videobaseurl;
     GString* dataGatewayIPaddress;
     GString* dnsconfig;
     GString* etchosts;

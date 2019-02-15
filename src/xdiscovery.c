@@ -474,8 +474,6 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
            g_message("Failed to add DNS notifications for %s", sno);
        if (gupnp_service_proxy_add_notify (sproxy, "TimeZone", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add TimeZone notifications for %s", sno);
-       if (gupnp_service_proxy_add_notify (sproxy, "VideoBaseUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
-           g_message("Failed to add VideoBaseUrl notifications for %s", sno);
     }
     else
     {
@@ -483,9 +481,6 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
            g_message("Failed to add DataGatewayIPaddress notifications for %s", sno);
     }
     gupnp_service_proxy_set_subscribed(sproxy, TRUE);
-
-    if (gupnp_service_proxy_add_notify (sproxy, "FogTsbUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
-           g_message("Failed to add FogTsbUrl notifications for %s", sno);
 
     if (gupnp_service_proxy_get_subscribed(sproxy) == FALSE)
     {
@@ -744,14 +739,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
         g_clear_error(&error);
 //        return FALSE;
     }
-    gupnp_service_proxy_send_action (sproxy, "GetFogTsbUrl",&error,NULL,"FogTsbUrl",G_TYPE_STRING, gwData->fogtsburl ,NULL);
-    g_message("GetFogTsbUrl = %s",gwData->fogtsburl->str);
-    if (error!=NULL)
-    {
-        g_message (" GetFogTsbUrl process gw services Error: %s\n", error->message);
-        g_clear_error(&error);
-        //return FALSE;
-    }
+    
     gupnp_service_proxy_send_action (sproxy, "GetDeviceName", &error,NULL,"DeviceName",G_TYPE_STRING, gwData->devicename,NULL);
     if (error!=NULL)
     {
@@ -795,14 +783,6 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
         g_clear_error(&error);
         return FALSE;
     }
-    gupnp_service_proxy_send_action (sproxy, "GetVideoBaseUrl", &error,NULL,"VideoBaseUrl",G_TYPE_STRING, gwData->videobaseurl,NULL);
-    if (error!=NULL)
-    {
-        g_message (" GetVideoBaseUrl process gw services Error: %s\n", error->message);
-        g_clear_error(&error);
-//        return FALSE;
-    }
-
     //Do not return error as the boxes which are not running single step tuning code base could still exist in the network
 
     gupnp_service_proxy_send_action (sproxy, "GetGatewayIP", &error,NULL,"GatewayIP",G_TYPE_STRING, gwData->gwyip,NULL);
@@ -1007,8 +987,6 @@ gboolean init_gwydata(GwyDeviceData* gwydata)
     gwydata->baseurl = g_string_new(NULL);
     gwydata->basetrmurl = g_string_new(NULL);
     gwydata->playbackurl = g_string_new(NULL);
-    gwydata->fogtsburl = g_string_new(NULL);
-    gwydata->videobaseurl = g_string_new(NULL);
     gwydata->dnsconfig = g_string_new(NULL);
     gwydata->etchosts = g_string_new(NULL);
     gwydata->systemids = g_string_new(NULL);
@@ -1047,8 +1025,6 @@ gboolean free_gwydata(GwyDeviceData* gwydata)
         g_string_free(gwydata->baseurl, TRUE);
         g_string_free(gwydata->basetrmurl, TRUE);
         g_string_free(gwydata->playbackurl, TRUE);
-        g_string_free(gwydata->fogtsburl, TRUE);
-        g_string_free(gwydata->videobaseurl, TRUE);
         g_string_free(gwydata->dnsconfig, TRUE);
         g_string_free(gwydata->etchosts, TRUE);
         g_string_free(gwydata->systemids, TRUE);
@@ -1208,7 +1184,6 @@ gboolean sendDiscoveryResult(const char* outfilename)
             g_string_append_printf(localOutputContents,"\t\t\t\"recvDevType\":\"%s\",\n", gwdata->recvdevtype->str);
             g_string_append_printf(localOutputContents,"\t\t\t\"DevType\":\"%s\",\n", gwdata->devicetype->str);
             g_string_append_printf(localOutputContents,"\t\t\t\"buildVersion\":\"%s\",\n", gwdata->buildversion->str);
-	    g_string_append_printf(localOutputContents,"\t\t\t\"fogTsbUrl\":\"%s\",\n", gwdata->fogtsburl->str);
             //g_string_append_printf(outputcontents,"\t\t\t\"hostMacAddress\":\"%s\",\n");
 	    if(g_strrstr(g_strstrip(gwdata->devicetype->str),"XI") == NULL )
 	    {
@@ -1241,7 +1216,6 @@ gboolean sendDiscoveryResult(const char* outfilename)
 	            g_string_append_printf(localOutputContents,"\t\t\t\"systemids\":\"%s\",\n", gwdata->systemids->str);
 	            //"receiverid":"T0100113218"
 	            //g_print("\t\t\t\"receiverid\":\"%s\"\n\t\t}", gwdata->receiverid->str);
-	            g_string_append_printf(localOutputContents,"\t\t\t\"videoBaseUrl\":\"%s\",\n", gwdata->videobaseurl->str);
 	     }
 	     else
 	     {
@@ -1748,27 +1722,6 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
 #endif
                     }
                 }
-                if (g_strcmp0(g_strstrip(variable_name), "FogTsbUrl") == 0)
-                {
-                    updated_value = g_value_get_string(value);
-                    g_message("Updated value is %s ", updated_value);
-                    if(g_strcmp0(g_strstrip(updated_value), gwdata->fogtsburl->str) != 0)
-                    {
-                        bUpdateDiscoveryResult=TRUE;
-                        g_string_assign(gwdata->fogtsburl, updated_value);
-                    }
-                }
-                if (g_strcmp0(g_strstrip(variable_name), "VideoBaseUrl") == 0)
-                {
-                    updated_value = g_value_get_string(value);
-                    g_message("Updated value is %s ", updated_value);
-                    if(g_strcmp0(g_strstrip(updated_value), gwdata->videobaseurl->str) != 0)
-                    {
-                        bUpdateDiscoveryResult=TRUE;
-                        g_string_assign(gwdata->videobaseurl, updated_value);
-                    }
-                }
-
                 //update_gwylist(gwdata);
                 g_free(receiverid);
                 if(bUpdateDiscoveryResult)
