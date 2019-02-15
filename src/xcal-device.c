@@ -222,30 +222,6 @@ static char * getGatewayName()
     return getStrValueFromMap(getPartnerID(), ARRAY_COUNT(gatewayNameMap), gatewayNameMap);
 }
 
-static void _fogEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
-{
-    if (data)
-    {
-        IARM_Bus_Fog_Param_t *pFogEventData = (IARM_Bus_Fog_Param_t*)data;
-        gboolean fogStatus = (gboolean) pFogEventData->status;
-
-        if (fogStatus)
-        {
-            g_message("Received FOG Status update as TRUE");
-            g_string_printf(fogtsburl, pFogEventData->tsbEndpoint);
-            g_string_printf(videobaseurl, "http://%s/video", gwyip->str);
-            g_message("_fogEventHandler: setting VideoBaseUrl:%s \n",videobaseurl->str);
-        }
-        else
-        {
-            g_message("Received FOG Status update as FALSE");
-            g_string_printf(fogtsburl, "");
-        }
-        notify_value_change("FogTsbUrl", fogtsburl->str);
-        notify_value_change("VideoBaseUrl", videobaseurl->str);
-    }
-}
-
 static void _sysEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
     /* Only handle state events */
@@ -507,7 +483,6 @@ gboolean XUPnP_IARM_Init(void)
     }
     else
     {
-        IARM_Bus_RegisterEventHandler(IARM_BUS_FOG_NAME, IARM_BUS_FOG_EVENT_STATUS, _fogEventHandler);
         IARM_Bus_RegisterEventHandler(IARM_BUS_SYSMGR_NAME, IARM_BUS_SYSMGR_EVENT_SYSTEMSTATE, _sysEventHandler);
         IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME,IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA, _routesysEventHandler);
         g_message("<<<<<<<%s - Registered the SYSMGR BUS Events >>>>>>>>",__FUNCTION__);
@@ -742,40 +717,6 @@ get_playback_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer
         //g_message ("Got a call back for playback url, Sending NULL\n", playbackurl->str);
         gupnp_service_action_set (action, "PlaybackUrl", G_TYPE_STRING, "NULL", NULL);
     }
-    gupnp_service_action_return (action);
-}
-
-/**
- * @brief Callback function which is invoked when getFogTsbUrl action is invoked and this sets
- * the state variable for FogTsb Url.
- *
- * @param[in] service Name of the service.
- * @param[out] action Action to be invoked.
- * @param[in] user_data Usually null will be passed.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
-/* GetFogTsbUrl */
-G_MODULE_EXPORT void
-get_fogtsb_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
-{
-    gupnp_service_action_set (action, "FogTsbUrl", G_TYPE_STRING, fogtsburl->str, NULL);
-    gupnp_service_action_return (action);
-}
-
-/**
- * @brief Callback function which is invoked when getvideobaseUrl action is invoked and this sets
- * the state variable for VideoBase Url.
- *
- * @param[in] service Name of the service.
- * @param[out] action Action to be invoked.
- * @param[in] user_data Usually null will be passed.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
-/* GetVideoBaseUrl */
-G_MODULE_EXPORT void
-get_videobase_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
-{
-    gupnp_service_action_set (action, "VideoBaseUrl", G_TYPE_STRING, videobaseurl->str, NULL);
     gupnp_service_action_return (action);
 }
 
@@ -1242,42 +1183,6 @@ query_playback_url_cb (GUPnPService *service, char *variable, GValue *value, gpo
 }
 
 /**
- * @brief Callback function which is invoked when fogTsbUrl action is invoked and this sets
- * the state variable with a new fogtsb url.
- *
- * @param[in] service Name of the service.
- * @param[in] variable State(Query) variable.
- * @param[in] value New value to be assigned.
- * @param[in] user_data Usually null will be passed.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
-/* FogTsbUrl */
-G_MODULE_EXPORT void
-query_fogtsb_url_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
-{
-    g_value_init (value, G_TYPE_STRING);
-    g_value_set_string (value, fogtsburl->str);
-}
-
-/**
- * @brief Callback function which is invoked when VideoBaseUrl action is invoked and this sets
- * the state variable with a new videobase url.
- *
- * @param[in] service Name of the service.
- * @param[in] variable State(Query) variable.
- * @param[in] value New value to be assigned.
- * @param[in] user_data Usually null will be passed.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
-/* VideoBaseUrl */
-G_MODULE_EXPORT void
-query_videobase_url_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
-{
-    g_value_init (value, G_TYPE_STRING);
-    g_value_set_string (value, videobaseurl->str);
-}
-
-/**
  * @brief Callback function which is invoked when DataGatewayIPaddress action is invoked and this sets
  * the state variable with a new DataGatewayIPaddress.
  *
@@ -1697,8 +1602,6 @@ main (int argc, char **argv)
     trmurl = g_string_new("null");
     trmurlCVP2 = g_string_new("null");
     playbackurl = g_string_new("null");
-    fogtsburl = g_string_new("null");
-    videobaseurl = g_string_new("null");
     playbackurlCVP2 = g_string_new("null");
     gwyip = g_string_new("null");
     gwyipv6 = g_string_new("null");
@@ -1873,7 +1776,6 @@ main (int argc, char **argv)
 
     g_string_assign(gwyip, ipAddressBuffer);
 
-
     //Init IARM Events
 #if defined(USE_XUPNP_IARM_BUS)
     gboolean iarminit = XUPnP_IARM_Init();
@@ -2004,12 +1906,6 @@ main (int argc, char **argv)
     }
 
 #endif
-    if(getFogStatus())
-    {
-        g_message(" fog tsb url  %s \n",fogtsburl->str);
-        g_string_printf(videobaseurl, "http://%s/video", ipAddressBuffer);
-        g_message(" video base url  %s \n",videobaseurl->str);
-    }
 
 #ifndef CLIENT_XCAL_SERVER
     if (getetchosts()==TRUE)
@@ -2131,8 +2027,6 @@ main (int argc, char **argv)
     g_signal_connect (upnpService, "action-invoked::GetUsesDaylightTime", G_CALLBACK (get_usesdaylighttime_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetPlaybackUrl", G_CALLBACK (get_playback_url_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetDataGatewayIPaddress", G_CALLBACK (get_dataGatewayIPaddress_cb), NULL);
-    g_signal_connect (upnpService, "action-invoked::GetFogTsbUrl", G_CALLBACK (get_fogtsb_url_cb), NULL);
-    g_signal_connect (upnpService, "action-invoked::GetVideoBaseUrl", G_CALLBACK (get_videobase_url_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetDeviceName", G_CALLBACK (get_devicename_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetIsGateway", G_CALLBACK (get_isgateway_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
@@ -2158,8 +2052,6 @@ main (int argc, char **argv)
     g_signal_connect (upnpService, "query-variable::UsesDaylightTime", G_CALLBACK (query_usesdaylighttime_cb), NULL);
     g_signal_connect (upnpService, "query-variable::PlaybackUrl", G_CALLBACK (query_playback_url_cb), NULL);
     g_signal_connect (upnpService, "query-variable::DataGatewayIPaddress", G_CALLBACK (query_dataGatewayIPaddress_cb), NULL);
-    g_signal_connect (upnpService, "query-variable::FogTsbUrl", G_CALLBACK (query_fogtsb_url_cb), NULL);
-    g_signal_connect (upnpService, "query-variable::VideoBaseUrl", G_CALLBACK (query_videobase_url_cb), NULL);
     g_signal_connect (upnpService, "query-variable::DeviceName", G_CALLBACK (query_devicename_cb), NULL);
     g_signal_connect (upnpService, "query-variable::IsGateway", G_CALLBACK (query_isgateway_cb), NULL);
     g_signal_connect (upnpService, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
@@ -3868,24 +3760,4 @@ gboolean getdevicename(void)
     }
     g_free(devicenamefile);
     return result;
-}
-gboolean getFogStatus(void)
-{
-    bool bRet=false;
-    IARM_Bus_Fog_Param_t param;
-    IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
-    memset(&param, 0, sizeof(param));
-    iarmRet = IARM_Bus_Call(IARM_BUS_FOG_NAME, IARM_BUS_FOG_getCurrentState, (void *)&param, sizeof(param));
-    if(iarmRet == IARM_RESULT_SUCCESS)
-    {
-        bRet = param.status;
-        g_string_printf(fogtsburl, param.tsbEndpoint);
-        g_message(  "Fog status %s \n",bRet? "enabled" : "disabled");
-    }
-    else
-    {
-        bRet = false;
-        g_message(  "IARM CALL failed  for fog status\n");
-    }
-    return bRet;
 }

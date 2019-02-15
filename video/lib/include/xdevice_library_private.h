@@ -31,7 +31,7 @@ typedef struct
   gint bcastPort, cvpPort;
 } ConfSettings;
 ConfSettings *devConf;
-GString *url, *trmurl, *playbackurl, *gwyip, *gwyipv6, *dnsconfig, *systemids, *serial_num, *lan_ip, *recv_id,*partner_id,*hostmacaddress,*devicetype,*recvdevtype,*buildversion,*ipv6prefix,*gwystbip,*bcastmacaddress,*devicename,*mocaIface,*wifiIface,*fogtsburl,*dataGatewayIPaddress, *videobaseurl;
+GString *url, *trmurl, *playbackurl, *gwyip, *gwyipv6, *dnsconfig, *systemids, *serial_num, *lan_ip, *recv_id,*partner_id,*hostmacaddress,*devicetype,*recvdevtype,*buildversion,*ipv6prefix,*gwystbip,*bcastmacaddress,*devicename,*mocaIface,*wifiIface,*dataGatewayIPaddress;
 GString *trmurlCVP2, *playbackurlCVP2, *gwyipCVP2;
 unsigned long channelmap_id, dac_id, plant_id, vodserver_id;
 GString *dsgtimezone, *etchosts;

@@ -584,46 +584,9 @@ void getSystemValues(void)
     */
     return;
 }
-BOOL getFogStatus()
-{
-    bool bRet = false;
-    IARM_Bus_Fog_Param_t param;
-    IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
-    memset(&param, 0, sizeof(param));
-    iarmRet = IARM_Bus_Call(IARM_BUS_FOG_NAME, IARM_BUS_FOG_getCurrentState,
-                            (void *)&param, sizeof(param));
-    if (iarmRet == IARM_RESULT_SUCCESS) {
-        bRet = param.status;
-        g_string_printf(fogtsburl, param.tsbEndpoint);
-        g_message(  "Fog status %s \n", bRet ? "enabled" : "disabled");
-    } else {
-        bRet = false;
-        g_message(  "IARM CALL failed  for fog status\n");
-    }
-    return bRet;
-}
 #endif
 
 #if defined(USE_XUPNP_IARM_BUS)
-static void _fogEventHandler(const char *owner, IARM_EventId_t eventId,
-                             void *data, size_t len)
-{
-    if (data) {
-        IARM_Bus_Fog_Param_t *pFogEventData = (IARM_Bus_Fog_Param_t *)data;
-        BOOL fogStatus = (BOOL) pFogEventData->status;
-        if (fogStatus) {
-            g_message("Received FOG Status update as TRUE");
-            g_string_printf(fogtsburl, pFogEventData->tsbEndpoint);
-	    g_string_printf(videobaseurl, "http://%s/video", gwyip->str);
-	    g_message("_fogEventHandler: setting VideoBaseUrl:%s \n",videobaseurl->str);
-        } else {
-            g_message("Received FOG Status update as FALSE");
-            g_string_printf(fogtsburl, "");
-        }
-	(*eventCallback)("FogTsbUrl", fogtsburl->str);
-	(*eventCallback)("VideoBaseUrl", videobaseurl->str);
-    }
-}
 /**
  * @brief This function is used to get the IP address based on IPv6 or IPv4 is enabled.
  *
@@ -850,8 +813,6 @@ BOOL XUPnP_IARM_Init(void)
         g_message("<<<<<<<%s Failed in  IARM_Bus_Connect>>>>>>>>", __FUNCTION__);
         return FALSE;
     } else {
-        IARM_Bus_RegisterEventHandler(IARM_BUS_FOG_NAME, IARM_BUS_FOG_EVENT_STATUS,
-                                      _fogEventHandler);
         IARM_Bus_RegisterEventHandler(IARM_BUS_SYSMGR_NAME,
                                       IARM_BUS_SYSMGR_EVENT_SYSTEMSTATE, _sysEventHandler);
         IARM_Bus_RegisterEventHandler(IARM_BUS_NM_SRV_MGR_NAME,
@@ -940,31 +901,6 @@ BOOL getTuneReady()
 BOOL getDisableTuneReadyStatus()
 {
     return devConf->disableTuneReady;
-}
-/**
- * @brief This function is used to get the IP address based on IPv6 or IPv4 is enabled.
- *
- * @param[in] ifname Name of the network interface.
- * @param[out] ipAddressBuffer Character buffer to hold the IP address.
- * @param[in] ipv6Enabled Flag to check whether IPV6 is enabled
- *
- * @return Returns an integer value '1' if successfully gets the IP address else returns '0'.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
-BOOL getFogTsbUrl(char *outValue)
-{
-    BOOL result = FALSE;
-    if (!check_null(outValue)) {
-        printf("getFogTsbUrl : NULL string !");
-        return result;
-    }
-    if (getFogStatus()) {
-	strcpy(outValue, fogtsburl->str);
-        result = TRUE;
-    } else {
-        printf("getFogTsbUrl : No fogtsb url !");
-    }
-    return result;
 }
 /**
  * @brief This function is used to get the IP address based on IPv6 or IPv4 is enabled.
@@ -1533,21 +1469,6 @@ BOOL getIsuseGliDiagEnabled()
 {
 	return devConf->useGliDiag;
 }
-BOOL getVideoBasedUrl(char *outValue)
-{
-    BOOL result = FALSE;
-    if (!check_null(outValue)) {
-        g_message("getVideoBasedUrl : NULL string !");
-        return result;
-    }
-    if (check_empty(videobaseurl->str)) {
-        strcpy(outValue, videobaseurl->str);
-        result = TRUE;
-    } else {
-	g_message("getVideoBasedUrl : No VideoBasedUrl found\n");
-    }
-    return result;
-}
 #ifndef CLIENT_XCAL_SERVER
 BOOL getCVPIp(char *outValue)
 {
@@ -1812,8 +1733,6 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     trmurl = g_string_new(NULL);
     trmurlCVP2 = g_string_new(NULL);
     playbackurl = g_string_new(NULL);
-    fogtsburl = g_string_new(NULL);
-    videobaseurl = g_string_new("null");
     playbackurlCVP2 = g_string_new(NULL);
     gwyip = g_string_new(NULL);
     gwyipv6 = g_string_new(NULL);
@@ -2053,11 +1972,6 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
         g_print("Serial Number is %s\n", serial_num->str);
     }
 #endif
-    if (getFogStatus()) {
-        g_message(" fog tsb url  %s \n", fogtsburl->str);
-	g_string_printf(videobaseurl, "http://%s/video", ipAddressBuffer);
-	g_message(" video base url  %s \n",videobaseurl->str);	
-    }
 #ifndef CLIENT_XCAL_SERVER
     if (getetchosts() == TRUE) {
         g_print("EtcHosts Content is \n%s\n", etchosts->str);
