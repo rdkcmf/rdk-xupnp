@@ -65,6 +65,9 @@ AM_LDFLAGS=$(GUPNP_LIBS) $(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $
            $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lgcrypt -lgpg-error  $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS)
 endif
 endif
+AM_CFLAGS+=$(BREAKPAD_CFLAGS)
+AM_LDFLAGS+=$(BREAKPAD_LFLAGS)
+AM_CFLAGS+=  -g3
 if BROADBAND_SUPPORT
 xcal_device_LDADD = $(top_builddir)/broadband/lib/libxdevice.la
 endif
