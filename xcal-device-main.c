@@ -29,10 +29,7 @@
 #include <string.h>
 
 #include "xdevice.h"
-#ifdef ENABLE_BREAKPAD
-#include "breakpadWrapper.h"
-#endif
-#ifdef BROADBAND
+#ifdef INCLUDE_BREAKPAD
 #include "breakpad_wrapper.h"
 #else
 #endif
@@ -1378,10 +1375,7 @@ main (int argc, char **argv)
 
     g_message("xmlfilename=%s struuid=%s serial_Num=%s",devXMlFile,uUid,serial_Num);
     g_message("devBcastIf=%sdevBcastPort=%d",devBcastIf,devBcastPort);
-#ifdef ENABLE_BREAKPAD
-    installExceptionHandler();
-#endif
-#ifdef BROADBAND
+#ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
 #endif
     char* xmlfilename = devXMlFile;

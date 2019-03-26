@@ -154,6 +154,22 @@ AC_ARG_ENABLE([broadband-support],
            esac
            ],
          [echo "broadband-support is enable"])
+# Check for breakpad
+BREAKPAD_CFLAGS=" "
+BREAKPAD_LFLAGS=" "
+AC_ARG_ENABLE([breakpad],
+		AS_HELP_STRING([--enable-breakpad],[enable breakpad support (default is no)]),
+		[
+			case "${enableval}" in
+        	 yes) BREAKPAD_CFLAGS="-DINCLUDE_BREAKPAD"
+                    BREAKPAD_LFLAGS="-lbreakpadwrapper -lpthread -lstdc++";;
+        	 no) AC_MSG_ERROR([breakpad is disabled]) ;;
+        	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-breakpad]) ;;
+        	 esac
+        	 ],
+    	    [echo "breakpad is disabled"])
+
+
 AM_CONDITIONAL([BROADBAND_SUPPORT], [test x$BROADBAND_SUPPORT = xtrue])
 PKG_CHECK_MODULES([LIBXML], [libxml-2.0 >= 2.7.8])
 PKG_CHECK_MODULES([LIBGSSDP], [gssdp-1.0] >= 0.10.0)
@@ -180,4 +196,6 @@ AC_SUBST(IARM_CFLAGS)
 AC_SUBST(GUPNP_VERSION)
 AC_SUBST(VIDEO_SUPPORT)
 AC_SUBST(BROADBAND_SUPPORT)
+AC_SUBST(BREAKPAD_CFLAGS)
+AC_SUBST(BREAKPAD_LFLAGS)
 AC_OUTPUT

@@ -29,16 +29,15 @@
 
 #include "xdiscovery.h"
 #include "xdiscovery_private.h"
-#ifdef ENABLE_BREAKPAD
-#include "breakpadWrapper.h"
-#endif
-#ifdef BROADBAND
+#ifdef INCLUDE_BREAKPAD
 #include "breakpad_wrapper.h"
-#else
+#endif
+#ifndef BROADBAND
 #ifdef ENABLE_RFC
 #include "rfcapi.h"
 #endif
 #endif
+
 #define DEVICE_PROTECTION_CONTEXT_PORT  50760
 //Symbols defined in makefile (via defs.mk)
 //#define USE_XUPNP_IARM
@@ -1112,10 +1111,7 @@ int main(int argc, char *argv[])
     cond = g_cond_new ();
     logoutfile = NULL;
 
-#ifdef ENABLE_BREAKPAD
-    installExceptionHandler();
-#endif
-#ifdef BROADBAND
+#ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
 #endif
 //   outputfilename = g_string_new("null");
