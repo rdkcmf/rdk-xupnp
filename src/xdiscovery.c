@@ -42,6 +42,11 @@
 #ifdef ENABLE_RFC
 #include "rfcapi.h"
 #endif
+#else
+#include <platform_hal.h>
+#endif
+#if defined(CLIENT_XCAL_SERVER) && !defined(BROADBAND)
+#include "mfrMgr.h"
 #endif
 int gatewayDetected=0;
 gboolean partialDiscovery=FALSE;
@@ -64,7 +69,11 @@ gboolean partialDiscovery=FALSE;
 //#define GUPNP_0_19
 //#define GUPNP_0_14
 const char* localHostIP="127.0.0.1";
-static int rfc_enabled;
+static int rfc_enabled ;
+#if !defined(BROADBAND)
+#define RESTART_XDISCOVERY_FILE      "/tmp/restartedXdiscovery"
+#endif
+
 static GMainLoop *main_loop;
 gboolean checkDevAddInProgress=FALSE;
 #define WAIT_TIME_SEC 5
@@ -73,6 +82,7 @@ gboolean checkDevAddInProgress=FALSE;
 #define SHM_EXISTS 17
 guint deviceAddNo=0;
 int getSoupStatusFromUrl(char* url);
+
 #ifdef SAFEC_DUMMY_API
 //adding strcmp_s defination
 errno_t strcmp_s(const char * d,int max ,const char * src,int *r)
@@ -512,6 +522,9 @@ gboolean getAccountId(char *outValue)
 }
 #endif
 
+gboolean selfDeviceDiscovered=FALSE;
+gboolean bSerialNum=FALSE;
+
 #if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
 
 typedef struct _iarmDeviceData {
@@ -905,6 +918,12 @@ device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 
     g_message ("In unavailable_cb  Device %s went down",sno);
 
+    if((g_strcmp0(g_strstrip(ownSerialNo->str),sno) == 0))
+    {
+        g_message ("Self Device [%s][%s] not removing",sno,ownSerialNo->str);
+        g_free(sno);
+        return;
+    }
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE);
 
     if (gupnp_service_proxy_get_subscribed(sproxy) == TRUE)
@@ -956,6 +975,12 @@ device_proxy_unavailable_cb_client (GUPnPControlPoint *cp, GUPnPDeviceProxy *dpr
     const gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
 
     g_message ("In unavailable_client Device %s went down",sno);
+    if((g_strcmp0(g_strstrip(ownSerialNo->str),sno) == 0))
+    {
+        g_message ("Self Device [%s][%s] not removing",sno,ownSerialNo->str);
+        g_free(sno);
+        return;
+    }
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_MEDIA);
     if (gupnp_service_proxy_get_subscribed(sproxy) == TRUE)
     {
@@ -981,6 +1006,12 @@ device_proxy_unavailable_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     const gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
     char gwyPlayUrl[OUTPLAYURL_SIZE]={0};
     g_message ("In unavailable_gw Device %s went down",sno);
+    if((g_strcmp0(g_strstrip(ownSerialNo->str),sno) == 0))
+    {
+        g_message ("Self Device [%s][%s] not removing",sno,ownSerialNo->str);
+        g_free(sno);
+        return;
+    }
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_MEDIA);
     if (gupnp_service_proxy_get_subscribed(sproxy) == TRUE)
     {
@@ -1125,9 +1156,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     {
         g_message("Discovered a XB device");
     }
-    else
-    {
-    if(strcasestr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
+    else if(g_strrstr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
     {
        if (gupnp_service_proxy_add_notify (gwydata->sproxy, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add url notifications for %s", sno);
@@ -1150,8 +1179,6 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
         g_message("Failed to register for notifications on %s", sno);
         g_clear_object(&(gwydata->sproxy));
     }
-    }
-
     g_free(sno);
     deviceAddNo--;
     g_message("Exting from device_proxy_available_cb deviceAddNo = %u",deviceAddNo);
@@ -1431,6 +1458,12 @@ device_proxy_unavailable_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy
 {
     const gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
     g_message ("In unavailable_bgw Device %s went down",sno);
+    if((g_strcmp0(g_strstrip(ownSerialNo->str),sno) == 0))
+    {
+        g_message ("Self Device [%s][%s] not removing",sno,ownSerialNo->str);
+        g_free(sno);
+        return;
+    }
     if (delete_gwyitem(sno) == FALSE)
     {
 	g_message("%s found, but unable to delete it from list", sno);
@@ -1809,6 +1842,8 @@ int main(int argc, char *argv[])
 #else
     main_loop = g_main_loop_new (main_context, FALSE);
 #endif
+    if(!bSerialNum)
+        getserialnum(ownSerialNo);
 
     thread = g_thread_create(verify_devices, NULL,FALSE, NULL);
     g_message("Started discovery on interface %s", disConf->discIf);
@@ -2937,6 +2972,11 @@ gboolean sendDiscoveryResult(const char* outfilename)
     const gchar v6ModeValue[]="ipv6";
     gboolean ipModeStateChanged=FALSE;
 
+    if(!bSerialNum)
+    {
+        getserialnum(ownSerialNo);
+    }
+
     GString *localOutputContents=g_string_new(NULL);
     GString *logDevicesList=g_string_new(NULL);
     g_string_printf(localOutputContents, "{\n\"xmediagateways\":\n\t[");
@@ -3022,6 +3062,11 @@ gboolean sendDiscoveryResult(const char* outfilename)
                     gatewayDetected++;
                 }
                 #endif
+            }
+            if((!selfDeviceDiscovered) && (g_strcmp0(g_strstrip(ownSerialNo->str),gwdata->serial_num->str) == 0))
+            {
+                selfDeviceDiscovered=TRUE;
+                g_message("Self Discovery Success %s",ownSerialNo->str);
             }
             if((disConf->enableGwSetup == TRUE) && ((firstXG1GwData == TRUE) || (firstXG2GwData == TRUE)) && (gwdata->isgateway == TRUE) && (checkvalidhostname(gwdata->dnsconfig->str) == TRUE ) && (checkvalidhostname(gwdata->etchosts->str) == TRUE) && (checkvalidip(gwdata->gwyip->str) == TRUE) && (checkvalidip(gwdata->gwyipv6->str) == TRUE))
             {
@@ -3166,7 +3211,9 @@ void* verify_devices()
     guint preCounter1=0;
     guint sleepCounter=0;
     guint browserDisableEnableCounter=0;
+    guint selfDiscoveryFailCount=0;
 //workaround to remove device in second attempt -Start
+    usleep(XUPNP_RESCAN_INTERVAL);
     while(1)
     {
         //g_main_context_push_thread_default(main_context);
@@ -3186,6 +3233,29 @@ void* verify_devices()
             usleep(XUPNP_RESCAN_INTERVAL);
             continue;
         }
+        // If self discovery fails even after local xdevice is publishing then do an restart of xdiscovery for one time.
+#if !defined(BROADBAND)
+        if((!selfDeviceDiscovered) && (access(RESTART_XDISCOVERY_FILE, F_OK ) == -1))
+        {
+            if (selfDiscoveryFailCount >= 20)
+            {
+                FILE *fDiscoveryFile;
+                fDiscoveryFile = fopen(RESTART_XDISCOVERY_FILE, "w");
+                if(! fDiscoveryFile)
+                {
+                    g_message("Restart Xdiscovery File open failure");
+                }
+                else
+                {
+                    g_message("Self Discovery Failed %d ! exiting",selfDiscoveryFailCount);
+                    fclose(fDiscoveryFile);
+                    exit(1);
+                }
+            }
+            else
+                selfDiscoveryFailCount++;
+        }
+#endif
         sleepCounter=0;
 #ifdef CLIENT_XCAL_SERVER
         // When there is a partial discovery make sure that we gssdp cache is flushed out using resource browser
@@ -3693,16 +3763,23 @@ gboolean readconffile(const char* configfile)
  * @return Returns TRUE if successfully get the own serial number else returns FALSE.
  * @ingroup XUPNP_XDISCOVERY_FUNC
  */
+
 gboolean getserialnum(GString* ownSerialNo)
 {
-    GError                  *err=NULL;
-    gboolean                result;
+#ifndef CLIENT_XCAL_SERVER
+    GError                  *error=NULL;
+    gboolean                result = FALSE;
     gchar* udhcpcvendorfile = NULL;
-    gchar *tokens = NULL;
-    result = g_file_get_contents ("//etc//udhcpc.vendor_specific", &udhcpcvendorfile, NULL, &err);
-    if (result)
+
+    result = g_file_get_contents ("//etc//udhcpc.vendor_specific", &udhcpcvendorfile, NULL, &error);
+    if (result == FALSE) {
+        g_message("Problem in reading /etc/udhcpcvendorfile file %s", error->message);
+    }
+    else
     {
-        tokens = g_strsplit_set(udhcpcvendorfile," \n\t\b\0", -1);
+        /* reset result = FALSE to identify serial number from udhcpcvendorfile contents */
+        result = FALSE;
+        gchar **tokens = g_strsplit_set(udhcpcvendorfile," \n\t\b\0", -1);
         guint toklength = g_strv_length(tokens);
         guint loopvar=0;
         for (loopvar=0; loopvar<toklength; loopvar++)
@@ -3711,17 +3788,71 @@ gboolean getserialnum(GString* ownSerialNo)
             if (g_strrstr(g_strstrip(tokens[loopvar]), "SUBOPTION4"))
             {
                 if ((loopvar+1) < toklength )
-                    g_string_assign(ownSerialNo,g_strstrip(tokens[loopvar+2]));
-                g_message("getserialnum serial no is %s",ownSerialNo->str);
+                {
+                    g_string_assign(ownSerialNo, g_strstrip(tokens[loopvar+2]));
+                    bSerialNum=TRUE;
+                    g_message("serialNumber fetched from udhcpcvendorfile:%s", ownSerialNo->str);
+                }
                 result = TRUE;
+                break;
             }
         }
-        if (tokens) g_strfreev(tokens);
+        g_strfreev(tokens);
     }
-    if (err) g_clear_error(&err);
+    //diagid=1000;
+
+    if(error)
+    {
+        /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
+        g_clear_error(&error);
+    }
     if (udhcpcvendorfile) g_free(udhcpcvendorfile);
+
     return result;
+#elif BROADBAND
+    gboolean result = FALSE;
+    if ( platform_hal_GetSerialNumber(ownSerialNo->str) == 0)
+    {
+        g_message("serialNumber returned from hal:%s", ownSerialNo->str);
+        result = TRUE;
+        bSerialNum=TRUE;
+    }
+    else
+    {
+        g_error("Unable to get SerialNumber");
+    }
+    return result;
+#else
+    bool bRet;
+    IARM_Bus_MFRLib_GetSerializedData_Param_t param;
+    IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
+    memset(&param, 0, sizeof(param));
+    param.type = mfrSERIALIZED_TYPE_SERIALNUMBER;
+    iarmRet = IARM_Bus_Call(IARM_BUS_MFRLIB_NAME, IARM_BUS_MFRLIB_API_GetSerializedData, &param, sizeof(param));
+    if(iarmRet == IARM_RESULT_SUCCESS)
+    {
+        if(param.buffer && param.bufLen)
+        {
+            g_message( " serialized data %s  \n",param.buffer );
+            g_string_assign(ownSerialNo,param.buffer);
+            bRet = true;
+            bSerialNum=TRUE;
+        }
+        else
+        {
+            g_message( " serialized data is empty  \n" );
+            bRet = false;
+        }
+    }
+    else
+    {
+        bRet = false;
+        g_message(  "IARM CALL failed  for mfrtype \n");
+    }
+    return bRet;
+#endif
 }
+
 
 /**
  * @brief Replace all occurrences of a sub-string in the given string to value the specified.
