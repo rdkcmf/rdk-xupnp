@@ -42,10 +42,12 @@ AM_CFLAGS=$(GUPNP_CFLAGS) -D$(GUPNP_VERSION)  $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS
     $(GCRYPT_CFLAGS) $(GNUTLS_CFLAGS) $(LIBGSSDP_CFLAGS) $(LIBXML_CFLAGS) $(LIBFFI_CFLAGS) $(SQLITE_CFLAGS) \
 	-I$(top_srcdir)/include 
 AM_LDFLAGS=$(GUPNP_LIBS) $(GTHREAD_LIBS) $(GCRYPT_LIBS) \
-           $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lgcrypt -lgpg-error  $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS) -lsyscfg
+           $(GNUTLS_LIBS) $(LIBSOUP_LIBS) $(LIBGSSDP_LIBS) -lgcrypt -lgpg-error -lccsp_common -lhal_platform -lhal_moca -lhal_msomgmt -lcm_mgnt -llmapi -lhal_ethsw $(LIBXML_LIBS) $(LIBFFI_LIBS) $(SQLITE_LIBS) $(GMODULE_LIBS) $(ZLIB_LIBS) -lsyscfg
+
 AM_CFLAGS+=$(GUPNP_CFLAGS) -D$(GUPNP_VERSION) ${IARM_CFLAGS} $(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS)\
     $(GCRYPT_CFLAGS) $(GNUTLS_CFLAGS) $(LIBGSSDP_CFLAGS) $(LIBXML_CFLAGS) $(LIBFFI_CFLAGS) $(SQLITE_CFLAGS) \
 	-I$(top_srcdir)/include -I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmbus \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/ccsp \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs-hal \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/sysmgr \
