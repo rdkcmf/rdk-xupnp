@@ -23,6 +23,11 @@ while [ "started" != "$x" ]
 do
    x=`sysevent get lan-status`
    echo "sysevent status = $x"
+   start_upnp=`syscfg get start_upnp_service`
+   if [ "$start_upnp" == "false" ]; then
+       echo "Stopping Xcal as RFC disabled"
+       systemctl stop xcal-device.service
+   fi
    sleep 2
 done
 status=""
@@ -49,6 +54,8 @@ do
         fi
         echo "Success"
 done
+
+export XCAL_DEF_INTERFACE=$MOCA_INTERFACE
 
 . /etc/device.properties
 . /etc/include.properties
@@ -134,69 +141,22 @@ if [ "$BUILD_TYPE" != "prod" ] && [ -f /etc/xdiscovery.conf ]; then
 fi
 
 echo "Moca interface =  $XCAL_DEF_INTERFACE"
-if [ "$GATEWAY_DEVICE" = "yes" ] || [ "$DEVICE_TYPE" = "hybrid" ]; then
-     # regular and hybrid
-     if [ ! -s /etc/xupnp/BasicDevice.xml ] || [ ! -f /etc/xupnp/BasicDevice.xml ] ; then
-       cp /etc/xupnp/BasicDevice.xml /opt/xupnp/BasicDevice.xml
-       chmod +x /etc/xupnp/BasicDevice.xml
-       loop=1
-       count=0
-       RETRY_COUNT=4
-       RETRY_DELAY=3
-       while [ $loop -eq 1 ]
-       do
-          if  [ ! -s /etc/xupnp/BasicDevice.xml ] ; then
-               count=$((count + 1))
-               if [ $count -ge $RETRY_COUNT ] ; then
-                    echo "start_upnp: $RETRY_COUNT tries failed. Giving up..."
-                    loop=0
-               else
-                    echo "start_upnp: Sleeping for $RETRY_DELAY more seconds ..."
-                    sleep $RETRY_DELAY
-               fi
-          else
-               echo "start_upnp: File size non-zero, good to go ..."
-               loop=0
-          fi
-      done
-   fi
-   if [ -f /etc/xupnp/DiscoverFriendlies.xml ]; then
-        cp /etc/xupnp/DiscoverFriendlies.xml  /opt/xupnp/DiscoverFriendlies.xml
-   fi
-   if [ -f /etc/xupnp/RemoteUIServerDevice.xml ]; then
-         cp /etc/xupnp/RemoteUIServerDevice.xml /opt/xupnp/RemoteUIServerDevice.xml
-         chmod +x /opt/xupnp/RemoteUIServerDevice.xml
-   fi
-   if [ -f /etc/xupnp/RemoteUIServer.xml ]; then
-         cp /etc/xupnp/RemoteUIServer.xml /opt/xupnp/RemoteUIServer.xml
-   fi
-   if [ -f /etc/MediaServer.xml ]; then
-         cp /etc/MediaServer.xml /opt/xupnp/MediaServer.xml
-         chmod +x /opt/xupnp/MediaServer.xml
-   fi
-   if [ -f /etc/ContentDirectory.xml ]; then
-         cp /etc/ContentDirectory.xml /opt/xupnp/ContentDirectory.xml
-   fi
-   if [ -f /etc/ConnectionManager.xml ]; then
-         cp /etc/ConnectionManager.xml /opt/xupnp/ConnectionManager.xml
-   fi
-else
-   echo "Mediaclient Execution..!"
-   if [ -s /etc/xupnp/BasicDevice.xml ] || [ -f /etc/xupnp/BasicDevice.xml ]; then
-	cp /etc/xupnp/BasicDevice.xml /nvram/xupnp/BasicDevice.xml
-	chmod +x /etc/xupnp/BasicDevice.xml
-   fi
-   if [ -f /etc/xupnp/DiscoverFriendlies.xml ]; then
-        cp /etc/xupnp/DiscoverFriendlies.xml  /nvram/xupnp/DiscoverFriendlies.xml
-   fi
-   if [ -f /etc/xupnp/RemoteUIServerDevice.xml ]; then
-         cp /etc/xupnp/RemoteUIServerDevice.xml /nvram/xupnp/RemoteUIServerDevice.xml
-         chmod +x /nvram/xupnp/RemoteUIServerDevice.xml
-   fi
-   if [ -f /etc/xupnp/RemoteUIServer.xml ]; then
-         cp /etc/xupnp/RemoteUIServer.xml /nvram/xupnp/RemoteUIServer.xml
-   fi
+echo "Mediaclient Execution..!"
+if [ -s /etc/xupnp/BasicDevice.xml ] || [ -f /etc/xupnp/BasicDevice.xml ]; then
+    cp /etc/xupnp/BasicDevice.xml /nvram/xupnp/BasicDevice.xml
+    chmod +x /etc/xupnp/BasicDevice.xml
 fi
+if [ -f /etc/xupnp/DiscoverFriendlies.xml ]; then
+    cp /etc/xupnp/DiscoverFriendlies.xml  /nvram/xupnp/DiscoverFriendlies.xml
+fi
+if [ -f /etc/xupnp/RemoteUIServerDevice.xml ]; then
+    cp /etc/xupnp/RemoteUIServerDevice.xml /nvram/xupnp/RemoteUIServerDevice.xml
+    chmod +x /nvram/xupnp/RemoteUIServerDevice.xml
+fi
+if [ -f /etc/xupnp/RemoteUIServer.xml ]; then
+    cp /etc/xupnp/RemoteUIServer.xml /nvram/xupnp/RemoteUIServer.xml
+fi
+
 mocaIpWait
 INTERFACE_TEST=`ifconfig $XCAL_DEF_INTERFACE`
 if [ "X$INTERFACE_TEST" == "X" ] ; then

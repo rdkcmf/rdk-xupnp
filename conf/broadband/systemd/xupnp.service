@@ -25,7 +25,7 @@ SyslogIdentifier="xupnp"
 Environment="LOG4C_RCPATH=/etc"
 EnvironmentFile=/etc/device.properties
 ExecStartPre=/bin/sh -c 'sleep 30'
-ExecStart=/bin/sh -c '/usr/bin/xdiscovery /etc/xdiscovery.conf /rdklogs/logs/xdiscovery.log '
+ExecStart=/bin/sh -c 'val=`syscfg get start_upnp_service`; if [ "$val" == "true" ]; then `/usr/bin/xdiscovery /etc/xdiscovery.conf /rdklogs/logs/xdiscovery.log`; fi '
 ExecStop=/bin/sh -c 'echo "`date`: Stopping/Restarting XDiscovery Service" >> ${PROCESS_RESTART_LOG}'
 Restart=always
 
