@@ -283,7 +283,7 @@ void logMilestone(const char *msg_code)
     fp = fopen("/opt/logs/rdk_milestones.log", "a+");
     if (fp != NULL)
     {
-      fprintf(fp, "[%ld] %s\n", getUptimeMS(), msg_code);
+      fprintf(fp, "%s:%ld\n", msg_code, getUptimeMS());
       fclose(fp);
     }
 }
