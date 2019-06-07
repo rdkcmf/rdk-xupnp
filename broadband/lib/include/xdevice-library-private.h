@@ -34,7 +34,7 @@ typedef struct
 
 ConfSettings *devConf;
 
-GString *url, *trmurl, *videobaseurl, *playbackurl, *gwyip, *gwyipv6, *dnsconfig, *systemids, *serial_num, *lan_ip, *recv_id,*partner_id,*hostmacaddress,*devicetype,*recvdevtype,*buildversion,*ipv6prefix,*gwystbip,*bcastmacaddress,*devicename,*mocaIface,*wifiIface,*fogtsburl,*dataGatewayIPaddress, *eroutermacaddress;
+GString *url, *trmurl, *videobaseurl, *playbackurl, *gwyip, *gwyipv6, *dnsconfig, *systemids, *serial_num, *lan_ip, *recv_id,*partner_id,*hostmacaddress,*devicetype,*recvdevtype,*buildversion,*ipv6prefix,*gwystbip,*bcastmacaddress,*devicename,*mocaIface,*wifiIface,*fogtsburl,*dataGatewayIPaddress, *eroutermacaddress, *accountid, *make;
 GString *trmurlCVP2, *playbackurlCVP2, *gwyipCVP2;
 unsigned long channelmap_id, dac_id, plant_id, vodserver_id;
 GString *dsgtimezone, *etchosts;

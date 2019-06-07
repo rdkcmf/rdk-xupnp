@@ -162,6 +162,18 @@ fi
 if [ -f /etc/xupnp/RemoteUIServer.xml ]; then
     cp /etc/xupnp/RemoteUIServer.xml /nvram/xupnp/RemoteUIServer.xml
 fi
+if [ -f /etc/xupnp/X1BroadbandGateway.xml ]; then
+    cp /etc/xupnp/X1BroadbandGateway.xml /nvram/xupnp/X1BroadbandGateway.xml
+fi
+if [ -f /etc/xupnp/X1GatewayConfiguration.xml ]; then
+    cp /etc/xupnp/X1GatewayConfiguration.xml /nvram/xupnp/X1GatewayConfiguration.xml
+fi
+if [ -f /etc/xupnp/X1Time.xml ]; then
+    cp /etc/xupnp/X1Time.xml /nvram/xupnp/X1Time.xml
+fi
+if [ -f /etc/xupnp/X1Identity.xml ]; then
+    cp /etc/xupnp/X1Identity.xml /nvram/xupnp/X1Identity.xml
+fi
 
 mocaIpWait
 INTERFACE_TEST=`ifconfig $XCAL_DEF_INTERFACE`

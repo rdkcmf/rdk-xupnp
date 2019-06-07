@@ -22,9 +22,11 @@ AM_CFLAGS = $(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBXML_CFLAGS) $(LIBSOUP_CFLAGS) 
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs-hal \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/sysmgr \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/wdmp-c \
+	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir) \
 	-I$(top_srcdir)/video/lib/include
 AM_CFLAGS += $(IARM_CFLAGS)
-AM_LDFLAGS=$(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(LIBXML_LIBS) $(LIBSOUP_LIBS)
+AM_LDFLAGS=$(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(LIBXML_LIBS) $(LIBSOUP_LIBS) -lrfcapi
 
 noinst_LTLIBRARIES = libxdevice.la
 libxdevice_la_SOURCES = src/xcal_device_library.c

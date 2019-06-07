@@ -101,7 +101,8 @@ BOOL getCVPIp(char *outValue);
 BOOL getRouteDataGateway(char *outValue);
 BOOL getLogFile(char *outValue);
 BOOL getDevXmlPath(char *outValue);
-BOOL getDevXmlFile(char *outValue);
+BOOL getDevXmlFile(char *outValue, int refactor);
+BOOL getAccountId(char *outValue);
 BOOL checkCVP2Enabled();
 BOOL getUidfromRecvId();
 

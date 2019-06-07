@@ -151,13 +151,30 @@ if [ -f /etc/xupnp/DiscoverFriendlies.xml ]; then
     mount --bind /nvram/xupnp/DiscoverFriendlies.xml /etc/xupnp/DiscoverFriendlies.xml
 fi
 if [ -f /etc/xupnp/RemoteUIServerDevice.xml ]; then
-     cp /etc/xupnp/RemoteUIServerDevice.xml /nvram/xupnp/RemoteUIServerDevice.xml
-     chmod +x /nvram/xupnp/RemoteUIServerDevice.xml
-     mount --bind /nvram/xupnp/RemoteUIServerDevice.xml /etc/xupnp/RemoteUIServerDevice.xml
+    cp /etc/xupnp/RemoteUIServerDevice.xml /nvram/xupnp/RemoteUIServerDevice.xml
+    chmod +x /nvram/xupnp/RemoteUIServerDevice.xml
+    mount --bind /nvram/xupnp/RemoteUIServerDevice.xml /etc/xupnp/RemoteUIServerDevice.xml
 fi
 if [ -f /etc/xupnp/RemoteUIServer.xml ]; then
-     cp /etc/xupnp/RemoteUIServer.xml /nvram/xupnp/RemoteUIServer.xml
-     mount --bind /nvram/xupnp/RemoteUIServer.xml /etc/xupnp/RemoteUIServer.xml
+    cp /etc/xupnp/RemoteUIServer.xml /nvram/xupnp/RemoteUIServer.xml
+    mount --bind /nvram/xupnp/RemoteUIServer.xml /etc/xupnp/RemoteUIServer.xml
+fi
+if [ -f /etc/xupnp/X1BroadbandGateway.xml ]; then
+    cp /etc/xupnp/X1BroadbandGateway.xml /nvram/xupnp/X1BroadbandGateway.xml
+    chmod +x /etc/xupnp/X1BroadbandGateway.xml
+    mount --bind /nvram/xupnp/X1BroadbandGateway.xml /etc/xupnp/X1BroadbandGateway.xml
+fi
+if [ -f /etc/xupnp/X1GatewayConfiguration.xml ]; then
+    cp /etc/xupnp/X1GatewayConfiguration.xml /nvram/xupnp/X1GatewayConfiguration.xml
+    mount --bind /nvram/xupnp/X1GatewayConfiguration.xml /etc/xupnp/X1GatewayConfiguration.xml
+fi
+if [ -f /etc/xupnp/X1Time.xml ]; then
+    cp /etc/xupnp/X1Time.xml /nvram/xupnp/X1Time.xml
+    mount --bind /nvram/xupnp/X1Time.xml /etc/xupnp/X1Time.xml
+fi
+if [ -f /etc/xupnp/X1Identity.xml ]; then
+    cp /etc/xupnp/X1Identity.xml /nvram/xupnp/X1Identity.xml
+    mount --bind /nvram/xupnp/X1Identity.xml /etc/xupnp/X1Identity.xml
 fi
 
 mocaIpWait

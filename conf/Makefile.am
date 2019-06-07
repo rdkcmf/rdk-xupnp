@@ -17,4 +17,4 @@
 # limitations under the License.
 ##########################################################################
 SUBDIRS = 
-sysconf_DATA= BasicDevice.xml DiscoverFriendlies.xml RemoteUIServerDevice.xml RemoteUIServer.xml
+sysconf_DATA= BasicDevice.xml DiscoverFriendlies.xml RemoteUIServerDevice.xml RemoteUIServer.xml X1GatewayConfiguration.xml X1Identity.xml X1MediaConfiguration.xml X1QamConfiguration.xml X1Renderer.xml X1Time.xml X1VideoGateway.xml X1BroadbandGateway.xml

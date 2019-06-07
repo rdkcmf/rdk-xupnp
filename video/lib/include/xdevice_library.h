@@ -105,7 +105,10 @@ BOOL getCVPXmlFile(char *outValue);
 BOOL getRouteDataGateway(char *outValue);
 BOOL getLogFile(char *outValue);
 BOOL getDevXmlPath(char *outValue);
-BOOL getDevXmlFile(char *outValue);
+BOOL getDevXmlFile(char *outValue, int refactor);
+BOOL getModelNumber(char *outValue);
+BOOL getMake(char *outValue);
+BOOL getAccountId(char *outValue);
 BOOL checkCVP2Enabled();
 
 //typedef INT (*xdevice_service_callback)(enum serviceListCb , char *data);
