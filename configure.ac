@@ -106,6 +106,16 @@ AC_ARG_ENABLE([fog],
                 esac
               ],
               [echo "fog is disabled"])
+AC_ARG_ENABLE([rfc],
+              AS_HELP_STRING([--enable-rfc],[enable rfc (default is no)]),
+              [
+                case "${enableval}" in
+                 yes) CFLAGS+=" -DENABLE_RFC";;
+                 no)   echo "RFC is disabled";;
+                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-rfc]) ;;
+                esac
+              ],
+              [echo "rfc is disabled"])
 LIBRARY_SUPPORT=" "
 AC_ARG_ENABLE([library-support],
         AS_HELP_STRING([--enable-library-support],[This will enable/disable library support.]),

@@ -25,6 +25,7 @@
 
   <device>
     <deviceType>urn:schemas-upnp-org:device:BasicDevice:1</deviceType>
+    <UPC></UPC>
     <friendlyName>XfinityMediaGateway</friendlyName>
     <manufacturer>Pace</manufacturer>
     <modelName>XG-1</modelName>

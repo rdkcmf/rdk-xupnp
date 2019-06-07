@@ -34,14 +34,19 @@
 #endif
 #ifdef BROADBAND
 #include "breakpad_wrapper.h"
+#else
 #endif
 #ifdef ENABLE_SD_NOTIFY
 #include <systemd/sd-daemon.h>
 #endif
 
-#define DEVICE_XML_PATH     "/etc/xupnp/"
-#define DEVICE_XML_FILE     "BasicDevice.xml"
-#define LOG_FILE    "/opt/logs/xdevice.log"
+#define DEVICE_XML_PATH     		"/etc/xupnp/"
+#define DEVICE_XML_FILE     		"BasicDevice.xml"
+#define CLIENT_DEVICE_XML_FILE		"X1Renderer.xml"
+#define GW_DEVICE_XML_FILE		"X1VideoGateway.xml"
+#define BROADBAND_DEVICE_XML_FILE	"X1BroadbandGateway.xml"
+#define LOG_FILE			"/opt/logs/xdevice.log"
+#define DEVICE_PROTECTION_CONTEXT_PORT  50757
 
 #define MAXSIZE 256
 #define RUIURLSIZE 2048
@@ -55,10 +60,12 @@ static  GMainLoop *main_loop;
 
 char devBcastIf[MAXSIZE],serial_Num[MAXSIZE], cvpInterface[MAXSIZE], cvPXmlFile[MAXSIZE],playBackUrl[URLSIZE],devXMlPath[MAXSIZE],uUid[MAXSIZE],ruiUrl[RUIURLSIZE];
 char devXMlFile [MAXSIZE],devBcastIf[MAXSIZE],serial_Num[MAXSIZE],cvpInterface[MAXSIZE],cvPXmlFile[MAXSIZE],ipv6preFix[MAXSIZE],trmUrl[MAXSIZE],urL[MAXSIZE];
-char gwyIp[MAXSIZE],gwyIpv6[MAXSIZE],gwystbIp[MAXSIZE],hostMacaddress[MAXSIZE],bcastMacaddress[MAXSIZE],recvdevType[MAXSIZE],deviceType[MAXSIZE];
-char buildVersion[MAXSIZE],dnsConfig[MAXSIZE],systemIds[MAXSIZE],dataGatewayIPAddress[MAXSIZE],dsgtimeZone[MAXSIZE],deviceName[MAXSIZE],etcHosts[RUIURLSIZE];
+char gwyIp[MAXSIZE],gwyIpv6[MAXSIZE],gwystbIp[MAXSIZE],hostMacaddress[MAXSIZE],bcastMacaddress[MAXSIZE],recvdevType[MAXSIZE],deviceType[MAXSIZE],modelclass[MAXSIZE],modelNumber[MAXSIZE],deviceid[MAXSIZE],hardwarerevision[MAXSIZE],softwarerevision[MAXSIZE],managementurl[MAXSIZE],Make[MAXSIZE],accountId[MAXSIZE];
+char buildVersion[MAXSIZE],dnsConfig[MAXSIZE],systemIds[MAXSIZE],dataGatewayIPAddress[MAXSIZE],dsgtimeZone[MAXSIZE],deviceName[MAXSIZE],etcHosts[RUIURLSIZE],receiverId[MAXSIZE];
 gint rawoffset, dstoffset, dstsavings, devBcastPort, cvpPort;
 gboolean usedaylightsavings,allowgwy,requiresTrm;
+
+static int rfc_enabled;
 
 static xmlNode * get_node_by_name(xmlNode * node, const char *node_name)
 {
@@ -133,7 +140,15 @@ BOOL updatexmldata(const char* xmlfilename, const char* struuid, const char* ser
         g_printerr ("Error reading the Device XML file\n");
         return FALSE;
     }
-
+    if(rfc_enabled)
+    {
+        if (set_content(doc, "UPC", "10000")!=0)
+        {
+            g_printerr ("Error setting the upc in conf xml\n");
+            return FALSE;
+        }
+	g_message("Added UPC value to Device.xml");
+    }
     if (set_content(doc, "UDN", struuid)!=0)
     {
         g_printerr ("Error setting the unique device id in conf xml\n");
@@ -144,7 +159,6 @@ BOOL updatexmldata(const char* xmlfilename, const char* struuid, const char* ser
         g_printerr ("Error setting the serial number in conf xml\n");
         return FALSE;
     }
-
     if(NULL != friendlyName)
     {
         if (set_content(doc, "friendlyName", friendlyName)!=0)
@@ -400,7 +414,7 @@ G_MODULE_EXPORT void
 get_bcastmacaddress_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     //g_print ("Got a call back\n");
-    getBcastMacAddress(bcastMacaddress);
+//    getBcastMacAddress(bcastMacaddress);
     gupnp_service_action_set (action, "BcastMacAddress", G_TYPE_STRING, bcastMacaddress, NULL);
     gupnp_service_action_return (action);
 }
@@ -431,6 +445,7 @@ get_devicetype_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
     gupnp_service_action_set (action, "DeviceType", G_TYPE_STRING, deviceType, NULL);
     gupnp_service_action_return (action);
 }
+
 /**
  * @brief Callback function which is invoked when getBuildVersion action is invoked and this sets
  * the state variable for Build Version.
@@ -497,7 +512,14 @@ get_systemids_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer us
 G_MODULE_EXPORT void
 get_dataGatewayIPaddress_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
-    getRouteDataGateway(dataGatewayIPAddress);
+    if ( rfc_enabled )
+    {
+        getGatewayStbIp(dataGatewayIPAddress);
+    }
+    else
+    {
+        getRouteDataGateway(dataGatewayIPAddress);
+    }
     gupnp_service_action_set (action, "DataGatewayIPaddress", G_TYPE_STRING, dataGatewayIPAddress, NULL);
     gupnp_service_action_return (action);
 }
@@ -681,6 +703,63 @@ get_rui_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user
     gupnp_service_action_get (action,"InputDeviceProfile", G_TYPE_STRING, inDevProfile->str, NULL);
     gupnp_service_action_get (action,"UIFilter", G_TYPE_STRING, uiFilter->str,NULL);
     gupnp_service_action_set (action, "UIListing", G_TYPE_STRING, ruiUrl, NULL);
+    gupnp_service_action_return (action);
+}
+
+get_modelclass_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    //g_print ("Got a call back\n");
+    getDeviceType(modelclass);
+    gupnp_service_action_set (action, "ModelClass", G_TYPE_STRING, modelclass, NULL);
+    gupnp_service_action_return (action);
+}
+get_modelnumber_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    //g_print ("Got a call back\n");
+    getModelNumber(modelNumber);
+    gupnp_service_action_set (action, "ModelNumber", G_TYPE_STRING, modelNumber, NULL);
+    gupnp_service_action_return (action);
+}
+get_deviceid_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    //g_print ("Got a call back\n");
+    gupnp_service_action_set (action, "DeviceId", G_TYPE_STRING, deviceid, NULL);
+    gupnp_service_action_return (action);
+}
+get_hardwarerevision_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    //g_print ("Got a call back\n");
+    gupnp_service_action_set (action, "HardwareRevision", G_TYPE_STRING, hardwarerevision, NULL);
+    gupnp_service_action_return (action);
+}
+get_softwarerevision_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    //g_print ("Got a call back\n");
+    gupnp_service_action_set (action, "SoftwareRevision", G_TYPE_STRING, softwarerevision, NULL);
+    gupnp_service_action_return (action);
+}
+get_managementurl_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    //g_print ("Got a call back\n");
+    gupnp_service_action_set (action, "ManagementURL", G_TYPE_STRING, managementurl, NULL);
+    gupnp_service_action_return (action);
+}
+get_make_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    //g_print ("Got a call back\n");
+    getMake(Make);
+    gupnp_service_action_set (action, "Make", G_TYPE_STRING, Make, NULL);
+    gupnp_service_action_return (action);
+}
+get_recev_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    //g_print ("Got a call back\n");
+    gupnp_service_action_set (action, "ReceiverId", G_TYPE_STRING, receiverId, NULL);
+    gupnp_service_action_return (action);
+}
+get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    gupnp_service_action_set (action, "AccountId", G_TYPE_STRING, accountId, NULL);
     gupnp_service_action_return (action);
 }
 /*
@@ -1130,6 +1209,152 @@ void* checkMainLoopRunning()
     }
 }
 
+G_MODULE_EXPORT void
+query_modelclass_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, modelclass);
+}
+G_MODULE_EXPORT void
+query_modelnumber_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, modelNumber);
+}
+G_MODULE_EXPORT void
+query_deviceid_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, deviceid);
+}
+G_MODULE_EXPORT void
+query_hardwarerevision_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, hardwarerevision);
+}
+G_MODULE_EXPORT void
+query_softwarerevision_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, softwarerevision);
+}
+G_MODULE_EXPORT void
+query_managementurl_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, managementurl);
+}
+G_MODULE_EXPORT void
+query_make_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, Make);
+}
+G_MODULE_EXPORT void
+query_recev_id_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, receiverId);
+}
+G_MODULE_EXPORT void
+query_account_id_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, accountId);
+}
+
+int registerIdentityConfigurationService(GUPnPServiceInfo *upnpIdService)
+{
+    g_signal_connect (upnpIdService, "action-invoked::GetRecvDevType", G_CALLBACK (get_recvdevtype_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetDeviceType", G_CALLBACK (get_devicetype_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetBuildVersion", G_CALLBACK (get_buildversion_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetDeviceName", G_CALLBACK (get_devicename_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetModelClass", G_CALLBACK (get_modelclass_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetModelNumber", G_CALLBACK (get_modelnumber_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetDeviceId", G_CALLBACK (get_deviceid_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetHardwareRevision", G_CALLBACK (get_hardwarerevision_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetSoftwareRevision", G_CALLBACK (get_softwarerevision_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetManagementUrl", G_CALLBACK (get_managementurl_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetMake", G_CALLBACK (get_make_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetReceiverId", G_CALLBACK (get_recev_id_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetAccountId", G_CALLBACK (get_account_id_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::RecvDevType", G_CALLBACK (query_recvdevtype_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::DeviceType", G_CALLBACK (query_devicetype_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::BuildVersion", G_CALLBACK (query_buildversion_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::DeviceName", G_CALLBACK (query_devicename_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::ModelClass", G_CALLBACK (query_modelclass_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::ModelNumber", G_CALLBACK (query_modelnumber_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::DeviceId", G_CALLBACK (query_deviceid_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::HardwareRevision", G_CALLBACK (query_hardwarerevision_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::SoftwareRevision", G_CALLBACK (query_softwarerevision_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::ManagementUrl", G_CALLBACK (query_managementurl_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::Make", G_CALLBACK (query_make_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::ReceiverId", G_CALLBACK (query_recev_id_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::AccountId", G_CALLBACK (query_account_id_cb), NULL);
+    return 0;
+}
+int registerMediaConfigurationService(GUPnPServiceInfo *upnpMediaConfService)
+{
+    g_signal_connect (upnpMediaConfService, "action-invoked::GetBaseUrl", G_CALLBACK (get_url_cb), NULL);
+    g_signal_connect (upnpMediaConfService, "action-invoked::GetPlaybackUrl", G_CALLBACK (get_playback_url_cb), NULL);
+//    g_signal_connect (upnpMediaConfService, "action-invoked::GetFogTsbUrl", G_CALLBACK (get_fogtsb_url_cb), NULL);
+//    g_signal_connect (upnpMediaConfService, "action-invoked::GetVideoBaseUrl", G_CALLBACK (get_videobase_url_cb), NULL);
+    g_signal_connect (upnpMediaConfService, "query-variable::Url", G_CALLBACK (query_url_cb), NULL);
+    g_signal_connect (upnpMediaConfService, "query-variable::PlaybackUrl", G_CALLBACK (query_playback_url_cb), NULL);
+//    g_signal_connect (upnpMediaConfService, "query-variable::FogTsbUrl", G_CALLBACK (query_fogtsb_url_cb), NULL);
+//    g_signal_connect (upnpMediaConfService, "query-variable::VideoBaseUrl", G_CALLBACK (query_videobase_url_cb), NULL);
+    return 0;
+}
+int registerGatewayConfigurationService(GUPnPServiceInfo *upnpGatewayConf)
+{
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetGatewayIP", G_CALLBACK (get_gwyip_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetGatewayIPv6", G_CALLBACK (get_gwyipv6_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetIpv6Prefix", G_CALLBACK (get_ipv6prefix_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetDnsConfig", G_CALLBACK (get_dnsconfig_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetHosts", G_CALLBACK (get_hosts_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetHostMacAddress", G_CALLBACK (get_hostmacaddress_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetDataGatewayIPaddress", G_CALLBACK (get_dataGatewayIPaddress_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetIsGateway", G_CALLBACK (get_isgateway_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::GatewayIP", G_CALLBACK (query_gwyip_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::GatewayIPv6", G_CALLBACK (query_gwyipv6_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::Ipv6Prefix", G_CALLBACK (query_ipv6prefix_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::GatewayStbIP", G_CALLBACK (query_gwystbip_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::DnsConfig", G_CALLBACK (query_dnsconfig_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::Hosts", G_CALLBACK (query_hosts_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::HostMacAddress", G_CALLBACK (query_hostmacaddress_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::DataGatewayIPaddress", G_CALLBACK (query_dataGatewayIPaddress_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::IsGateway", G_CALLBACK (query_isgateway_cb), NULL);
+    g_signal_connect (upnpGatewayConf, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
+    return 0;
+}
+int registerQamConfigurationService(GUPnPServiceInfo *upnpQamConf)
+{
+    g_signal_connect (upnpQamConf, "action-invoked::GetBaseTrmUrl", G_CALLBACK (get_trm_url_cb), NULL);
+    g_signal_connect (upnpQamConf, "action-invoked::GetSystemIds", G_CALLBACK (get_systemids_cb), NULL);
+    g_signal_connect (upnpQamConf, "action-invoked::GetRequiresTRM", G_CALLBACK (get_requirestrm_cb), NULL);
+    g_signal_connect (upnpQamConf, "query-variable::TrmUrl", G_CALLBACK (query_trm_url_cb), NULL);
+    g_signal_connect (upnpQamConf, "query-variable::SystemIds", G_CALLBACK (query_systemids_cb), NULL);
+    g_signal_connect (upnpQamConf, "query-variable::RequiresTRM", G_CALLBACK (query_requirestrm_cb), NULL);
+    return 0;
+}
+int registerTimeConfigurationService(GUPnPServiceInfo *upnpTimeConf)
+{
+    g_signal_connect (upnpTimeConf, "action-invoked::GetTimeZone", G_CALLBACK (get_timezone_cb), NULL);
+    g_signal_connect (upnpTimeConf, "action-invoked::GetRawOffSet", G_CALLBACK (get_rawoffset_cb), NULL);
+    g_signal_connect (upnpTimeConf, "action-invoked::GetDSTOffset", G_CALLBACK (get_dstoffset_cb), NULL);
+    g_signal_connect (upnpTimeConf, "action-invoked::GetDSTSavings", G_CALLBACK (get_dstsavings_cb), NULL);
+    g_signal_connect (upnpTimeConf, "action-invoked::GetUsesDaylightTime", G_CALLBACK (get_usesdaylighttime_cb), NULL);
+    g_signal_connect (upnpTimeConf, "query-variable::TimeZone", G_CALLBACK (query_timezone_cb), NULL);
+    g_signal_connect (upnpTimeConf, "query-variable::RawOffSet", G_CALLBACK (query_rawoffset_cb), NULL);
+    g_signal_connect (upnpTimeConf, "query-variable::DSTOffset", G_CALLBACK (query_dstoffset_cb), NULL);
+    g_signal_connect (upnpTimeConf, "query-variable::DSTSavings", G_CALLBACK (query_dstsavings_cb), NULL);
+    g_signal_connect (upnpTimeConf, "query-variable::UsesDaylightTime", G_CALLBACK (query_usesdaylighttime_cb), NULL);
+    return 0;
+}
+
 int
 main (int argc, char **argv)
 {
@@ -1138,15 +1363,21 @@ main (int argc, char **argv)
     g_thread_init (NULL);
     char devConfFile[] = "/etc/xdevice.conf";
     g_type_init ();
-    g_message(" Starting XCAL-DEVICE ");
+    g_message("Starting XCAL-DEVICE ");
     xupnpEventCallback_register(&notify_value_change);
     xdeviceInit(devConfFile,NULL);
-    if(!(getDevXmlPath(devXMlPath)&& getDevXmlFile(devXMlFile) && getUUID(uUid) && getBcastPort(&devBcastPort) && getSerialNum(serial_Num) && getBcastIf(devBcastIf)))
+    rfc_enabled = check_rfc();
+    if(!rfc_enabled)
     {
-        g_message("Failed to update the required gupnp xcal-device variables\n");
+        g_message("Running Older Xcal Device");
     }
-	g_message("xmlfilename=%s struuid=%s serial_Num=%s",devXMlFile,uUid,serial_Num);
-	g_message("devBcastIf=%sdevBcastPort=%d",devBcastIf,devBcastPort);
+    if(!(getDevXmlPath(devXMlPath)&& getDevXmlFile(devXMlFile,0) && getUUID(uUid) && getBcastPort(&devBcastPort) && getSerialNum(serial_Num) && getBcastIf(devBcastIf)))
+    {
+        g_message("Failed to update the required gupnp xcal-device variables");
+    }
+
+    g_message("xmlfilename=%s struuid=%s serial_Num=%s",devXMlFile,uUid,serial_Num);
+    g_message("devBcastIf=%sdevBcastPort=%d",devBcastIf,devBcastPort);
 #ifdef ENABLE_BREAKPAD
     installExceptionHandler();
 #endif
@@ -1162,8 +1393,12 @@ main (int argc, char **argv)
         exit(1);
     }
     else
-        fprintf(stderr,"Updated the device xml file %s\n", xmlfilename);
-        fprintf(stderr,"Updated the struuid value %s\n",struuid);
+        g_message("Updated the device xml file:%s uuid: %s", xmlfilename,struuid);
+//        fprintf(stderr,"Updated the struuid value %s\n",struuid);
+    if(!getBcastMacAddress(bcastMacaddress))
+    {
+        g_message("Unable to get bcastMacaddress");
+    }
     upnpContext = gupnp_context_new (NULL, devBcastIf, devBcastPort, &error);
     if (error) {
         g_printerr ("Error creating the Broadcast context: %s\n",
@@ -1173,7 +1408,7 @@ main (int argc, char **argv)
         return EXIT_FAILURE;
     }
     gupnp_context_set_subscription_timeout(upnpContext, 0);
-    dev = gupnp_root_device_new (upnpContext, devXMlFile, devXMlPath);
+    baseDev = gupnp_root_device_new (upnpContext, devXMlFile, devXMlPath);
 #ifndef CLIENT_XCAL_SERVER
     if(!getDisableTuneReadyStatus())
     {
@@ -1183,12 +1418,128 @@ main (int argc, char **argv)
 	}
     }
 #endif
-    gupnp_root_device_set_available (dev, TRUE);
+    gupnp_root_device_set_available (baseDev, TRUE);
+    /* Get the discover friendlies service from the root device */
     upnpService = gupnp_device_info_get_service
-              (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:DiscoverFriendlies:1");
-    if (!upnpService) {
+       (GUPNP_DEVICE_INFO (baseDev), "urn:schemas-upnp-org:service:DiscoverFriendlies:1");
+    if (!upnpService) 
+    {
         g_printerr ("Cannot get DiscoverFriendlies service\n");
         return EXIT_FAILURE;
+    }
+    if(rfc_enabled)
+    {
+        char devXMlFile_new[MAXSIZE];
+
+	if(!getDevXmlFile(devXMlFile_new, 1))
+	{
+	    g_message("Unable to get new device xml file");
+	}
+        char *xmlfilename_new = devXMlFile_new;
+
+	char uuid_new[48];
+        if(getAccountId(accountId))
+        {
+            g_message("Account Id of the device is %s", accountId);
+        }
+        else
+        {
+	    g_message("Failed to get the Account Id");
+        }
+        if(bcastMacaddress)
+        {
+            sprintf(uuid_new,"uuid:%s",bcastMacaddress);
+        }
+	result = updatexmldata(xmlfilename_new, uuid_new, serial_Num, "XFINITY");
+        if (!result)
+        {
+            g_message("Failed to open the device xml file %s\n", xmlfilename_new);
+            exit(1);
+        }
+        else
+        {
+            g_message("RFC enabled Updated the device xml file:%s uuid: %s\n", xmlfilename_new,uuid_new);
+        }
+        upnpContextDeviceProtect = gupnp_context_new (NULL, devBcastIf, DEVICE_PROTECTION_CONTEXT_PORT, &error);
+        if (error) {
+            g_printerr ("Error creating the Device Protection Broadcast context: %s\n",
+                        error->message);
+            /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
+            g_clear_error(&error);
+            return EXIT_FAILURE;
+        }
+        gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
+        dev = gupnp_root_device_new (upnpContextDeviceProtect, devXMlFile_new, devXMlPath);
+//        dev = gupnp_root_device_new (upnpContext, devXMlFile_new, devXMlPath);
+        gupnp_root_device_set_available (dev, TRUE);
+
+        upnpIdService = gupnp_device_info_get_service
+            (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1Identity:1");
+        if (!upnpService)
+        {
+            g_printerr ("Cannot get X1Identity service\n");
+            return EXIT_FAILURE;
+        }
+        g_message("XUPNP Identity service successfully created");
+
+        if(strstr(devXMlFile_new,BROADBAND_DEVICE_XML_FILE) || strstr(devXMlFile_new,GW_DEVICE_XML_FILE))
+        {
+	    g_message("Broadband OR Gateway Device Configuration File");
+            upnpTimeConf = gupnp_device_info_get_service
+                 (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1Time:1");
+            if (!upnpTimeConf)
+            {
+                g_printerr ("Cannot get XfinityTimeConfiguration service\n");
+                return EXIT_FAILURE;
+            }
+            g_message("XUPNP XfinityTimeConfiguration service successfully created");
+            upnpGatewayConf = gupnp_device_info_get_service
+                 (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1GatewayConfiguration:1");
+            if (!upnpGatewayConf)
+            {
+                g_printerr ("Cannot get XfinityGatewayConfiguration service\n");
+                return EXIT_FAILURE;
+            }
+            g_message("XUPNP XfinityGatewayConfiguration service successfully created");
+        }
+	else
+    	{
+	    g_message("Client Device configuration file");
+            upnpMediaConfService = gupnp_device_info_get_service
+                    (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1MediaConfiguration:1");
+            if (!upnpMediaConfService)
+            {
+                g_printerr ("Cannot get XfinityMediaConfiguration service\n");
+                return EXIT_FAILURE;
+            }
+            g_message("XUPNP Media Configuration service successfully created");
+	}
+
+	if(strstr(devXMlFile_new,GW_DEVICE_XML_FILE))
+	{
+	    g_message("Gateway Device Configuration file");
+            upnpMediaConfService = gupnp_device_info_get_service
+                    (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1MediaConfiguration:1");
+            if (!upnpMediaConfService)
+            {
+                g_printerr ("Cannot get XfinityMediaConfiguration service\n");
+                return EXIT_FAILURE;
+            }
+            g_message("XUPNP Media Configuration service successfully created");
+            upnpQamConf = gupnp_device_info_get_service
+	        (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1QamConfiguration:1");
+            if (!upnpQamConf)
+            {
+	        g_printerr ("Cannot get XfinityQamConfiguration service\n");
+	        return EXIT_FAILURE;
+            }
+            g_message("XUPNP XfinityQamConfiguration service successfully created");
+	}
+
+        if(!getReceiverId(receiverId))
+	{
+	    g_message("Unable to get receiver id");
+	}
     }
 #ifdef ENABLE_SD_NOTIFY
     sd_notifyf(0, "READY=1\n"
@@ -1196,14 +1547,24 @@ main (int argc, char **argv)
               "MAINPID=%lu",
               (unsigned long) getpid());
 #endif
-
+    /* Autoconnect the action and state variable handlers.  This connects
+         query_target_cb and query_status_cb to the Target and Status state
+         variables query callbacks, and set_target_cb, get_target_cb and
+         get_status_cb to SetTarget, GetTarget and GetStatus actions
+         respectively. */
+    /*gupnp_service_signals_autoconnect (GUPNP_SERVICE (service), NULL, &error);
+    if (error) {
+      g_printerr ("Failed to autoconnect signals: %s\n", error->message);
+      g_error_free (error);
+      return EXIT_FAILURE;
+    }*/
     g_signal_connect (upnpService, "action-invoked::GetBaseUrl", G_CALLBACK (get_url_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetBaseTrmUrl", G_CALLBACK (get_trm_url_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetGatewayIP", G_CALLBACK (get_gwyip_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetGatewayIPv6", G_CALLBACK (get_gwyipv6_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetIpv6Prefix", G_CALLBACK (get_ipv6prefix_cb), NULL);
-    g_signal_connect (upnpService, "action-invoked::GetDnsConfig", G_CALLBACK (get_dnsconfig_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetDnsConfig", G_CALLBACK (get_dnsconfig_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetSystemIds", G_CALLBACK (get_systemids_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetTimeZone", G_CALLBACK (get_timezone_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetHosts", G_CALLBACK (get_hosts_cb), NULL);
@@ -1245,8 +1606,30 @@ main (int argc, char **argv)
     g_signal_connect (upnpService, "query-variable::RecvDevType", G_CALLBACK (query_recvdevtype_cb), NULL);
     g_signal_connect (upnpService, "query-variable::DeviceType", G_CALLBACK (query_devicetype_cb), NULL);
     g_signal_connect (upnpService, "query-variable::BuildVersion", G_CALLBACK (query_buildversion_cb), NULL);
-    service_ready=TRUE;
 
+    if(rfc_enabled)
+    {
+#ifdef BROADBAND
+//Broadband services
+        registerGatewayConfigurationService(upnpGatewayConf);
+        registerTimeConfigurationService(upnpTimeConf);
+#else
+#ifndef CLIENT_XCAL_SERVER
+//Video Gateway services
+        registerQamConfigurationService(upnpQamConf);
+        registerGatewayConfigurationService(upnpGatewayConf);
+        registerTimeConfigurationService(upnpTimeConf);
+        registerMediaConfigurationService(upnpMediaConfService);
+#else
+//Client services
+        registerMediaConfigurationService(upnpMediaConfService);
+#endif
+#endif
+        registerIdentityConfigurationService(upnpIdService);
+	g_message("Successfully registered all services");
+    }
+
+    service_ready=TRUE;
 #ifndef CLIENT_XCAL_SERVER
     /*Code to handle RUI publishing*/
     if (checkCVP2Enabled())
@@ -1291,6 +1674,7 @@ main (int argc, char **argv)
         }
         gupnp_context_set_subscription_timeout(cvpcontext, 0);
 	cvpdev = gupnp_root_device_new (cvpcontext, cvPXmlFile, devXMlPath);
+	/* Get the CVP service from the root device */
         gupnp_root_device_set_available (cvpdev, TRUE);
         cvpservice = gupnp_device_info_get_service
                      (GUPNP_DEVICE_INFO (cvpdev), "urn:schemas-upnp-org:service:RemoteUIServer:1");
@@ -1316,8 +1700,30 @@ main (int argc, char **argv)
     /* Cleanup */
     g_main_loop_unref (main_loop);
     g_object_unref (upnpService);
-    g_object_unref (dev);
+    g_object_unref (baseDev);
     g_object_unref (upnpContext);
+    if(rfc_enabled)
+    {
+        g_object_unref (upnpIdService);
+	if(upnpMediaConfService)
+	{
+            g_object_unref (upnpMediaConfService);
+	}
+	if(upnpTimeConf)
+	{
+            g_object_unref (upnpTimeConf);
+	}
+	if(upnpGatewayConf)
+	{
+            g_object_unref (upnpGatewayConf);
+	}
+	if(upnpQamConf)
+	{
+            g_object_unref (upnpQamConf);
+	}
+        g_object_unref (dev);
+        g_object_unref (upnpContextDeviceProtect);
+    }
     return EXIT_SUCCESS;
 }
 

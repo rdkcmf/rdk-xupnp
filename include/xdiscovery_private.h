@@ -23,6 +23,12 @@
 #define G_LOG_DOMAIN "XUPNP"
 #define XUPNP_RESCAN_INTERVAL 22000000
 #define XDISC_SERVICE "urn:schemas-upnp-org:service:DiscoverFriendlies:1"
+#define XDISC_SERVICE_IDENTITY "urn:schemas-upnp-org:service:X1Identity:1"
+#define XDISC_SERVICE_MEDIA "urn:schemas-upnp-org:service:X1MediaConfiguration:1"
+#define XDISC_SERVICE_GW_CFG "urn:schemas-upnp-org:service:X1GatewayConfiguration:1"
+#define XDISC_SERVICE_QAM_CFG "urn:schemas-upnp-org:service:X1QamConfiguration:1"
+#define XDISC_SERVICE_TIME "urn:schemas-upnp-org:service:X1Time:1"
+#define XDISC_SERVICE_PROTECTION "urn:schemas-upnp-org:service:DeviceProtection:1"
 
 struct ProxyMapping {
     GUPnPDeviceProxy *proxy;
@@ -61,6 +67,19 @@ typedef struct _gwyDeviceData {
     gboolean isRouteSet;
     gboolean isOwnGateway;
     GUPnPServiceInfo* sproxy;
+    GUPnPServiceInfo* sproxy_i;
+    GUPnPServiceInfo* sproxy_m;
+    GUPnPServiceInfo* sproxy_g;
+    GUPnPServiceInfo* sproxy_q;
+    GUPnPServiceInfo* sproxy_t;
+    GString* modelclass;
+    GString* modelnumber;
+    GString* deviceid;
+    GString* hardwarerevision;
+    GString* softwarerevision;
+    GString* managementurl;
+    GString* make;
+    GString* accountid;
 } GwyDeviceData;
 
 GList* xdevlist= NULL;
@@ -72,7 +91,8 @@ GMutex *devMutex;
 GCond *cond;
 GMainContext *main_context;
 GUPnPContext *context;
-GUPnPControlPoint* cp;
+GUPnPContext *upnpContextDeviceProtect;
+GUPnPControlPoint* cp, *cp_client, *cp_gw, *cp_bgw;
 GString* outputfilename;
 GString* outputcontents;
 GString* ipMode;

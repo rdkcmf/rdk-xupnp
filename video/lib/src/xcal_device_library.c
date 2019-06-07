@@ -36,6 +36,9 @@
 #include <memory.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
+#ifdef ENABLE_RFC
+#include "rfcapi.h"
+#endif
 #ifdef CLIENT_XCAL_SERVER
 #include "mfrMgr.h"
 #endif
@@ -57,6 +60,8 @@ IARM_Bus_Daemon_SysMode_t sysModeParam;
 #define LOG_FILE    "/opt/logs/xdevice.log"
 #define DEVICE_XML_PATH     "/etc/xupnp/"
 #define DEVICE_XML_FILE     "BasicDevice.xml"
+#define CLIENT_DEVICE_XML_FILE          "X1Renderer.xml"
+#define GW_DEVICE_XML_FILE              "X1VideoGateway.xml"
 
 #define DEVICE_PROPERTY_FILE   "/etc/device.properties"
 #define AUTH_SERVER_URL     "http://localhost:50050/authService/getDeviceId"
@@ -314,7 +319,7 @@ gboolean readDevFile(const char *deviceFile)
                     counter++;
                     g_string_assign(recvdevtype, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 7)
                 {
                     result = TRUE;
                     break;
@@ -327,7 +332,7 @@ gboolean readDevFile(const char *deviceFile)
                     counter++;
                     g_string_assign(buildversion, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 7)
                 {
                     result = TRUE;
                     break;
@@ -340,7 +345,7 @@ gboolean readDevFile(const char *deviceFile)
                     counter++;
                     g_string_assign(devicetype, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 7)
                 {
                     result = TRUE;
                     break;
@@ -353,7 +358,7 @@ gboolean readDevFile(const char *deviceFile)
                     counter++;
                     g_string_assign(mocaIface, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 7)
                 {
                     result = TRUE;
                     break;
@@ -366,12 +371,39 @@ gboolean readDevFile(const char *deviceFile)
                     counter++;
                     g_string_assign(wifiIface, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 7)
                 {
                     result = TRUE;
                     break;
                 }
             }
+            if (g_strrstr(g_strstrip(tokens[loopvar]), "MODEL_NUM"))
+            {
+                if ((loopvar+1) < toklength )
+                {
+                    counter++;
+                    g_string_assign(modelnumber, g_strstrip(tokens[loopvar+1]));
+                }
+                if (counter == 7)
+                {
+                    result = TRUE;
+                    break;
+                }
+            }
+            if (g_strrstr(g_strstrip(tokens[loopvar]), "MFG_NAME"))
+            {
+                if ((loopvar+1) < toklength )
+                {
+                    counter++;
+                    g_string_assign(make, g_strstrip(tokens[loopvar+1]));
+                }
+                if (counter == 7)
+                {
+                    result = TRUE;
+                    break;
+                }
+            }
+
 
         }
         g_strfreev(tokens);
@@ -391,6 +423,34 @@ gboolean readDevFile(const char *deviceFile)
     return result;
 }
 
+int check_rfc()
+{
+#ifdef ENABLE_RFC
+    RFC_ParamData_t param = {0};
+
+    WDMP_STATUS status = getRFCParameter("XUPNP","Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.UPnP.Refactor.Enable",&param);
+
+    if (status == WDMP_SUCCESS)
+    {
+       if (!strncmp(param.value, "true", strlen("true")))
+       {
+           g_message("New Device Refactoring rfc_enabled");
+           return 1;
+       }
+       else
+       {
+           g_message("Running older xcal");
+       }
+    }
+    else
+    {
+       g_message("getRFCParameter Failed : %s\n", getRFCErrorString(status));
+    }
+#else
+    g_message("Not built with RFC support.");
+#endif
+    return 0;
+}
 
 static GString *get_compatible_uis_icon(int nSize, int nDepth, const char * pszImageType, const char * pszImageExt)
 {
@@ -1603,18 +1663,93 @@ BOOL getDevXmlPath(char *outValue)
         g_message("getDevXmlPath : config has empty xml path !");
     return result;
 }
-BOOL getDevXmlFile(char *outValue)
+BOOL getDevXmlFile(char *outValue, int refactor)
 {
     BOOL result = FALSE;
     if ((!check_null(devConf->devXmlFile)) || (!check_null(outValue))) {
         g_message("getDevXmlFile : NULL string !");
         return result;
     }
-    if (check_empty(devConf->devXmlFile)) {
-        sprintf(outValue, "%s/%s", devConf->devXmlPath, devConf->devXmlFile);
+    if(!refactor)
+    {
+        if (check_empty(devConf->devXmlFile)) {
+            sprintf(outValue, "%s/%s", devConf->devXmlPath, devConf->devXmlFile);
+            result = TRUE;
+        } else
+            g_message("getDevXmlFile : config has empty xml file !");
+    }
+    else
+    {
+#ifndef CLIENT_XCAL_SERVER
+        sprintf(outValue, "%s/%s", devConf->devXmlPath,GW_DEVICE_XML_FILE);
+#else
+	sprintf(outValue, "%s/%s", devConf->devXmlPath,CLIENT_DEVICE_XML_FILE);
+#endif
+	result = TRUE;
+	g_message("getDevXmlFile : refactor path=%s",outValue);
+    }
+    return result;
+}
+BOOL getModelNumber(char *outValue)
+{
+    BOOL result = FALSE;
+    if ((!check_null(modelnumber->str)) || (!check_null(outValue))) {
+        g_message("getModelNumber : NULL string !");
+        return result;
+    }
+    if (check_empty(modelnumber->str)) {
+        strcpy(outValue, modelnumber->str);
+	g_message("getModelNumber : %s",modelnumber->str);
         result = TRUE;
     } else
-        g_message("getDevXmlFile : config has empty xml file !");
+        g_message("getModelNumber : config has empty modelnumber file !");
+    return result;
+}
+
+BOOL getMake(char *outValue)
+{
+    BOOL result = FALSE;
+    if ((!check_null(make->str)) || (!check_null(outValue))) {
+        g_message("getMake : NULL string !");
+        return result;
+    }
+    if (check_empty(make->str)) {
+        strcpy(outValue, make->str);
+        result = TRUE;
+    } else
+        g_message("getMake : config has empty device make file !");
+    return result;
+}
+BOOL getAccountId(char *outValue)
+{
+    BOOL result = FALSE;
+#ifdef ENABLE_RFC
+    RFC_ParamData_t param = {0};
+
+    WDMP_STATUS status = getRFCParameter("XUPNP","Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.AccountInfo.AccountID",&param);
+
+    if (status == WDMP_SUCCESS)
+    {
+	if ((!check_null(param.value)))
+	{
+	    g_message("getAccountId : NULL string !");
+	    return result;
+	}
+	else
+	{
+	    if (strcpy(outValue,param.value))
+	    {
+	        result = TRUE;
+	    }
+	}
+    }
+    else
+    {
+       g_message("getAccountId: getRFCParameter Failed : %s\n", getRFCErrorString(status));
+    }
+#else
+    g_message("Not built with RFC support.");
+#endif
     return result;
 }
 BOOL checkCVP2Enabled()
@@ -1762,6 +1897,9 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     devicetype = g_string_new(NULL);
     mocaIface = g_string_new(NULL);
     wifiIface = g_string_new(NULL);
+    modelnumber = g_string_new(NULL);
+    make = g_string_new(NULL);
+    accountid = g_string_new(NULL);
     dataGatewayIPaddress = g_string_new(NULL);
 
     dstOffset=1; //dstoffset can be only 0 or 60 so intializing with 1.
@@ -1778,10 +1916,12 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
 	g_message("Unable to find xdevice config, giving up\n");
 	exit(1);
     }
+
 #else
     devConf = g_new(ConfSettings, 1);
 #endif
 #ifdef CLIENT_XCAL_SERVER
+    devConf->bcastPort = 0;
     if (! (devConf->bcastPort))
         devConf->bcastPort = BCAST_PORT;
     if (! (devConf->devPropertyFile))

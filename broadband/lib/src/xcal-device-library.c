@@ -29,6 +29,7 @@
 #include <netinet/in.h>
 #include <stdbool.h>
 #include "xdevice-library-private.h"
+#include "syscfg/syscfg.h"
 
 #include <platform_hal.h>
 
@@ -49,6 +50,7 @@
 #define LOG_FILE    "/rdklogs/logs/xdevice.log"
 #define DEVICE_XML_PATH     "/etc/xupnp/"
 #define DEVICE_XML_FILE     "BasicDevice.xml"
+#define BROADBAND_DEVICE_XML_FILE       "X1BroadbandGateway.xml"
 
 #ifndef F_OK
 #define F_OK 0
@@ -145,6 +147,46 @@ xupnpEventCallback eventCallback;
 void xupnpEventCallback_register(xupnpEventCallback callback_func)
 {
     eventCallback=callback_func;
+}
+
+int check_rfc()
+{
+    char temp[24] = {0};
+    if (!syscfg_get(NULL, "Refactor", temp, sizeof(temp)) )
+    {
+        if(temp != NULL)
+        {
+            if (strcmp(temp, "true") == 0)
+            {
+                return 1;
+            }
+        }
+    }
+    else
+    {
+        g_message("check_rfc: Failed Unable to find the RFC parameter");
+    }
+    return 0;
+}
+
+BOOL getAccountId(char *outValue)
+{
+    char temp[24] = {0};
+    int rc;
+    rc = syscfg_get(NULL, "AccountID", temp, sizeof(temp));
+    if(!rc)
+    {
+        if (check_null(outValue))
+        {
+            strcpy(outValue, temp);
+            return TRUE;
+        }
+    }
+    else
+    {
+        g_message("getAccountId: Unable to get the Account Id");
+    }
+    return FALSE;
 }
 
 gboolean getserialnum(GString* serial_num)
@@ -334,7 +376,7 @@ gboolean readDevFile(const char *deviceFile)
                     counter++;
                     g_string_assign(recvdevtype, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 6)
                 {
                     result = TRUE;
                     break;
@@ -347,7 +389,7 @@ gboolean readDevFile(const char *deviceFile)
                     counter++;
                     g_string_assign(buildversion, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 6)
                 {
                     result = TRUE;
                     break;
@@ -360,7 +402,7 @@ gboolean readDevFile(const char *deviceFile)
                     counter++;
                     g_string_assign(devicetype, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 6)
                 {
                     result = TRUE;
                     break;
@@ -373,38 +415,42 @@ gboolean readDevFile(const char *deviceFile)
                     counter++;
                     g_string_assign(devicename, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 6)
                 {
                     result = TRUE;
                     break;
                 }
             }
-/*            if (g_strrstr(g_strstrip(tokens[loopvar]), "MOCA_INTERFACE"))
+            if (g_strrstr(g_strstrip(tokens[loopvar]), "MFG_NAME"))
             {
                 if ((loopvar+1) < toklength )
                 {
                     counter++;
-                    g_string_assign(mocaIface, g_strstrip(tokens[loopvar+1]));
+                    g_string_assign(make, g_strstrip(tokens[loopvar+1]));
                 }
-                if (counter == 5)
+                if (counter == 6)
                 {
                     result = TRUE;
                     break;
                 }
             }
-            if (g_strrstr(g_strstrip(tokens[loopvar]), "WIFI_INTERFACE"))
+            else
             {
-                if ((loopvar+1) < toklength )
+                if (g_strrstr(g_strstrip(tokens[loopvar]), "MANUFACTURE"))
                 {
-                    counter++;
-                    g_string_assign(wifiIface, g_strstrip(tokens[loopvar+1]));
+                    if ((loopvar+1) < toklength )
+                    {
+                        counter++;
+                        g_string_assign(make, g_strstrip(tokens[loopvar+1]));
+                    }
+                    if (counter == 6)
+                    {
+                        result = TRUE;
+                        break;
+                    }
                 }
-                if (counter == 5)
-                {
-                    result = TRUE;
-                    break;
-                }
-            }*/
+            }
+
         }
         g_strfreev(tokens);
     }
@@ -1285,28 +1331,71 @@ BOOL getDevXmlPath(char *outValue)
         g_message("getDevXmlPath : config has empty xml path !");
     return result;
 }
-BOOL getDevXmlFile(char *outValue)
+BOOL getDevXmlFile(char *outValue, int refactor)
 {
     BOOL result = FALSE;
     if ((!check_null(devConf->devXmlFile)) || (!check_null(outValue))) {
         g_message("getDevXmlFile : NULL string !");
         return result;
     }
-    if (check_empty(devConf->devXmlFile)) {
-        sprintf(outValue, "%s/%s", devConf->devXmlPath, devConf->devXmlFile);
-        result = TRUE;
-    } else
-        g_message("getDevXmlFile : config has empty xml file !");
+    if(!refactor)
+    {
+        if (check_empty(devConf->devXmlFile)) {
+            sprintf(outValue, "%s/%s", devConf->devXmlPath, devConf->devXmlFile);
+            result = TRUE;
+        } else
+            g_message("getDevXmlFile : config has empty xml file !");
+    }
+    else
+    {
+	sprintf(outValue, "%s/%s", devConf->devXmlPath,BROADBAND_DEVICE_XML_FILE);
+	g_message("getDevXmlFile : refactor = %s",outValue);
+	result = TRUE;
+    }
     return result;
 }
 BOOL checkCVP2Enabled()
 {
     return devConf->enableCVP2;
 }
+
+
+BOOL getModelNumber(char *outValue)
+{
+    BOOL result = FALSE;
+    if ((!check_null(devicename->str)) || (!check_null(outValue))) {
+        g_message("getModelNumber : NULL string !");
+        return result;
+    }
+    if (check_empty(devicename->str)) {
+        strcpy(outValue, devicename->str);
+        result = TRUE;
+    } else
+        g_message("getModelNumber : config has empty modelnumber file !");
+    return result;
+}
+
+BOOL getMake(char *outValue)
+{
+    BOOL result = FALSE;
+    if ((!check_null(make->str)) || (!check_null(outValue))) {
+        g_message("getMake : NULL string !");
+        return result;
+    }
+    if (check_empty(make->str)) {
+        strcpy(outValue, make->str);
+        result = TRUE;
+    } else
+        g_message("getMake : config has empty device make file !");
+    return result;
+}
+
+
 BOOL xdeviceInit(char *devConfFile, char *devLogFile)
 {
     GError *error = NULL;
 
+    syscfg_init();     // to get values from syscfg.db
     url = g_string_new(NULL);
     trmurl = g_string_new(NULL);
     trmurlCVP2 = g_string_new(NULL);
@@ -1343,6 +1432,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     devicetype = g_string_new(NULL);
     mocaIface = g_string_new(NULL);
     wifiIface = g_string_new(NULL);
+    make = g_string_new(NULL);
     dataGatewayIPaddress = g_string_new(NULL);
 
     if (! check_null(devConfFile)) {
@@ -1394,7 +1484,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
                           G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_ERROR, xupnp_logger,
                           NULL);
     }
-    g_message("Starting xdevice service on interface %s", devConf->bcastIf);
+    g_message("Starting xdevice service");
     if (devConf->devPropertyFile != NULL) {
         if (readDevFile(devConf->devPropertyFile) == TRUE) {
             g_message("Receiver Type : %s Build Version :  %s Device Type: %s moca %s wifi %s ",
