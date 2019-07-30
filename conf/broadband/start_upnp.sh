@@ -23,6 +23,11 @@ while [ "started" != "$x" ]
 do
    x=`sysevent get lan-status`
    echo $x
+   y=`sysevent get bridge_mode`
+   if [[ "$y" != "0" && "z$x" != "z" ]] ; then
+      echo "Shutting down the services as Bridge mode is Enabled"
+      exit 0
+   fi
    sleep 2
 done
 status=""

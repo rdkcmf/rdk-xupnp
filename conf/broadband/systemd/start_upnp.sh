@@ -28,6 +28,12 @@ do
        echo "Stopping Xcal as RFC disabled"
        systemctl stop xcal-device.service
    fi
+   y=`sysevent get bridge_mode`
+   if [[ "$y" != "0" && "z$x" != "z" ]] ; then
+       echo "Shutting down the services as Bridge mode is Enabled"
+       systemctl stop xupnp
+       systemctl stop xcal-device
+   fi
    sleep 2
 done
 status=""
@@ -169,5 +175,6 @@ else
                 exit 1
         fi
 fi
+touch /tmp/start_xupnp
 echo "Starting Xcal UPNP client xcal-discovery-list"
 
