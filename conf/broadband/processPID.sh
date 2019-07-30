@@ -18,4 +18,4 @@
 # limitations under the License.
 ##########################################################################
 #
-ps -ef | grep $1 | grep -v grep| grep -v $0 | awk '{print $2}'
+ps | grep $1 | grep -v grep| awk '{print $1}'
