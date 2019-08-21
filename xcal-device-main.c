@@ -53,15 +53,16 @@
 #define BOOL  unsigned char
 #endif
 
-#define SLEEP_INTERVAL 7000000
 static  GMainLoop *main_loop;
 
 char devBcastIf[MAXSIZE],serial_Num[MAXSIZE], cvpInterface[MAXSIZE], cvPXmlFile[MAXSIZE],playBackUrl[URLSIZE],devXMlPath[MAXSIZE],uUid[MAXSIZE],ruiUrl[RUIURLSIZE];
 char devXMlFile [MAXSIZE],devBcastIf[MAXSIZE],serial_Num[MAXSIZE],cvpInterface[MAXSIZE],cvPXmlFile[MAXSIZE],ipv6preFix[MAXSIZE],trmUrl[MAXSIZE],urL[MAXSIZE];
 char gwyIp[MAXSIZE],gwyIpv6[MAXSIZE],gwystbIp[MAXSIZE],hostMacaddress[MAXSIZE],bcastMacaddress[MAXSIZE],recvdevType[MAXSIZE],deviceType[MAXSIZE],modelclass[MAXSIZE],modelNumber[MAXSIZE],deviceid[MAXSIZE],hardwarerevision[MAXSIZE],softwarerevision[MAXSIZE],managementurl[MAXSIZE],Make[MAXSIZE],accountId[MAXSIZE];
 char buildVersion[MAXSIZE],dnsConfig[MAXSIZE],systemIds[MAXSIZE],dataGatewayIPAddress[MAXSIZE],dsgtimeZone[MAXSIZE],deviceName[MAXSIZE],etcHosts[RUIURLSIZE],receiverId[MAXSIZE];
+char devPXmlFile[MAXSIZE], devCertFile[MAXSIZE], devCertPath[MAXSIZE], devKeyFile[MAXSIZE], devKeyPath[MAXSIZE];
 gint rawoffset, dstoffset, dstsavings, devBcastPort, cvpPort;
 gboolean usedaylightsavings,allowgwy,requiresTrm;
+char *caFile="/tmp/icebergwedge";
 
 static int rfc_enabled;
 #ifdef SAFEC_DUMMY_API
@@ -1204,20 +1205,6 @@ query_usesdaylighttime_cb (GUPnPService *service, char *variable, GValue *value,
     g_value_init (value, G_TYPE_BOOLEAN);
     g_value_set_boolean (value, usedaylightsavings);
 }
-void* checkMainLoopRunning()
-{
-    guint checkMainLoopCounter=0;
-    while(true)
-    {
-        if (! g_main_loop_is_running(main_loop))
-        {
-          if(checkMainLoopCounter < 7)
-            g_message("TELEMETRY_XUPNP_DEVICE_MAIN_LOOP_NOT_RUNNING");
-          checkMainLoopCounter++;
-        }
-        usleep(SLEEP_INTERVAL);
-    }
-}
 
 G_MODULE_EXPORT void
 query_modelclass_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
@@ -1368,10 +1355,11 @@ int registerTimeConfigurationService(GUPnPServiceInfo *upnpTimeConf)
 int
 main (int argc, char **argv)
 {
-    GThread *thread;
     GError *error = NULL;
     g_thread_init (NULL);
     char devConfFile[] = "/etc/xdevice.conf";
+    char *certFile=NULL, *keyFile=NULL;
+
     g_type_init ();
     g_message("Starting XCAL-DEVICE ");
     xupnpEventCallback_register(&notify_value_change);
@@ -1400,15 +1388,16 @@ main (int argc, char **argv)
         exit(1);
     }
     else
+    {
         g_message("Updated the device xml file:%s uuid: %s", xmlfilename,struuid);
-//        fprintf(stderr,"Updated the struuid value %s\n",struuid);
+    }
     if(!getBcastMacAddress(bcastMacaddress))
     {
         g_message("Unable to get bcastMacaddress");
     }
     upnpContext = gupnp_context_new (NULL, devBcastIf, devBcastPort, &error);
     if (error) {
-        g_printerr ("Error creating the Broadcast context: %s\n",
+        g_message("Error creating the Broadcast context: %s",
                     error->message);
         /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
         g_clear_error(&error);
@@ -1421,7 +1410,7 @@ main (int argc, char **argv)
     {
 	if(!getTuneReady())
 	{
-	    g_message("Xupnp: Tune ready status is false\n");
+	    g_message("Xupnp: Tune ready status is false");
 	}
     }
 #endif
@@ -1457,97 +1446,151 @@ main (int argc, char **argv)
         {
             sprintf(uuid_new,"uuid:%s",bcastMacaddress);
         }
-	result = updatexmldata(xmlfilename_new, uuid_new, serial_Num, "XFINITY");
-        if (!result)
+
+	if ((getDevCertFile(devCertFile)) && (getDevCertPath(devCertPath)) && (getDevKeyFile(devKeyFile)) && (getDevKeyPath(devKeyPath)))
         {
-            g_message("Failed to open the device xml file %s\n", xmlfilename_new);
-            exit(1);
-        }
+           if (g_path_is_absolute (devCertFile)) 
+           {
+               certFile = g_strdup (devCertFile);
+           }
+           else 
+           {
+               certFile  = g_build_filename (devCertPath, devCertFile, NULL);
+           }
+           g_message("certFile %s ", certFile);
+
+           if (g_path_is_absolute (devKeyFile))
+           {
+              keyFile = g_strdup (devKeyFile);
+           }
+           else
+           {
+              keyFile  = g_build_filename (devKeyPath, devKeyFile, NULL);
+           }
+           g_message("keytFile %s ", keyFile);
+
+           if ((g_file_test(certFile, G_FILE_TEST_EXISTS)) && (g_file_test(keyFile, G_FILE_TEST_EXISTS))
+                        && (g_file_test(caFile, G_FILE_TEST_EXISTS))) 
+           {
+                result = updatexmldata(xmlfilename_new, uuid_new, serial_Num, "XFINITY");
+                if (!result)
+                {
+                    g_message("Failed to open the device xml file %s\n", xmlfilename_new);
+                    exit(1);
+                }
+                else
+                {
+                    g_message("RFC enabled Updated the device xml file:%s uuid: %s", xmlfilename_new,uuid_new);
+                }
+                upnpContextDeviceProtect = gupnp_context_new_s (NULL, devBcastIf, DEVICE_PROTECTION_CONTEXT_PORT, certFile, keyFile, &error);
+                if (error)
+                {
+                   g_message("Error creating the Device Protection Broadcast context: %s",
+                               error->message);
+                   /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
+                   g_clear_error(&error);
+                }
+                else
+                {
+                    gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
+		    // Set TLS config params here.
+		    gupnp_context_set_tls_params(upnpContextDeviceProtect,caFile,keyFile, NULL);
+                    dev = gupnp_root_device_new (upnpContextDeviceProtect, devXMlFile_new, devXMlPath);
+                    gupnp_root_device_set_available (dev, TRUE);
+
+                    upnpIdService = gupnp_device_info_get_service
+                           (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1Identity:1");
+                    if (!upnpIdService)
+                    {
+                       g_message("Cannot get X1Identity service\n");
+                    }
+                    else
+                    {
+                       g_message("XUPNP Identity service successfully created");
+                    }
+                    if (strstr(devXMlFile_new,BROADBAND_DEVICE_XML_FILE) || strstr(devXMlFile_new,GW_DEVICE_XML_FILE))
+                    {
+	                g_message("Broadband OR Gateway Device Configuration File");
+                        upnpTimeConf = gupnp_device_info_get_service
+                           (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1Time:1");
+                        if (!upnpTimeConf)
+                        {
+                            g_message("Cannot get XfinityTimeConfiguration service\n");
+                        }
+                        else
+                        {
+                            g_message("XUPNP XfinityTimeConfiguration service successfully created");
+                        }
+                        upnpGatewayConf = gupnp_device_info_get_service
+                                 (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1GatewayConfiguration:1");
+                        if (!upnpGatewayConf)
+                        {
+                            g_message("Cannot get XfinityGatewayConfiguration service\n");
+                        }
+                        else
+                        {
+                            g_message("XUPNP XfinityGatewayConfiguration service successfully created");
+                        }
+                    }
+	            else
+    	            {
+	                g_message("Client Device configuration file");
+                        upnpMediaConfService = gupnp_device_info_get_service
+                              (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1MediaConfiguration:1");
+                        if (!upnpMediaConfService)
+                        {
+                            g_message("Cannot get XfinityMediaConfiguration service\n");
+                        }
+                        else
+                        {
+                            g_message("XUPNP Media Configuration service successfully created");
+                        }
+	            }
+
+	            if (strstr(devXMlFile_new,GW_DEVICE_XML_FILE))
+	            {
+	                g_message("Gateway Device Configuration file");
+                        upnpMediaConfService = gupnp_device_info_get_service
+                            (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1MediaConfiguration:1");
+                        if (!upnpMediaConfService)
+                        {
+                            g_message("Cannot get XfinityMediaConfiguration service\n");
+                        }
+                        else
+                        {
+                            g_message("XUPNP Media Configuration service successfully created");
+                        }
+                        upnpQamConf = gupnp_device_info_get_service
+	                     (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1QamConfiguration:1");
+                        if (!upnpQamConf)
+                        {
+	                    g_message("Cannot get XfinityQamConfiguration service\n");
+                        }
+                        else
+                        {
+                            g_message("XUPNP XfinityQamConfiguration service successfully created");
+                        }
+	            }
+
+                    if (!getReceiverId(receiverId))
+	            {
+	                g_message("Unable to get receiver id");
+	            }
+                }
+           }
+           else
+           {
+              g_message("DeviceProtection Error: Cert file, Key file not available, continuing with older xcal");
+           }
+           g_free(keyFile);
+           g_free(certFile);
+        } // certficate and key file available
         else
         {
-            g_message("RFC enabled Updated the device xml file:%s uuid: %s\n", xmlfilename_new,uuid_new);
+            g_message("Certificate or Key file unavailable, continuing with older xcal");
         }
-        upnpContextDeviceProtect = gupnp_context_new (NULL, devBcastIf, DEVICE_PROTECTION_CONTEXT_PORT, &error);
-        if (error) {
-            g_printerr ("Error creating the Device Protection Broadcast context: %s\n",
-                        error->message);
-            /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
-            g_clear_error(&error);
-            return EXIT_FAILURE;
-        }
-        gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
-        dev = gupnp_root_device_new (upnpContextDeviceProtect, devXMlFile_new, devXMlPath);
-//        dev = gupnp_root_device_new (upnpContext, devXMlFile_new, devXMlPath);
-        gupnp_root_device_set_available (dev, TRUE);
+    } //rfc_enabled
 
-        upnpIdService = gupnp_device_info_get_service
-            (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1Identity:1");
-        if (!upnpService)
-        {
-            g_printerr ("Cannot get X1Identity service\n");
-            return EXIT_FAILURE;
-        }
-        g_message("XUPNP Identity service successfully created");
-
-        if(strstr(devXMlFile_new,BROADBAND_DEVICE_XML_FILE) || strstr(devXMlFile_new,GW_DEVICE_XML_FILE))
-        {
-	    g_message("Broadband OR Gateway Device Configuration File");
-            upnpTimeConf = gupnp_device_info_get_service
-                 (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1Time:1");
-            if (!upnpTimeConf)
-            {
-                g_printerr ("Cannot get XfinityTimeConfiguration service\n");
-                return EXIT_FAILURE;
-            }
-            g_message("XUPNP XfinityTimeConfiguration service successfully created");
-            upnpGatewayConf = gupnp_device_info_get_service
-                 (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1GatewayConfiguration:1");
-            if (!upnpGatewayConf)
-            {
-                g_printerr ("Cannot get XfinityGatewayConfiguration service\n");
-                return EXIT_FAILURE;
-            }
-            g_message("XUPNP XfinityGatewayConfiguration service successfully created");
-        }
-	else
-    	{
-	    g_message("Client Device configuration file");
-            upnpMediaConfService = gupnp_device_info_get_service
-                    (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1MediaConfiguration:1");
-            if (!upnpMediaConfService)
-            {
-                g_printerr ("Cannot get XfinityMediaConfiguration service\n");
-                return EXIT_FAILURE;
-            }
-            g_message("XUPNP Media Configuration service successfully created");
-	}
-
-	if(strstr(devXMlFile_new,GW_DEVICE_XML_FILE))
-	{
-	    g_message("Gateway Device Configuration file");
-            upnpMediaConfService = gupnp_device_info_get_service
-                    (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1MediaConfiguration:1");
-            if (!upnpMediaConfService)
-            {
-                g_printerr ("Cannot get XfinityMediaConfiguration service\n");
-                return EXIT_FAILURE;
-            }
-            g_message("XUPNP Media Configuration service successfully created");
-            upnpQamConf = gupnp_device_info_get_service
-	        (GUPNP_DEVICE_INFO (dev), "urn:schemas-upnp-org:service:X1QamConfiguration:1");
-            if (!upnpQamConf)
-            {
-	        g_printerr ("Cannot get XfinityQamConfiguration service\n");
-	        return EXIT_FAILURE;
-            }
-            g_message("XUPNP XfinityQamConfiguration service successfully created");
-	}
-
-        if(!getReceiverId(receiverId))
-	{
-	    g_message("Unable to get receiver id");
-	}
-    }
 #ifdef ENABLE_SD_NOTIFY
     sd_notifyf(0, "READY=1\n"
               "STATUS=xcal-device is Successfully Initialized\n"
@@ -1643,7 +1686,7 @@ main (int argc, char **argv)
     {
 	if(!(getCVPIf(cvpInterface) && getCVPXmlFile(cvPXmlFile) && getCVPPort(&cvpPort)))
 	{
-	    g_message("Failed to update the CVP variables for xcal-device\n");
+	    g_message("Failed to update the CVP variables for xcal-device");
 	}
 	char* cvpxmlfilename = g_strconcat(g_strstrip(devXMlPath), "/", g_strstrip(cvPXmlFile),NULL);
         g_print("Starting CVP2 Service with %s\n", cvpxmlfilename);
@@ -1702,7 +1745,6 @@ main (int argc, char **argv)
      */
     /* Run the main loop */
     main_loop = g_main_loop_new (NULL, FALSE);
-    thread = g_thread_create(checkMainLoopRunning, NULL,FALSE, NULL);
     g_main_loop_run (main_loop);
     /* Cleanup */
     g_main_loop_unref (main_loop);

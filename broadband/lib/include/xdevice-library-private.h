@@ -26,8 +26,9 @@
 #define MAX_DEBUG_MESSAGE 50
 typedef struct
 {
-  gchar *bcastIf, *streamIf, *trmIf, *gwIf, *cvpIf, *ruiPath, *uriOverride, *hostMacIf;
+  gchar *bcastIf, *streamIf, *trmIf, *gwIf, *cvpIf, *ruiPath, *uriOverride, *hostMacIf,  *devCertPath, *devKeyPath;
   gchar *oemFile, *dnsFile, *dsgFile, *diagFile, *hostsFile, *wbFile, *devXmlPath, *devXmlFile, *cvpXmlFile, *logFile, *authServerUrl,*devPropertyFile,*ipv6FileLocation,*ipv6PrefixFile,*deviceNameFile;
+  gchar *devCertFile, *devKeyFile;
   gboolean enableCVP2, useIARM, allowGwy, enableTRM, useGliDiag, disableTuneReady,enableHostMacPblsh,rmfCrshSupp,wareHouseMode;
   gint bcastPort, cvpPort;
 } ConfSettings;

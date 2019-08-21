@@ -102,9 +102,17 @@ BOOL getRouteDataGateway(char *outValue);
 BOOL getLogFile(char *outValue);
 BOOL getDevXmlPath(char *outValue);
 BOOL getDevXmlFile(char *outValue, int refactor);
+BOOL getModelNumber(char *outValue);
+BOOL getMake(char *outValue);
 BOOL getAccountId(char *outValue);
 BOOL checkCVP2Enabled();
 BOOL getUidfromRecvId();
+int check_rfc();
+
+BOOL getDevKeyPath(char *outValue);
+BOOL getDevKeyFile(char *outValue);
+BOOL getDevCertPath(char *outValue);
+BOOL getDevCertPath(char *outValue);
 
 //#################
 //typedef INT (*xdevice_service_callback)(enum serviceListCb , char *data);

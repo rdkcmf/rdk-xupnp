@@ -1,0 +1,39 @@
+--- xdiscovery.c	2019-10-14 18:47:03.506124852 +0000
++++ /mnt/home/pmathe686/sprint_1909/generic/xupnp/generic/src/xdiscovery.c	2019-10-11 22:50:32.123296478 +0000
+@@ -35,10 +35,8 @@
+ #ifdef BROADBAND
+ #include "breakpad_wrapper.h"
+ #else
+-#ifdef ENABLE_RFC
+ #include "rfcapi.h"
+ #endif
+-#endif
+ #define DEVICE_PROTECTION_CONTEXT_PORT  50760
+ //Symbols defined in makefile (via defs.mk)
+ //#define USE_XUPNP_IARM
+@@ -319,7 +317,6 @@
+ int check_rfc()
+ {
+ #ifndef BROADBAND
+-#ifdef ENABLE_RFC
+     RFC_ParamData_t param = {0};
+ 
+     WDMP_STATUS status = getRFCParameter("XUPNP","Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.UPnP.Refactor.Enable",&param);
+@@ -341,9 +338,6 @@
+         g_message("getRFCParameter Failed : %s", getRFCErrorString(status));
+     }
+ #else
+-    g_message("Not built with RFC support.");
+-#endif
+-#else
+     syscfg_init();
+     char temp[24] = {0};
+     if (!syscfg_get(NULL, "Refactor", temp, sizeof(temp)) )
+@@ -1316,6 +1310,7 @@
+ 	    g_message("cert_File Path %s", cert_File);
+ 	    g_message("Key File Path %s", key_File);
+             upnpContextDeviceProtect = gupnp_context_new_s (NULL, disConf->discIf, DEVICE_PROTECTION_CONTEXT_PORT, cert_File, key_File, &error);
++	    //upnpContextDeviceProtect = gupnp_context_new (NULL, disConf->discIf, DEVICE_PROTECTION_CONTEXT_PORT, &error);
+ 	    if (error) {
+ 	       g_printerr ("Error creating the Device Protection Broadcast context: %s\n",
+ 			error->message);

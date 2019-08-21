@@ -46,6 +46,7 @@ package_ipk:
 	$(mkdir_p) $(IPK_GEN_STAGING_DIR)/usr/bin/
 	$(mkdir_p) $(IPK_GEN_STAGING_DIR)/lib/rdk/
 	cp -af ${abs_top_builddir}/conf/*.xml $(IPK_GEN_STAGING_DIR)/etc/xupnp/
+	cp -af ${abs_top_builddir}/conf/*.pem $(IPK_GEN_STAGING_DIR)/etc/xupnp/
 	cp -af ${abs_top_builddir}/conf/broadband/start_upnp.sh $(IPK_GEN_STAGING_DIR)/lib/rdk/
 	cp -af ${abs_top_builddir}/conf/broadband/start-upnp-service $(IPK_GEN_STAGING_DIR)/lib/rdk/
 	cp -af ${abs_top_builddir}/conf/broadband/processPID.sh $(IPK_GEN_STAGING_DIR)/lib/rdk/
@@ -59,7 +60,9 @@ package_ipk:
 	$(mkdir_p) $(IPK_GEN_STAGING_DIR)/lib/systemd/system/
 	cp -af ${abs_top_builddir}/conf/*.xml $(IPK_GEN_STAGING_DIR)/etc/xupnp/
 	cp -af ${abs_top_builddir}/conf/systemd/xupnp.service $(IPK_GEN_STAGING_DIR)/lib/systemd/system/
-	cp -af ${abs_top_builddir}/conf/systemd/xdiscovery.conf $(IPK_GEN_STAGING_DIR)/etc/
+	cp -af ${abs_top_builddir}/conf/*.pem $(IPK_GEN_STAGING_DIR)/etc/xupnp/
+	cp -af ${abs_top_builddir}/conf/systemd/dpcg-s.sh $(IPK_GEN_STAGING_DIR)/etc/xupnp/
+	cp -af ${abs_top_builddir}/conf/systemd/dpcg.sh $(IPK_GEN_STAGING_DIR)/etc/xupnp/
 	cp -af $(IPK_GEN_STAGING_DIR)/bin/* $(IPK_GEN_STAGING_DIR)/usr/bin/
 	rm -rf $(IPK_GEN_STAGING_DIR)/etc/*.xml
 	tar -czvf $(IPK_GEN_PATH)/data.tar.gz -C $(IPK_GEN_STAGING_DIR) etc usr lib

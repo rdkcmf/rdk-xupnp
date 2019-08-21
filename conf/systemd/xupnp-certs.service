@@ -17,14 +17,15 @@
 # limitations under the License.
 ##########################################################################
 [Unit]
-Description=xcal-device demon which publishes upnp data
-After=lighttpd.service iarmbusd.service moca.service xupnp-certs.service
-ConditionPathExists=/tmp/ip_acquired
+Description=Updating the certificates before upnp start.
+After=rfc-config.service
 
 [Service]
-Type=notify
-SyslogIdentifier="xcal-device"
-ExecStart=/usr/bin/xcal-device /etc/xdevice.conf
-TimeoutStartSec=300
-RestartSec=5
-Restart=always
+Type=oneshot
+SyslogIdentifier="xupnp-cert"
+ExecStart=/bin/sh -c "/etc/xupnp/dpcg-s.sh"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+

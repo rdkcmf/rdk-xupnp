@@ -18,7 +18,7 @@
 ##########################################################################
 [Unit]
 Description=A Upnp service
-After=moca.service sysmgr.service iarmbusd.service
+After=moca.service sysmgr.service iarmbusd.service xupnp-certs.service
 Requires=moca.service sysmgr.service
 
 [Service]
