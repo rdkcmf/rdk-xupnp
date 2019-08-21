@@ -29,6 +29,7 @@ typedef struct
   gchar *oemFile, *dnsFile, *dsgFile, *diagFile, *hostsFile, *devXmlPath, *devXmlFile, *cvpXmlFile, *logFile, *authServerUrl,*devPropertyFile,*ipv6FileLocation,*ipv6PrefixFile,*deviceNameFile;
   gboolean enableCVP2, useIARM, allowGwy, enableTRM, useGliDiag, disableTuneReady,enableHostMacPblsh,rmfCrshSupp,wareHouseMode;
   gint bcastPort, cvpPort;
+  gchar *devCertPath, *devCertFile, *devKeyFile, *devKeyPath;
 } ConfSettings;
 ConfSettings *devConf;
 GString *url, *trmurl, *playbackurl, *gwyip, *gwyipv6, *dnsconfig, *systemids, *serial_num, *lan_ip, *recv_id,*partner_id,*hostmacaddress,*devicetype,*recvdevtype,*buildversion,*ipv6prefix,*gwystbip,*bcastmacaddress,*devicename,*mocaIface,*wifiIface,*dataGatewayIPaddress, *modelnumber, *make, *accountid;

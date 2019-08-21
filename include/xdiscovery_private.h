@@ -103,7 +103,7 @@ char ipaddress[INET6_ADDRSTRLEN];
 typedef struct
 {
     gchar *discIf,*gwIf;
-    gchar *gwSetupFile,*logFile,*outputJsonFile;
+    gchar *gwSetupFile,*logFile,*outputJsonFile,*disCertFile, *disCertPath, *disKeyFile, *disKeyPath;
     gboolean enableGwSetup;
     gint GwPriority;
 } ConfSettings;

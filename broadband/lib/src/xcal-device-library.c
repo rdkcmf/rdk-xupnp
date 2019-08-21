@@ -32,6 +32,7 @@
 #include "syscfg/syscfg.h"
 
 #include <platform_hal.h>
+#include "rdk_safeclib.h"
 
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 46
@@ -55,7 +56,10 @@
 #define MAX_OUTVALUE      256
 #define RUIURLSIZE 2048
 #define URLSIZE 512
-#include "rdk_safeclib.h"
+#define DEVICE_KEY_PATH     "/tmp/"
+#define DEVICE_KEY_FILE     "icebergwedge_y"
+#define DEVICE_CERT_PATH     "/tmp/"
+#define DEVICE_CERT_FILE     "icebergwedge_t"
 
 #ifndef F_OK
 #define F_OK 0
@@ -489,7 +493,6 @@ gboolean readDevFile(const char *deviceFile)
     //diagid=1000;
     return result;
 }
-
 
 /**
  * @brief Supporting function for checking the content of given string is numeric or not.
@@ -1241,6 +1244,66 @@ BOOL getPartnerId(char *outValue)
     }
     return result;
 }
+BOOL getDevKeyPath(char *outValue)
+{
+    BOOL result = FALSE;
+    if ((!check_null(devConf->devKeyPath)) || (!check_null(outValue))) {
+        g_message("getDevKeyPath: NULL string !");
+        return result;
+    }
+    if (check_empty(devConf->devKeyPath)) {
+          strncpy(outValue,devConf->devKeyPath, MAX_FILE_LENGTH);
+          result = TRUE;
+    } else
+          g_message("getDevKeyPath : config has empty key path !");
+    return result;
+}
+
+BOOL getDevKeyFile(char *outValue)
+{
+    BOOL result = FALSE;
+    if ((!check_null(devConf->devKeyFile)) || (!check_null(outValue)))  {
+        g_message("getDevKeyFile : NULL string !");
+        return result;
+    }
+    if (check_empty(devConf->devKeyFile)) {
+        strncpy(outValue,devConf->devKeyFile, MAX_FILE_LENGTH);
+        result = TRUE;
+    } else
+          g_message("getDevKeyFile : config has empty key file !");
+    return result;
+}
+
+BOOL getDevCertPath(char *outValue)
+{
+    BOOL result = FALSE;
+    if ((!check_null(devConf->devCertPath)) || (!check_null(outValue))) {
+        g_message("getDevCertPath: NULL string !");
+        return result;
+    }
+    if (check_empty(devConf->devCertPath)) {
+        strncpy(outValue,devConf->devCertPath, MAX_FILE_LENGTH);
+        result = TRUE;
+    } else
+        g_message("getDevCertPath: config has empty path!");
+   return result;
+
+}
+
+BOOL getDevCertFile(char *outValue)
+{
+    BOOL result = FALSE;
+    if ((!check_null(devConf->devCertFile)) || (!check_null(outValue))) {
+        g_message("getDevCertFile: NULL string !");
+        return result;
+    }
+    if (check_empty(devConf->devCertFile)) {
+         strncpy(outValue,devConf->devCertFile, MAX_FILE_LENGTH);
+         result = TRUE;
+    } else
+         g_message("getDevCertFile: config has empty file !");
+    return result;
+}
 
 BOOL getUidfromRecvId()
 {
@@ -1597,6 +1660,7 @@ BOOL getDevXmlPath(char *outValue)
         g_message("getDevXmlPath : config has empty xml path !");
     return result;
 }
+
 BOOL getDevXmlFile(char *outValue, int refactor)
 {
     BOOL result = FALSE;
@@ -1620,11 +1684,11 @@ BOOL getDevXmlFile(char *outValue, int refactor)
     }
     return result;
 }
+
 BOOL checkCVP2Enabled()
 {
     return devConf->enableCVP2;
 }
-
 
 BOOL getModelNumber(char *outValue)
 {
@@ -1671,7 +1735,6 @@ BOOL getMake(char *outValue)
         g_message("getMake : config has empty device make file !");
     return result;
 }
-
 
 BOOL xdeviceInit(char *devConfFile, char *devLogFile)
 {
@@ -1735,13 +1798,28 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
 
 #ifdef CLIENT_XCAL_SERVER
 
-    devConf->bcastPort = BCAST_PORT;
-    devConf->devPropertyFile = g_strdup(DEVICE_PROPERTY_FILE);
-    devConf->authServerUrl = g_strdup(AUTH_SERVER_URL);
-    devConf->deviceNameFile = g_strdup(DEVICE_NAME_FILE);
-    devConf->logFile = g_strdup(LOG_FILE);
-    devConf->devXmlPath = g_strdup(DEVICE_XML_PATH);
-    devConf->devXmlFile = g_strdup(DEVICE_XML_FILE);
+    if (! (devConf->bcastPort))
+        devConf->bcastPort = BCAST_PORT;
+    if (! (devConf->devPropertyFile))
+        devConf->devPropertyFile = g_strdup(DEVICE_PROPERTY_FILE);
+    if (! (devConf->authServerUrl))
+        devConf->authServerUrl = g_strdup(AUTH_SERVER_URL);
+    if (! (devConf->deviceNameFile))
+        devConf->deviceNameFile = g_strdup(DEVICE_NAME_FILE);
+    if (! (devConf->logFile))
+        devConf->logFile = g_strdup(LOG_FILE);
+    if (! (devConf->devXmlPath))
+        devConf->devXmlPath = g_strdup(DEVICE_XML_PATH);
+    if (! (devConf->devXmlFile))
+        devConf->devXmlFile = g_strdup(DEVICE_XML_FILE);
+    if (! (devConf->devKeyFile))
+        devConf->devKeyFile  = g_strdup(DEVICE_KEY_FILE);
+    if (! (devConf->devKeyPath))
+        devConf->devKeyPath  = g_strdup(DEVICE_KEY_PATH);
+    if (! (devConf->devCertFile))
+        devConf->devCertFile = g_strdup(DEVICE_CERT_FILE);
+    if (! (devConf->devCertPath))
+        devConf->devCertPath = g_strdup(DEVICE_CERT_PATH);
     devConf->allowGwy = FALSE;
     devConf->useIARM = TRUE;
     devConf->useGliDiag=TRUE;
@@ -1757,6 +1835,9 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     }
     if (logoutfile) {
         g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_INFO | G_LOG_LEVEL_MESSAGE | \
+                          G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_ERROR, xupnp_logger,
+                          NULL);
+        g_log_set_handler("libsoup", G_LOG_LEVEL_INFO | G_LOG_LEVEL_MESSAGE | \
                           G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_ERROR, xupnp_logger,
                           NULL);
     }
@@ -1809,7 +1890,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
             g_message("Could not locate the ipaddress of the wifi broadcast interface %s",
                       wifiIface->str);
             g_critical("Could not locate the link local v4 ipaddress of the broadcast interface %s\n",
-                       devConf->bcastIf);
+                       wifiIface->str);
             exit(1);
         } else {
             devConf->bcastIf = g_strdup(wifiIface->str);
@@ -2331,6 +2412,14 @@ gboolean readconffile(const char *configfile)
                                 "DataFiles", "Ipv6FileLocation", NULL);
     devConf->ipv6PrefixFile = g_key_file_get_string          (keyfile, "DataFiles",
                               "Ipv6PrefixFile", NULL);
+    devConf->devCertFile = g_key_file_get_string             (keyfile, "DataFiles",
+                                  "DevCertFile", NULL);
+    devConf->devKeyFile = g_key_file_get_string             (keyfile,  "DataFiles",
+                               "DevKeyFile", NULL);
+    devConf->devCertPath = g_key_file_get_string             (keyfile, "DataFiles",
+                              "DevCertPath", NULL);
+    devConf->devKeyPath = g_key_file_get_string             (keyfile, "DataFiles",
+                             "DevKeyPath", NULL);
 #endif
     devConf->deviceNameFile = g_key_file_get_string          (keyfile, "DataFiles",
                               "DeviceNameFile", NULL);

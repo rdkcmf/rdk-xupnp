@@ -194,6 +194,9 @@ else
         fi
 fi
 
+if [ -f /etc/xupnp/dpcg-s.sh ]; then
+    sh /etc/xupnp/dpcg-s.sh
+fi
 start_upnp=`syscfg get start_upnp_service`
 if [ "$start_upnp" == "true" ]; then
 	/usr/bin/xdiscovery $xcalDiscoveryConfig $XDISC_LOG_FILE $XCAL_DEF_INTERFACE  &
