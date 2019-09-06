@@ -539,16 +539,26 @@ gboolean is_num(const gchar *str)
  */
 BOOL getRouteData(void)
 {
+    IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
     IARM_Bus_RouteSrvMgr_RouteData_Param_t param;
-    IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME,
+    memset(&param, 0, sizeof(param));
+    iarmRet = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME,
                   IARM_BUS_ROUTE_MGR_API_getCurrentRouteData, &param, sizeof(param));
-    if (param.status) {
-        g_string_assign(dataGatewayIPaddress, param.route.routeIp);
-        g_message("getRouteData: route IP for the device %s ",
+    if (iarmRet == IARM_RESULT_SUCCESS )
+    {
+        if (param.status) {
+            g_string_assign(dataGatewayIPaddress, param.route.routeIp);
+            g_message("getRouteData: route IP for the device %s ",
                   dataGatewayIPaddress->str);
-        return TRUE;
-    } else {
-        g_message("route data not available");
+            return TRUE;
+        } else {
+            g_message("route data not available");
+            return FALSE;
+        }
+    }
+    else
+    {
+        g_message("IARM failure in getting route data");
         return FALSE;
     }
 }
