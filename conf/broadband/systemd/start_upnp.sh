@@ -29,11 +29,16 @@ do
        systemctl stop xcal-device.service
    fi
    y=`sysevent get bridge_mode`
+   if [ "z$y" == "z" ]; then
+       echo "Delay in fetching Bridge mode details from syscfg. Retrying.."
+       x=""
+   fi
    if [[ "$y" != "0" && "z$x" != "z" ]] ; then
        echo "Shutting down the services as Bridge mode is Enabled"
        systemctl stop xupnp
        systemctl stop xcal-device
    fi
+
    sleep 2
 done
 status=""

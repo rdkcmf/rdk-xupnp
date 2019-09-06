@@ -24,6 +24,10 @@ do
    x=`sysevent get lan-status`
    echo $x
    y=`sysevent get bridge_mode`
+   if [ "z$y" == "z" ]; then
+       echo "Delay in fetching Bridge mode details from syscfg. Retrying.."
+       x=""
+   fi
    if [[ "$y" != "0" && "z$x" != "z" ]] ; then
       echo "Shutting down the services as Bridge mode is Enabled"
       exit 0
