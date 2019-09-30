@@ -167,6 +167,7 @@ int check_rfc()
             ERR_CHK(rc);
             if((!ind) && (rc == EOK))
             {
+                g_message("New Device Refactoring rfc_enabled");
                 return 1;
             }
         }
