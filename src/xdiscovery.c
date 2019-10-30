@@ -37,6 +37,8 @@
 #include "rfcapi.h"
 #endif
 #endif
+int gatewayDetected=0;
+gboolean partialDiscovery=FALSE;
 
 #define DEVICE_PROTECTION_CONTEXT_PORT  50760
 //Symbols defined in makefile (via defs.mk)
@@ -594,6 +596,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                 g_message("Exiting the device addition as UPC value matched");
                 g_free(upc);
                 deviceAddNo--;
+                partialDiscovery=TRUE;
                 return;
             }
 	}
@@ -828,81 +831,86 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     gwydata->sproxy_q = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_QAM_CFG);
     if (sno != NULL)
     {
-        g_message("In available_cb_gw Gateway device serial number: %s",sno);
-        g_string_assign(gwydata->serial_num, sno);
-        const char* udn = gupnp_device_info_get_udn(GUPNP_DEVICE_INFO (dproxy));
-        if (udn != NULL)
-        {
-            if (g_strrstr(udn,"uuid:"))
-            {
-                gchar* receiverid = g_strndup(udn+5, strlen(udn)-5);
-                if(receiverid)
-                {
-                    g_message("Gateway device receiver id is %s",receiverid);
-                    g_string_assign(gwydata->receiverid, receiverid);
-                    g_free(receiverid);
-                    if(!process_gw_services_identity(gwydata->sproxy_i, gwydata))
-                    {
-                        free_gwydata(gwydata);
-                        g_free(gwydata);
-                        g_free(sno);
-                        deviceAddNo--;
-                        g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
-                        return;
-                    }
-                    else
-                    {
+	g_message("In available_cb_gw Gateway device serial number: %s",sno);
+	g_string_assign(gwydata->serial_num, sno);
+	const char* udn = gupnp_device_info_get_udn(GUPNP_DEVICE_INFO (dproxy));
+	if (udn != NULL)
+	{
+	    if (g_strrstr(udn,"uuid:"))
+	    {
+		gchar* receiverid = g_strndup(udn+5, strlen(udn)-5);
+		if(receiverid)
+		{
+		    g_message("Gateway device receiver id is %s",receiverid);
+		    g_string_assign(gwydata->receiverid, receiverid);
+		    g_free(receiverid);
+		    if(!process_gw_services_identity(gwydata->sproxy_i, gwydata))
+		    {
+			free_gwydata(gwydata);
+			g_free(gwydata);
+			g_free(sno);
+			deviceAddNo--;
+			partialDiscovery=TRUE;
+			g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
+			return;
+		    }
+		    else
+		    {
 			g_message("Received XI Identity service");
-                    }
-                    if(!process_gw_services_media_config(gwydata->sproxy_m, gwydata))
-                    {
-                        free_gwydata(gwydata);
-                        g_free(gwydata);
-                        g_free(sno);
-                        deviceAddNo--;
-                        g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
-                        return;
-                    }
+		    }
+		    if(!process_gw_services_media_config(gwydata->sproxy_m, gwydata))
+		    {
+			free_gwydata(gwydata);
+			g_free(gwydata);
+			g_free(sno);
+			deviceAddNo--;
+			partialDiscovery=TRUE;
+			g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
+			return;
+		    }
 		    else
                     {
 			g_message("Received XI Media Config service");
-                    }
-                    if(!process_gw_services_time_config(gwydata->sproxy_t, gwydata))
-                    {
-                        free_gwydata(gwydata);
-                        g_free(gwydata);
-                        g_free(sno);
-                        deviceAddNo--;
-                        g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
-                        return;
-                    }
+		    }
+		    if(!process_gw_services_time_config(gwydata->sproxy_t, gwydata))
+		    {
+			free_gwydata(gwydata);
+			g_free(gwydata);
+			g_free(sno);
+			deviceAddNo--;
+			partialDiscovery=TRUE;
+			g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
+			return;
+		    }
 		    else
                     {
 			g_message("Received XI Time Config service");
-                    }
-                    if(!process_gw_services_gateway_config(gwydata->sproxy_g, gwydata))
-                    {
-                        free_gwydata(gwydata);
-                        g_free(gwydata);
-                        g_free(sno);
-                        deviceAddNo--;
-                        g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
-                        return;
-                    }
+		    }
+		    if(!process_gw_services_gateway_config(gwydata->sproxy_g, gwydata))
+		    {
+			free_gwydata(gwydata);
+			g_free(gwydata);
+			g_free(sno);
+			deviceAddNo--;
+			partialDiscovery=TRUE;
+			g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
+			return;
+		    }
 		    else
                     {
 			g_message("Received XI Gateway Config service");
-                    }
-                    if(!process_gw_services_qam_config(gwydata->sproxy_q, gwydata))
+		    }
+		    if(!process_gw_services_qam_config(gwydata->sproxy_q, gwydata))
 		    {
-		        free_gwydata(gwydata);
-		        g_free(gwydata);
-                        g_free(sno);
-                        deviceAddNo--;
-                        g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
-                        return;
-                    }
-                    else
+			free_gwydata(gwydata);
+			g_free(gwydata);
+			g_free(sno);
+			deviceAddNo--;
+			partialDiscovery=TRUE;
+			g_message("Exting from available_cb_gw since mandatory paramters are not there  device no %u",deviceAddNo);
+			return;
+		    }
+		    else
                     {
 			g_message("Received XI QAM Config service");
                         if (update_gwylist(gwydata)==FALSE )
@@ -2367,8 +2375,19 @@ gboolean delete_gwyitem(const char* serial_num)
     if (lstXdev)
     {
         GwyDeviceData *gwdata = lstXdev->data;
+        g_mutex_lock(mutex);
         if(gwdata->isgateway == TRUE)
+        {
+#ifdef CLIENT_XCAL_SERVER
+            if (gatewayDetected)
+            {
+                gatewayDetected--;
+            }
+            g_message("Removing Gateway Device %s from the device list %d", gwdata->serial_num->str,gatewayDetected);
+#else
             g_message("Removing Gateway Device %s from the device list", gwdata->serial_num->str);
+#endif
+        }
         else
             g_message("Removing Client Device %s from the device list", gwdata->serial_num->str);
 /*        g_mutex_lock(mutex);
@@ -2381,7 +2400,6 @@ gboolean delete_gwyitem(const char* serial_num)
           lstXdev=NULL;
         return TRUE;
         GwyDeviceData *gwdata = lstXdev->data;*/
-        g_mutex_lock(mutex);
         xdevlist = g_list_remove_link(xdevlist, lstXdev);
         free_gwydata(gwdata);
         g_free(gwdata);
@@ -2531,6 +2549,12 @@ gboolean sendDiscoveryResult(const char* outfilename)
                 //"dnsconfig":"search plant1.dac10.he.cc.ccp.cable.comcast.com;nameserver 10.252.180.16;",
                 //g_print("\t\t\t\"dnsconfig\":\"%s\",\n", gwdata->dnsconfig->str);
                 g_string_append_printf(localOutputContents,"\t\t\t\"receiverid\":\"%s\"\n\t\t}", gwdata->receiverid->str);
+                #ifdef CLIENT_XCAL_SERVER
+                if (gwdata->isgateway)
+                {
+                    gatewayDetected++;
+                }
+                #endif
             }
             if((disConf->enableGwSetup == TRUE) && ((firstXG1GwData == TRUE) || (firstXG2GwData == TRUE)) && (gwdata->isgateway == TRUE) && (checkvalidhostname(gwdata->dnsconfig->str) == TRUE ) && (checkvalidhostname(gwdata->etchosts->str) == TRUE) && (checkvalidip(gwdata->gwyip->str) == TRUE) && (checkvalidip(gwdata->gwyipv6->str) == TRUE))
             {
@@ -2663,6 +2687,7 @@ void* verify_devices()
     guint counter1=0;
     guint preCounter1=0;
     guint sleepCounter=0;
+    guint browserDisableEnableCounter=0;
 //workaround to remove device in second attempt -Start
     while(1)
     {
@@ -2684,6 +2709,20 @@ void* verify_devices()
             continue;
         }
         sleepCounter=0;
+#ifdef CLIENT_XCAL_SERVER
+        // When there is a partial discovery make sure that we gssdp cache is flushed out using resource browser
+        if((partialDiscovery) && (!gatewayDetected) && (browserDisableEnableCounter <=2))
+        {
+            g_message("Partial Device Discovery Disable Enable Resource Browser");
+            gssdp_resource_browser_set_active(GSSDP_RESOURCE_BROWSER(cp),FALSE);
+            partialDiscovery=FALSE;
+            usleep(XUPNP_RESCAN_INTERVAL/5);
+            gssdp_resource_browser_set_active(GSSDP_RESOURCE_BROWSER(cp),TRUE);
+            usleep(XUPNP_RESCAN_INTERVAL);
+            browserDisableEnableCounter++;
+            continue;
+        }
+#endif
 	if(rfc_enabled)
 	{
 	    if (gssdp_resource_browser_rescan(GSSDP_RESOURCE_BROWSER(cp_client))==FALSE)
