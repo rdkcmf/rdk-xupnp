@@ -195,13 +195,14 @@ else
 fi
 
 start_upnp=`syscfg get start_upnp_service`
-if [ "$start_upnp" != "false" ]; then
+if [ "$start_upnp" == "true" ]; then
 	/usr/bin/xdiscovery $xcalDiscoveryConfig $XDISC_LOG_FILE $XCAL_DEF_INTERFACE  &
 	/usr/bin/xcal-device &
 	echo "Starting Xcal UPNP client xdiscovery"
 else
         echo "Exiting as RFC is disabled"
-	exit 1
+        disable=`ifconfig brlan0:0 down`
+	exit 0
 fi
 
 echo "Starting Xcal UPNP client xdiscovery"
