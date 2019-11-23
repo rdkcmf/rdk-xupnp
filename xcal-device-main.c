@@ -768,11 +768,35 @@ get_recev_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer use
     gupnp_service_action_set (action, "ReceiverId", G_TYPE_STRING, receiverId, NULL);
     gupnp_service_action_return (action);
 }
+
 get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
-    gupnp_service_action_set (action, "AccountId", G_TYPE_STRING, accountId, NULL);
-    gupnp_service_action_return (action);
+    gchar *clientAccountId=NULL;
+    SoupMessage *msg;
+    /* Get the client account Id value */ 
+    gupnp_service_action_get (action, "SAccountId", G_TYPE_STRING, &clientAccountId, NULL);
+    gupnp_service_action_set (action, "GAccountId", G_TYPE_STRING, accountId, NULL);
+    if ((clientAccountId) && (!strcmp(clientAccountId, accountId)))
+    {
+       g_warning("Client connection with device account ID: %s gw accountId %s", clientAccountId, accountId); 
+       gupnp_service_action_return (action);
+    }
+    else 
+    {
+       // AccountId is not matching.
+       // Log the message, accountId receivede
+       // Disconnect soup session TBD.
+       g_warning("Client connection with device account ID %s not matching with gw accountId %s", clientAccountId, accountId); 
+       msg = gupnp_service_action_get_message(action); 
+       gupnp_service_action_return (action);
+       //g_warning("service action returning error "); 
+       //gupnp_service_action_return_error (action, 402, "Account Id not matching");
+       //g_warning("service action aborting session "); 
+       //gupnp_service_action_abort_session(service);
+    }
+    g_warning("get_account_id_cb exit "); 
 }
+
 /*
  * State Variable query handlers
  */
@@ -1546,7 +1570,6 @@ main (int argc, char **argv)
                             g_message("XUPNP Media Configuration service successfully created");
                         }
 	            }
-
 	            if (strstr(devXMlFile_new,GW_DEVICE_XML_FILE))
 	            {
 	                g_message("Gateway Device Configuration file");

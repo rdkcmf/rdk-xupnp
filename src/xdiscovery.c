@@ -44,6 +44,7 @@ gboolean partialDiscovery=FALSE;
 #define OUTPLAYURL_SIZE 160
 
 #define DEVICE_PROTECTION_CONTEXT_PORT  50760
+#define ACCOUNTID_SIZE 30
 //Symbols defined in makefile (via defs.mk)
 //#define USE_XUPNP_IARM
 //#define GUPNP_0_19
@@ -66,11 +67,13 @@ errno_t strcmp_s(const char * d,int max ,const char * src,int *r)
 char *cert_File=NULL;
 char *key_File=NULL;
 char *ca_File="/tmp/icebergwedge";
+char accountId[ACCOUNTID_SIZE]={'\0',};
 
 typedef GTlsInteraction XupnpTlsInteraction;
 typedef GTlsInteractionClass XupnpTlsInteractionClass;
 static void xupnp_tls_interaction_init (XupnpTlsInteraction *interaction);
 static void xupnp_tls_interaction_class_init (XupnpTlsInteractionClass *xupnpClass);
+static gboolean getAccountId(char *outValue);
 
 GType xupnp_tls_interaction_get_type (void);
 G_DEFINE_TYPE (XupnpTlsInteraction, xupnp_tls_interaction, G_TYPE_TLS_INTERACTION);
@@ -114,6 +117,62 @@ xupnp_tls_interaction_class_init (XupnpTlsInteractionClass *xupnpClass)
 
        interaction_class->request_certificate = xupnp_tls_interaction_request_certificate;
 }
+
+#ifdef BROADBAND
+gboolean getAccountId(char *outValue)
+{
+    char temp[ACCOUNTID_SIZE] = {0};
+    int rc;
+    rc = syscfg_get(NULL, "AccountID", temp, sizeof(temp));
+    if(!rc)
+    {
+        if ((outValue != NULL))
+        {
+            strncpy(outValue, temp, ACCOUNTID_SIZE-1);
+            return TRUE;
+        }
+    }
+    else
+    {
+        g_message("getAccountId: Unable to get the Account Id");
+    }
+    return FALSE;
+}
+#else
+gboolean getAccountId(char *outValue)
+{
+    gboolean result = FALSE;
+#ifdef ENABLE_RFC
+    RFC_ParamData_t param = {0};
+
+    WDMP_STATUS status = getRFCParameter("XUPNP","Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.AccountInfo.AccountID",&param);
+
+    if (status == WDMP_SUCCESS)
+    {
+	if (((param.value == NULL)))
+	{
+	    g_message("getAccountId : NULL string !");
+	    return result;
+	}
+	else
+	{
+	    if (strncpy(outValue,param.value, ACCOUNTID_SIZE-1))
+	    {
+	        result = TRUE;
+	    }
+	}
+    }
+    else
+    {
+       g_message("getAccountId: getRFCParameter Failed : %s\n", getRFCErrorString(status));
+    }
+#else
+    g_message("Not built with RFC support.");
+#endif
+    return result;
+}
+#endif
+
 #if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
 
 typedef struct _iarmDeviceData {
@@ -133,6 +192,7 @@ static void _GetXUPNPDeviceInfo(void *callCtx, unsigned long methodID, void *arg
 #include "sysMgr.h"
 IARM_Result_t _GetXUPNPDeviceInfo(void *arg);
 #endif
+
 
 static IARM_Result_t GetXUPNPDeviceInfo(char *pDeviceInfo, unsigned long length)
 {
@@ -1330,6 +1390,10 @@ int main(int argc, char *argv[])
     gupnp_context_set_subscription_timeout(context, 0);
     if(rfc_enabled)
     {
+        //Get account Id of the control point.
+        if (!getAccountId(accountId)) {
+              g_message("Failed to retrieve AccountId of the control point");
+        }
         if (g_path_is_absolute (disConf->disCertFile)) {
 	   cert_File= g_strdup (disConf->disCertFile);
 	}
@@ -1464,16 +1528,15 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     gupnp_service_proxy_send_action (sproxy, "GetIsGateway", &error, NULL,"IsGateway", G_TYPE_BOOLEAN, &temp_b ,NULL);
     if (error!=NULL)
     {
-	g_message ("GetIsGateway process gw services  Error: %s", error->message);
-	g_message("TELEMETRY_XUPNP_PARTIAL_DISCOVERY:%d,IsGateway",error->code);
-	g_clear_error(&error);
-	return FALSE;
+       g_message ("GetIsGateway process gw services  Error: %s", error->message);
+       g_message("TELEMETRY_XUPNP_PARTIAL_DISCOVERY:%d,IsGateway",error->code);
+       g_clear_error(&error);
+       return FALSE;
     }
     else
     {
-	gwData->isgateway = temp_b;
+       gwData->isgateway = temp_b;
     }
-
     gupnp_service_proxy_send_action (sproxy, "GetRecvDevType", &error,NULL,"RecvDevType",G_TYPE_STRING, &temp ,NULL);
     if (error!=NULL)
     {
@@ -1829,6 +1892,20 @@ gboolean process_gw_services_identity(GUPnPServiceProxy *sproxy, GwyDeviceData* 
     gchar *temp=NULL;
 
     g_message("Entering into process_gw_services_identity ");
+
+    gupnp_service_proxy_send_action (sproxy, "GetAccountId", &error,"SAccountId", G_TYPE_STRING, accountId, NULL, "GAccountId", G_TYPE_STRING, &temp, NULL);
+    if (error!=NULL)
+    {
+       g_message ("GetAccountId process gw Identity services Error: %s", error->message);
+       g_clear_error(&error);
+    }
+    else
+    {
+      g_message ("Received account id: %s", temp);
+      g_string_assign(gwData->accountid, temp);
+      g_free(temp);
+    }
+
     gupnp_service_proxy_send_action (sproxy, "GetRecvDevType", &error,NULL,"RecvDevType",G_TYPE_STRING, &temp ,NULL);
     if (error!=NULL)
     {
@@ -1948,17 +2025,6 @@ gboolean process_gw_services_identity(GUPnPServiceProxy *sproxy, GwyDeviceData* 
     else
     {
         g_string_assign(gwData->make, temp);
-        g_free(temp);
-    }
-    gupnp_service_proxy_send_action (sproxy, "GetAccountId", &error,NULL,"AccountId",G_TYPE_STRING, &temp ,NULL);
-    if (error!=NULL)
-    {
-        g_message ("GetAccountId process gw Identity services Error: %s", error->message);
-        g_clear_error(&error);
-    }
-    else
-    {
-        g_string_assign(gwData->accountid, temp);
         g_free(temp);
     }
     gupnp_service_proxy_send_action (sproxy, "GetReceiverId", &error,NULL,"ReceiverId",G_TYPE_STRING, &temp ,NULL);
