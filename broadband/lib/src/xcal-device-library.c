@@ -1445,27 +1445,21 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
         if(readconffile(devConfFile)==FALSE)
         {
                 g_message("readconffile returned FALSE");
-                 devConf = g_new(ConfSettings, 1);
+                 devConf = g_new0(ConfSettings, 1);
         }
 #else
-    devConf = g_new(ConfSettings, 1);
+    devConf = g_new0(ConfSettings, 1);
 #endif
 
 #ifdef CLIENT_XCAL_SERVER
-    if (! (devConf->bcastPort))
-        devConf->bcastPort = BCAST_PORT;
-    if (! (devConf->devPropertyFile))
-        devConf->devPropertyFile = g_strdup(DEVICE_PROPERTY_FILE);
-    if (! (devConf->authServerUrl))
-        devConf->authServerUrl = g_strdup(AUTH_SERVER_URL);
-    if (! (devConf->deviceNameFile))
-        devConf->deviceNameFile = g_strdup(DEVICE_NAME_FILE);
-    if (! (devConf->logFile))
-        devConf->logFile = g_strdup(LOG_FILE);
-    if (! (devConf->devXmlPath))
-        devConf->devXmlPath = g_strdup(DEVICE_XML_PATH);
-    if (! (devConf->devXmlFile))
-        devConf->devXmlFile = g_strdup(DEVICE_XML_FILE);
+
+    devConf->bcastPort = BCAST_PORT;
+    devConf->devPropertyFile = g_strdup(DEVICE_PROPERTY_FILE);
+    devConf->authServerUrl = g_strdup(AUTH_SERVER_URL);
+    devConf->deviceNameFile = g_strdup(DEVICE_NAME_FILE);
+    devConf->logFile = g_strdup(LOG_FILE);
+    devConf->devXmlPath = g_strdup(DEVICE_XML_PATH);
+    devConf->devXmlFile = g_strdup(DEVICE_XML_FILE);
     devConf->allowGwy = FALSE;
     devConf->useIARM = TRUE;
     devConf->useGliDiag=TRUE;
@@ -1977,7 +1971,7 @@ gboolean readconffile(const char *configfile)
     }
     g_message("Starting with Settings %s\n", g_key_file_to_data(keyfile, NULL,
               NULL));
-    devConf = g_new(ConfSettings, 1);
+    devConf = g_new0(ConfSettings, 1);
     /*
     # Names of all network interfaces used for publishing
     [Network]
