@@ -24,7 +24,7 @@ do
    x=`sysevent get lan-status`
    echo "sysevent status = $x"
    start_upnp=`syscfg get start_upnp_service`
-   if [ "$start_upnp" == "false" ]; then
+   if [[ "$start_upnp" != "true" && "z$x" != "z" ]]; then
        echo "Stopping Xcal as RFC disabled"
        systemctl stop xcal-device.service
    fi
