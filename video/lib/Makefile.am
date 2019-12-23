@@ -24,6 +24,7 @@ AM_CFLAGS = $(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBXML_CFLAGS) $(LIBSOUP_CFLAGS) 
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/sysmgr \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/wdmp-c \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir) \
+        -I$(top_srcdir)/include \
 	-I$(top_srcdir)/video/lib/include
 AM_CFLAGS+=  -g3
 AM_CFLAGS += $(IARM_CFLAGS)

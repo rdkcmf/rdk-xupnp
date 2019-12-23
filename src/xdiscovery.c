@@ -39,6 +39,9 @@
 #endif
 int gatewayDetected=0;
 gboolean partialDiscovery=FALSE;
+#include "rdk_safeclib.h"
+
+#define OUTPLAYURL_SIZE 160
 
 #define DEVICE_PROTECTION_CONTEXT_PORT  50760
 //Symbols defined in makefile (via defs.mk)
@@ -52,6 +55,14 @@ gboolean checkDevAddInProgress=FALSE;
 #define WAIT_TIME_SEC 5
 guint deviceAddNo=0;
 int getSoupStatusFromUrl(char* url);
+#ifdef SAFEC_DUMMY_API
+//adding strcmp_s defination
+errno_t strcmp_s(const char * d,int max ,const char * src,int *r)
+{
+  *r= strcmp(d,src);
+  return EOK;
+}
+#endif
 #if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
 
 typedef struct _iarmDeviceData {
@@ -98,7 +109,6 @@ static IARM_Result_t GetXUPNPDeviceInfo(char *pDeviceInfo, unsigned long length)
 
     //IARM_CallReturn(callCtx, "UIMgr", "GetXUPNPDeviceInfo", ret, serial);
     //g_mutex_unlock(mutex);
-
 }
 
 //notifyXUPnPDataUpdateEvent(UIDEV_EVENT_XUPNP_DATA_UPDATE)
@@ -162,7 +172,13 @@ void _evtHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t l
         notifyXUPnPDataUpdateEvent(UIDEV_EVENT_XUPNP_DATA_UPDATE);
     }
 #else
-    if (strcmp(owner, IARM_BUS_SYSMGR_NAME)  == 0) {
+    errno_t rc       = -1;
+    int     ind      = -1;
+
+    rc = strcmp_s(owner, strlen(owner), IARM_BUS_SYSMGR_NAME, &ind );
+    ERR_CHK(rc);
+    if((ind == 0) && (rc == EOK))
+    {
         switch (eventId) {
         case IARM_BUS_SYSMGR_EVENT_XUPNP_DATA_REQUEST:
         {
@@ -296,14 +312,15 @@ int check_rfc()
 #else
     syscfg_init();
     char temp[24] = {0};
+    errno_t rc       = -1;
+    int     ind      = -1;
     if (!syscfg_get(NULL, "Refactor", temp, sizeof(temp)) )
     {
-        if(temp != NULL)
+        rc = strcmp_s("true", strlen("true"), temp, &ind);
+        ERR_CHK(rc);
+        if((ind == 0) && (rc == EOK))
         {
-            if (strcmp(temp, "true") == 0)
-            {
-                return 1;
-            }
+            return 1;
         }
     }
 #endif
@@ -411,6 +428,7 @@ g_list_compare_sno(GwyDeviceData* gwData1, GwyDeviceData* gwData2, gpointer user
 gboolean checkDeviceExists(const char* sno,char* outPlayUrl)
 {
     gboolean retval = FALSE;
+    errno_t rc       = -1;
     if (g_list_length(xdevlist) > 0)
     {
         GList *element = NULL;
@@ -424,7 +442,12 @@ gboolean checkDeviceExists(const char* sno,char* outPlayUrl)
                 retval = TRUE;
                 if((((GwyDeviceData *)element->data)->isgateway) == TRUE)
                 {
-                    strcpy(outPlayUrl,g_strstrip(((GwyDeviceData *)element->data)->playbackurl->str));
+                    rc = strcpy_s(outPlayUrl, OUTPLAYURL_SIZE,  g_strstrip(((GwyDeviceData *)element->data)->playbackurl->str));
+                    ERR_CHK(rc);
+                    if ( rc != EOK)
+                    {
+                        retval = FALSE;
+                    }
                 }
                 break;
             }
@@ -446,7 +469,7 @@ gboolean checkDeviceExists(const char* sno,char* outPlayUrl)
 static void
 device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 {
-    char gwyPlayUrl[160]={'\0'};
+    char gwyPlayUrl[OUTPLAYURL_SIZE]={'\0'};
     const gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
 
     g_message ("In unavailable_cb  Device %s went down",sno);
@@ -525,7 +548,7 @@ static void
 device_proxy_unavailable_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 {
     const gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
-    char gwyPlayUrl[160]={0};
+    char gwyPlayUrl[OUTPLAYURL_SIZE]={0};
     g_message ("In unavailable_gw Device %s went down",sno);
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_MEDIA);
     if (gupnp_service_proxy_get_subscribed(sproxy) == TRUE)
@@ -571,6 +594,8 @@ device_proxy_unavailable_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 static void
 device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 {
+    errno_t rc       = -1;
+    int     ind      = -1;
     //g_print("Found a new device\n");
 //    if(!checkDevAddInProgress)
 //    {
@@ -591,7 +616,9 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
         gchar* upc = gupnp_device_info_get_upc (GUPNP_DEVICE_INFO (dproxy));
         if(upc)
         {
-            if(!(strcmp(upc,"10000")))
+            rc =strcmp_s("10000", strlen("10000"), upc, &ind);
+            ERR_CHK(rc);
+            if((!ind) && (rc == EOK))
             {
                 g_message("Exiting the device addition as UPC value matched");
                 g_free(upc);
@@ -3235,7 +3262,10 @@ gboolean getserialnum(GString* ownSerialNo)
  */
 char *replace_string(char *src_string, char *sub_string, char *replace_string) {
 
-    char *return_str, *insert_str, *tmp_str;
+    char *return_str = NULL;
+    char *insert_str = NULL;
+    char *tmp_str    = NULL;
+    errno_t rc       = -1;
     int distance, lenSubStr, lenRepStr, numOccurences;
 
     if ((!src_string) || (!sub_string) || (!replace_string))return src_string;
@@ -3248,18 +3278,26 @@ char *replace_string(char *src_string, char *sub_string, char *replace_string) {
         insert_str = tmp_str + lenSubStr;
     }
 
-    tmp_str = return_str = malloc(strlen(src_string) + (lenRepStr - lenSubStr) * numOccurences + 1);
+    int rstrsize = strlen(src_string) + (lenRepStr - lenSubStr) * numOccurences + 1;
+    tmp_str = return_str = malloc(rstrsize);
 
     if (!return_str) return src_string;
 
     while (numOccurences--) {
         insert_str = strstr(src_string, sub_string);
         distance = insert_str - src_string;
-        tmp_str = strncpy(tmp_str, src_string, distance) + distance;
-        tmp_str = strcpy(tmp_str, replace_string) + lenRepStr;
+        rc = strncpy_s(tmp_str, rstrsize, src_string, distance);
+        ERR_CHK(rc);
+        tmp_str += distance;
+        rstrsize -= distance;
+        rc = strcpy_s(tmp_str, rstrsize, replace_string);
+        ERR_CHK(rc);
+        tmp_str += lenRepStr;
+        rstrsize -= lenRepStr;
         src_string += distance + lenSubStr;
     }
-    strcpy(tmp_str, src_string);
+    rc =strcpy_s(tmp_str, rstrsize, src_string);
+    ERR_CHK(rc);
     return return_str;
 }
 
@@ -3284,6 +3322,8 @@ int getipaddress(const char* ifname, char* ipAddressBuffer, gboolean ipv6Enabled
     getifaddrs(&ifAddrStruct);
     //char addressBuffer[INET_ADDRSTRLEN] = NULL;
     int found=0;
+    errno_t rc       = -1;
+    int     ind      = -1;
 
     for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr == NULL) continue;
@@ -3294,7 +3334,9 @@ int getipaddress(const char* ifname, char* ipAddressBuffer, gboolean ipv6Enabled
             inet_ntop(AF_INET6, tmpAddrPtr, ipAddressBuffer, INET6_ADDRSTRLEN);
 
             //if (strcmp(ifa->ifa_name,"eth0")==0)
-            if (strcmp(ifa->ifa_name,ifname)==0)
+            rc = strcmp_s(ifa->ifa_name, strlen(ifa->ifa_name) ,ifname, &ind);
+            ERR_CHK(rc);
+            if((ind == 0) && (rc == EOK))
             {
                 found = 1;
                 break;
@@ -3310,7 +3352,9 @@ int getipaddress(const char* ifname, char* ipAddressBuffer, gboolean ipv6Enabled
                 inet_ntop(AF_INET, tmpAddrPtr, ipAddressBuffer, INET_ADDRSTRLEN);
 
                 //if (strcmp(ifa->ifa_name,"eth0")==0)
-                if (strcmp(ifa->ifa_name,ifname)==0)
+                rc =strcmp_s(ifa->ifa_name,strlen(ifa->ifa_name), ifname, &ind);
+                ERR_CHK(rc);
+                if((ind == 0) && (rc == EOK))
                 {
                     found = 1;
                     break;
@@ -3413,11 +3457,13 @@ gboolean checkvalidhostname( char* hostname)
 #if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
 void broadcastIPModeChange(void)
 {
+    errno_t rc       = -1;
     IARM_Bus_SYSMgr_EventData_t eventData;
     eventData.data.systemStates.stateId = IARM_BUS_SYSMGR_SYSSTATE_IP_MODE;
     eventData.data.systemStates.state = 1;
     eventData.data.systemStates.error = 0;
-    strncpy(eventData.data.systemStates.payload,ipMode->str,strlen(ipMode->str));
+    rc = strcpy_s(eventData.data.systemStates.payload, sizeof(eventData.data.systemStates.payload), ipMode->str);
+    ERR_CHK(rc);
     eventData.data.systemStates.payload[strlen(ipMode->str)]='\0';
     IARM_Bus_BroadcastEvent(IARM_BUS_SYSMGR_NAME, (IARM_EventId_t) IARM_BUS_SYSMGR_EVENT_SYSTEMSTATE, (void *)&eventData, sizeof(eventData));
     g_message("sent event for ipmode= %s",ipMode->str);

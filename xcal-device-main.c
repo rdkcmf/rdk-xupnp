@@ -36,6 +36,7 @@
 #ifdef ENABLE_SD_NOTIFY
 #include <systemd/sd-daemon.h>
 #endif
+#include "rdk_safeclib.h"
 
 #define DEVICE_XML_PATH     		"/etc/xupnp/"
 #define DEVICE_XML_FILE     		"BasicDevice.xml"
@@ -63,15 +64,27 @@ gint rawoffset, dstoffset, dstsavings, devBcastPort, cvpPort;
 gboolean usedaylightsavings,allowgwy,requiresTrm;
 
 static int rfc_enabled;
+#ifdef SAFEC_DUMMY_API
+//adding strcmp_s defination
+errno_t strcmp_s(const char * d,int max ,const char * src,int *r)
+{
+  *r= strcmp(d,src);
+  return EOK;
+}
+#endif
 
 static xmlNode * get_node_by_name(xmlNode * node, const char *node_name)
 {
+    errno_t rc       = -1;
+    int     ind      = -1;
     xmlNode * cur_node = NULL;
     xmlNode * ret       = NULL;
 
     for (cur_node = node ; cur_node ; cur_node = cur_node->next)
     {
-        if (strcmp(cur_node->name, node_name) == 0)
+        rc = strcmp_s(cur_node->name, strlen(cur_node->name), node_name, &ind);
+        ERR_CHK(rc);
+        if ((ind ==0) && (rc == EOK))
         {
             return cur_node;
         }
