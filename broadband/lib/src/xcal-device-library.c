@@ -51,6 +51,11 @@
 #define DEVICE_XML_PATH     "/etc/xupnp/"
 #define DEVICE_XML_FILE     "BasicDevice.xml"
 #define BROADBAND_DEVICE_XML_FILE       "X1BroadbandGateway.xml"
+#define MAX_FILE_LENGTH   256
+#define MAX_OUTVALUE      256
+#define RUIURLSIZE 2048
+#define URLSIZE 512
+#include "rdk_safeclib.h"
 
 #ifndef F_OK
 #define F_OK 0
@@ -151,12 +156,16 @@ void xupnpEventCallback_register(xupnpEventCallback callback_func)
 
 int check_rfc()
 {
+    errno_t rc       = -1;
+    int     ind      = -1;
     char temp[24] = {0};
     if (!syscfg_get(NULL, "Refactor", temp, sizeof(temp)) )
     {
         if(temp != NULL)
         {
-            if (strcmp(temp, "true") == 0)
+            rc = strcmp_s("true",strlen("true"),temp,&ind);
+            ERR_CHK(rc);
+            if((!ind) && (rc == EOK))
             {
                 return 1;
             }
@@ -173,13 +182,22 @@ BOOL getAccountId(char *outValue)
 {
     char temp[24] = {0};
     int rc;
+    errno_t rc1 = -1;
+
     rc = syscfg_get(NULL, "AccountID", temp, sizeof(temp));
     if(!rc)
     {
         if (check_null(outValue))
         {
-            strcpy(outValue, temp);
-            return TRUE;
+            rc1 = strcpy_s(outValue,MAX_OUTVALUE,temp);
+            if(rc1 == EOK)
+            {
+                return TRUE;
+            }
+            else
+            {
+                ERR_CHK(rc1);
+            }
         }
     }
     else
@@ -561,13 +579,21 @@ BOOL getBaseUrl(char *outValue)
 BOOL getFogTsbUrl(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getFogTsbUrl : NULL string !");
         return result;
     }
     if (fogtsburl->str) {
-        strcpy(outValue, fogtsburl->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,fogtsburl->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     } else {
         g_message("getFogTsbUrl : No fogtsb url !");
     }
@@ -586,13 +612,21 @@ BOOL getFogTsbUrl(char *outValue)
 BOOL getIpv6Prefix(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if  (!check_null(outValue)) {
         g_message("getIpv6Prefix : NULL string !");
         return result;
     }
     if (parseipv6prefix()) {
-        strcpy(outValue, ipv6prefix->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,ipv6prefix->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     } else {
         g_message("getIpv6Prefix : No ipv6 prefix  !");
     }
@@ -611,13 +645,21 @@ BOOL getIpv6Prefix(char *outValue)
 BOOL getDeviceName(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getDeviceName : NULL string !");
         return result;
     }
     if(devicename->str != NULL) {
-        strcpy(outValue, devicename->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,devicename->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     } else {
         g_message("getDeviceName : No Device Name !");
     }
@@ -636,13 +678,21 @@ BOOL getDeviceName(char *outValue)
 BOOL getDeviceType(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(devicetype)) || (!check_null(outValue))) {
         g_message("getDeviceType : NULL string !");
         return result;
     }
     if (check_empty(devicetype->str)) {
-        strcpy(outValue, devicetype->str);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE,devicetype->str);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     }
     else
     {
@@ -663,6 +713,7 @@ BOOL getDeviceType(char *outValue)
 BOOL getBcastMacAddress(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getBcastMacAddress : NULL string !");
         return result;
@@ -678,8 +729,15 @@ BOOL getBcastMacAddress(char *outValue)
         }
         g_string_assign(bcastmacaddress, bcastmac);
         g_message("bcast mac address is %s", bcastmacaddress->str);
-        strcpy(outValue, bcastmacaddress->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,bcastmacaddress->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
     else
     {
@@ -701,14 +759,22 @@ BOOL getBcastMacAddress(char *outValue)
 BOOL getGatewayStbIp(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(gwystbip)) || (!check_null(outValue))) {
         g_message("getGatewayStbIp : NULL string !");
         return result;
     }
 #ifndef CLIENT_XCAL_SERVER
     if (check_empty(gwystbip->str)) {
-        strcpy(outValue, gwystbip->str);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE,gwystbip->str);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     }
 #endif
     return result;
@@ -730,10 +796,18 @@ BOOL getGatewayIpv6(char *outValue)
         g_message("getGatewayIpv6 : NULL string !");
         return result;
     }
+    errno_t rc = -1;
 #ifndef CLIENT_XCAL_SERVER
     if (check_empty(gwyipv6->str)) {
-        strcpy(outValue, gwyipv6->str);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE,gwyipv6->str);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     }
 #endif
     return result;
@@ -751,13 +825,21 @@ BOOL getGatewayIpv6(char *outValue)
 BOOL getGatewayIp(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(gwyip)) || (!check_null(outValue))) {
         g_message("getGatewayIp : NULL string !");
         return result;
     }
     if (check_empty(gwyip->str)) {
-        strcpy(outValue, gwyip->str);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE,gwyip->str);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     }
     else
     {
@@ -778,13 +860,21 @@ BOOL getGatewayIp(char *outValue)
 BOOL getRecvDevType(char *outValue)
 {
     BOOL result = FALSE;
+     errno_t rc = -1;
     if ((!check_null(recvdevtype)) || (!check_null(outValue))) {
         g_message("getRecvDevType : NULL string !");
         return result;
     }
     if (check_empty(recvdevtype->str)) {
-        strcpy(outValue, recvdevtype->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,recvdevtype->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
     else
     {
@@ -795,13 +885,21 @@ BOOL getRecvDevType(char *outValue)
 BOOL getBuildVersion(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(buildversion)) || (!check_null(outValue))) {
         g_message("getBuildVersion : NULL string !");
         return result;
     }
     if (check_empty(buildversion->str)) {
-        strcpy(outValue, buildversion->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,buildversion->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
     else
     {
@@ -812,6 +910,7 @@ BOOL getBuildVersion(char *outValue)
 BOOL getHostMacAddress(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!(check_null(hostmacaddress)) || (!check_null(outValue))) {
         g_message("getHostMacAddress : NULL string !");
         return result;
@@ -827,8 +926,15 @@ BOOL getHostMacAddress(char *outValue)
         }
         g_string_assign(hostmacaddress, hostmac);
         g_message("Host mac address is %s", hostmacaddress->str);
-        strcpy(outValue, hostmacaddress->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,hostmacaddress->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
 #endif
     return result;
@@ -836,13 +942,21 @@ BOOL getHostMacAddress(char *outValue)
 BOOL getDnsConfig(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getDnsConfig : NULL string !");
         return result;
     }
     if (parsednsconfig()) {
-        strcpy(outValue, dnsconfig->str);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE,dnsconfig->str);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     } else {
         g_message("getDnsConfig : no dns config !");
     }
@@ -851,13 +965,21 @@ BOOL getDnsConfig(char *outValue)
 BOOL getSystemsIds(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(systemids)) || (!check_null(outValue))) {
         g_message("getSystemsIds : NULL string !");
         return result;
     }
     if (check_empty(systemids->str)) {
-        strcpy(outValue, systemids->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,systemids->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
     else
     {
@@ -915,13 +1037,21 @@ gboolean gettimezone(void)
 BOOL getTimeZone(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(dsgtimezone)) || (!check_null(outValue))) {
         g_message("getTimeZone : NULL string !");
         return result;
     }
     if (check_empty(dsgtimezone->str)) {
-        strcpy(outValue, dsgtimezone->str);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE, dsgtimezone->str);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     }
     else
     {
@@ -952,13 +1082,21 @@ BOOL getIsGateway(BOOL *outValue)
 BOOL getHosts(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getHosts : NULL string !");
         return result;
     }
     if (check_empty(etchosts->str)) {
-        strcpy(outValue, etchosts->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,RUIURLSIZE,etchosts->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     } else {
         g_message("getHosts : No Hosts Data available !");
     }
@@ -977,13 +1115,21 @@ BOOL getBcastPort(int *outValue)
 BOOL getBcastIp(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(gwyip)) || (!check_null(outValue))) {
         g_message("getBcastIp : NULL string !");
         return result;
     }
     if (check_empty(gwyip->str)) {
-        strcpy(outValue, gwyip->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,gwyip->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
     else
     {
@@ -994,13 +1140,21 @@ BOOL getBcastIp(char *outValue)
 BOOL getBcastIf(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getBcastIf : NULL string !");
         return result;
     }
     if(check_empty(devConf->bcastIf)) {
-        strncpy(outValue, devConf->bcastIf, MAXSIZE);
-        result = TRUE;
+        rc = strcpy_s(outValue, MAXSIZE, devConf->bcastIf);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
     else
         g_message("getBcastIf : No Bcast Interface found !");
@@ -1035,13 +1189,21 @@ BOOL getRUIUrl(char *outValue)
 BOOL getSerialNum(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getSerialNum : NULL string !");
         return result;
     }
     if(check_empty(serial_num->str)) {
-        strcpy(outValue, serial_num->str);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE,serial_num->str);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     } else {
         g_message("getSerialNum : No Serial Number Available !");
     }
@@ -1050,13 +1212,21 @@ BOOL getSerialNum(char *outValue)
 BOOL getPartnerId(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getPartnerId : NULL string !");
         return result;
     } else {
         if (check_null(partner_id) && check_empty(partner_id->str)) {
-            strcpy(outValue, partner_id->str);
-            result = TRUE;
+            rc = strcpy_s(outValue,MAX_OUTVALUE,partner_id->str);
+            if(rc == EOK)
+            {
+                result = TRUE;
+            }
+            else
+            {
+                ERR_CHK(rc);
+            }
         }
 	else
 	{
@@ -1109,6 +1279,7 @@ BOOL getUUID(char *outValue)
 BOOL getReceiverId(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getReceiverId : NULL string !");
         return result;
@@ -1116,8 +1287,15 @@ BOOL getReceiverId(char *outValue)
     if(getUidfromRecvId())
     {
         if (check_null(recv_id) && check_empty(recv_id->str)) {
-            strcpy(outValue, recv_id->str);
-            result = TRUE;
+             rc = strcpy_s(outValue,MAX_OUTVALUE,recv_id->str);
+             if(rc == EOK)
+             {
+                 result = TRUE;
+             }
+             else
+             {
+                 ERR_CHK(rc);
+             }
         }
 	else
 	{
@@ -1133,13 +1311,21 @@ BOOL getReceiverId(char *outValue)
 BOOL getTrmUrl(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getTrmUrl : NULL string !");
         return result;
     }
     if (check_empty(trmurl->str)) {
-        strcpy(outValue, trmurl->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,trmurl->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     } else {
         g_message("getTrmUrl : No trmurl found");
     }
@@ -1152,14 +1338,22 @@ BOOL getTuneReady()
 BOOL getPlaybackUrl(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(playbackurl->str)){
         g_message("getPlaybackUrl:  NULL string !");
         return result;
     }
     if (check_empty(playbackurl->str))
     {
-        strcpy(outValue, playbackurl->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,URLSIZE, playbackurl->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
     else
     {
@@ -1170,13 +1364,21 @@ BOOL getPlaybackUrl(char *outValue)
 BOOL getVideoBasedUrl(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getVideoBasedUrl : NULL string !");
         return result;
     }
     if (check_empty(videobaseurl->str)) {
-        strcpy(outValue, videobaseurl->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE, videobaseurl->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     } else {
         g_message("getVideoBasedUrl : No VideoBasedUrl found");
     }
@@ -1199,6 +1401,7 @@ BOOL getDisableTuneReadyStatus()
 #ifndef CLIENT_XCAL_SERVER
 BOOL getCVPIp(char *outValue)
 {
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getCVPIp : NULL string !");
         return FALSE;
@@ -1211,19 +1414,35 @@ BOOL getCVPIp(char *outValue)
         return FALSE;
     }
     g_message("ipaddress of the CVP2 interface %s", ipAddressBuffer);
-    strcpy(outValue, ipAddressBuffer);
-    return TRUE;
+    rc = strcpy_s(outValue,MAX_OUTVALUE,ipAddressBuffer);
+    if(rc == EOK)
+    {
+         return TRUE;
+    }
+    else
+    {
+         ERR_CHK(rc);
+         return FALSE;
+    }
 }
 BOOL getCVPIf(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1
     if (!check_null(outValue)) {
         g_message("getCVPIf : NULL string !");
         return result;
     }
     if (check_empty(devConf->cvpIf)) {
-        strncpy(outValue, devConf->cvpIf, MAXSIZE);
-        result = TRUE;
+        rc = strcpy_s(outValue, MAXSIZE, devConf->cvpIf);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
     else
     {
@@ -1248,13 +1467,21 @@ BOOL getCVPPort(int *outValue)
 BOOL getCVPXmlFile(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getCVPXmlFile : NULL string !");
         return result;
     }
     if (check_empty(devConf->cvpXmlFile)) {
-        strncpy(outValue, devConf->cvpXmlFile, MAXSIZE);
-        result = TRUE;
+        rc = strcpy_s(outValue, MAXSIZE, devConf->cvpXmlFile);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     }
     else
     {
@@ -1267,13 +1494,21 @@ BOOL getCVPXmlFile(char *outValue)
 BOOL getRouteDataGateway(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getRouteDataGateway : NULL string !");
         return result;
     }
     if(check_empty(dataGatewayIPaddress->str)) {
-        strcpy(outValue, dataGatewayIPaddress->str);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE,dataGatewayIPaddress->str);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     } else
         g_message("getRouteDataGateway : error getting route data!");
     return result;
@@ -1281,13 +1516,21 @@ BOOL getRouteDataGateway(char *outValue)
 BOOL getLogFile(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if (!check_null(outValue)) {
         g_message("getLogFile : NULL string !");
         return result;
     }
     if (check_empty(devConf->logFile)) {
-        strcpy(outValue, devConf->logFile);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE,devConf->logFile);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     } else
         g_message("getLogFile : Config doesnt have a log file !");
     return result;
@@ -1295,6 +1538,7 @@ BOOL getLogFile(char *outValue)
 BOOL getEstbMacAddr(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
 #ifndef CLIENT_XCAL_SERVER
     if ((!check_null(devConf->hostMacIf)) || (!check_null(outValue))) {
         g_message("getEstbMacAddr : NULL string !");
@@ -1304,7 +1548,7 @@ BOOL getEstbMacAddr(char *outValue)
         const gchar *hostmac = (gchar *)getmacaddress(devConf->hostMacIf);
         if (hostmac) {
             g_message("MAC address in  interface: %s  %s ", devConf->hostMacIf, hostmac);
-            strcpy(hostmacaddress->str, hostmac);
+            g_string_assign(hostmacaddress,hostmac);
             result = TRUE;
         } else {
             g_message("failed to retrieve macaddress on interface %s ",
@@ -1312,21 +1556,37 @@ BOOL getEstbMacAddr(char *outValue)
             return result;
         }
     }
-    strcpy(outValue, hostmacaddress->str);
+    rc = strcpy_s(outValue,MAX_OUTVALUE, hostmacaddress->str);
+    if(rc == EOK)
+    {
+        result = TRUE;
+    }
+    else
+    {
+        ERR_CHK(rc);
+    }
     g_message("Host mac address is %s", hostmacaddress->str);
 #endif
-    return result;
+return result;
 }
 BOOL getDevXmlPath(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(devConf->devXmlPath)) || (!check_null(outValue))) {
         g_message("getDevXmlPath : NULL string !");
         return result;
     }
     if (check_empty(devConf->devXmlPath)) {
-        strcpy(outValue, devConf->devXmlPath);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,devConf->devXmlPath);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     } else
         g_message("getDevXmlPath : config has empty xml path !");
     return result;
@@ -1363,13 +1623,21 @@ BOOL checkCVP2Enabled()
 BOOL getModelNumber(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(devicename->str)) || (!check_null(outValue))) {
         g_message("getModelNumber : NULL string !");
         return result;
     }
     if (check_empty(devicename->str)) {
-        strcpy(outValue, devicename->str);
-        result = TRUE;
+         rc = strcpy_s(outValue,MAX_OUTVALUE,devicename->str);
+         if(rc == EOK)
+         {
+             result = TRUE;
+         }
+         else
+         {
+             ERR_CHK(rc);
+         }
     } else
         g_message("getModelNumber : config has empty modelnumber file !");
     return result;
@@ -1378,13 +1646,21 @@ BOOL getModelNumber(char *outValue)
 BOOL getMake(char *outValue)
 {
     BOOL result = FALSE;
+    errno_t rc = -1;
     if ((!check_null(make->str)) || (!check_null(outValue))) {
         g_message("getMake : NULL string !");
         return result;
     }
     if (check_empty(make->str)) {
-        strcpy(outValue, make->str);
-        result = TRUE;
+        rc = strcpy_s(outValue,MAX_OUTVALUE,make->str);
+        if(rc == EOK)
+        {
+            result = TRUE;
+        }
+        else
+        {
+            ERR_CHK(rc);
+        }
     } else
         g_message("getMake : config has empty device make file !");
     return result;
@@ -2531,13 +2807,15 @@ gboolean parsednsconfig(void)
  */
 gchar *getmacaddress(const gchar *ifname)
 {
+    errno_t rc = -1;
     int fd;
     struct ifreq ifr;
     unsigned char *mac;
     GString *data = g_string_new(NULL);
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     ifr.ifr_addr.sa_family = AF_INET;
-    strncpy(ifr.ifr_name , ifname , IFNAMSIZ - 1);
+    rc = strcpy_s(ifr.ifr_name,IFNAMSIZ - 1,ifname);
+    ERR_CHK(rc);
     ioctl(fd, SIOCGIFHWADDR, &ifr);
     close(fd);
     mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
@@ -2565,6 +2843,8 @@ int getipaddress(const char *ifname, char *ipAddressBuffer,
     struct ifaddrs *ifa = NULL;
     void *tmpAddrPtr = NULL;
     getifaddrs(&ifAddrStruct);
+    errno_t rc       = -1;
+    int     ind      = -1;
     //char addressBuffer[INET_ADDRSTRLEN] = NULL;
     int found = 0;
     for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
@@ -2572,8 +2852,10 @@ int getipaddress(const char *ifname, char *ipAddressBuffer,
         if (ipv6Enabled == TRUE) {
             // check it is IP6
             // is a valid IP6 Address
-            if ((strcmp(ifa->ifa_name, ifname) == 0)
-                    && (ifa ->ifa_addr->sa_family == AF_INET6)) {
+              rc = strcmp_s(ifa->ifa_name,strlen(ifa->ifa_name),ifname,&ind);
+              ERR_CHK(rc);
+              if(((!ind) && (rc == EOK)) && (ifa ->ifa_addr->sa_family == AF_INET6))
+              { 
                 tmpAddrPtr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
                 inet_ntop(AF_INET6, tmpAddrPtr, ipAddressBuffer, INET6_ADDRSTRLEN);
                 //if (strcmp(ifa->ifa_name,"eth0")==0trcmp0(g_strstrip(devConf->mocaMacIf),ifname) == 0)
@@ -2591,7 +2873,10 @@ int getipaddress(const char *ifname, char *ipAddressBuffer,
                 tmpAddrPtr = &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
                 inet_ntop(AF_INET, tmpAddrPtr, ipAddressBuffer, INET_ADDRSTRLEN);
                 //if (strcmp(ifa->ifa_name,"eth0")==0)
-                if (strcmp(ifa->ifa_name, ifname) == 0) {
+                 rc = strcmp_s(ifa->ifa_name,strlen(ifa->ifa_name),ifname,&ind);
+                 ERR_CHK(rc);
+                 if((!ind) && (rc == EOK))
+                  {
                     found = 1;
                     break;
                 }

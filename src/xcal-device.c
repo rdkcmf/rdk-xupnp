@@ -43,6 +43,7 @@
 #include <libxml/parser.h>
 
 #include "xdevice.h"
+#include "rdk_safeclib.h"
 #ifdef CLIENT_XCAL_SERVER
 #include "mfrMgr.h"
 #endif
@@ -88,6 +89,16 @@ IARM_Bus_Daemon_SysMode_t sysModeParam;
 #define CST_RAWOFFSET (-6  * 60 * 60 * 1000)
 #define EST_RAWOFFSET (-5  * 60 * 60 * 1000)
 gboolean ipv6Enabled=FALSE;
+
+#ifdef SAFEC_DUMMY_API
+//adding strcmp_s defination
+errno_t strcmp_s(const char * d,int max ,const char * src,int *r)
+{
+  *r= strcmp(d,src);
+  return EOK;
+}
+#endif
+
 
 static struct TZStruct
 {
@@ -224,8 +235,14 @@ static char * getGatewayName()
 
 static void _sysEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
+    errno_t rc       = -1;
+    int     ind      = -1;
     /* Only handle state events */
-    if ((eventId != IARM_BUS_SYSMGR_EVENT_SYSTEMSTATE) || (strcmp(owner, IARM_BUS_SYSMGR_NAME)  != 0))return;
+    rc = strcmp_s(owner, strlen(owner), IARM_BUS_SYSMGR_NAME , &ind);
+    ERR_CHK(rc);
+    if ((eventId != IARM_BUS_SYSMGR_EVENT_SYSTEMSTATE) || (ind  != 0) || (rc != EOK))
+
+    return;
 
     IARM_Bus_SYSMgr_EventData_t *sysEventData = (IARM_Bus_SYSMgr_EventData_t*)data;
     IARM_Bus_SYSMgr_SystemState_t stateId = sysEventData->data.systemStates.stateId;
@@ -433,7 +450,12 @@ IARM_Result_t _SysModeChange(void *arg)
 
 static void _routesysEventHandler(const char *owner, IARM_EventId_t eventId, void *data, size_t len)
 {
-    if (strcmp(owner, IARM_BUS_NM_SRV_MGR_NAME)  == 0) {
+    errno_t rc       = -1;
+    int     ind      = -1;
+    rc = strcmp_s(owner, strlen(owner), IARM_BUS_NM_SRV_MGR_NAME, &ind )
+    ERR_CHK(rc);
+    if((ind == 0) && (rc == EOK))
+    {
         switch (eventId) {
         case IARM_BUS_NETWORK_MANAGER_EVENT_ROUTE_DATA:
         {
@@ -2161,6 +2183,8 @@ int getipaddress(const char* ifname, char* ipAddressBuffer, gboolean ipv6Enabled
     struct ifaddrs * ifAddrStruct=NULL;
     struct ifaddrs * ifa=NULL;
     void * tmpAddrPtr=NULL;
+    errno_t rc       = -1;
+    int     ind      = -1;
     getifaddrs(&ifAddrStruct);
     //char addressBuffer[INET_ADDRSTRLEN] = NULL;
     int found=0;
@@ -2169,7 +2193,9 @@ int getipaddress(const char* ifname, char* ipAddressBuffer, gboolean ipv6Enabled
         if (ipv6Enabled == TRUE)
         {   // check it is IP6
             // is a valid IP6 Address
-            if ((strcmp(ifa->ifa_name,ifname)==0) && (ifa ->ifa_addr->sa_family==AF_INET6))
+            rc = strcmp_s(ifa->ifa_name, strlen(ifa->ifa_name), ifname, &ind);
+            ERR_CHK(rc);
+            if (((ind == 0) && (rc == EOK)) && (ifa ->ifa_addr->sa_family==AF_INET6))
             {
                 tmpAddrPtr=&((struct sockaddr_in6  *)ifa->ifa_addr)->sin6_addr;
 
@@ -2193,7 +2219,9 @@ int getipaddress(const char* ifname, char* ipAddressBuffer, gboolean ipv6Enabled
                 inet_ntop(AF_INET, tmpAddrPtr, ipAddressBuffer, INET_ADDRSTRLEN);
 
                 //if (strcmp(ifa->ifa_name,"eth0")==0)
-                if (strcmp(ifa->ifa_name,ifname)==0)
+                rc = strcmp_s(ifa->ifa_name, strlen(ifa->ifa_name), ifname, &ind);
+                ERR_CHK(rc);
+                if((ind == 0) && (rc == EOK))
                 {
                     found = 1;
                     break;
@@ -2217,6 +2245,7 @@ int getipaddress(const char* ifname, char* ipAddressBuffer, gboolean ipv6Enabled
  */
 gchar* getmacaddress(const gchar* ifname)
 {
+    errno_t rc = -1;
     int fd;
     struct ifreq ifr;
     unsigned char *mac;
@@ -2225,18 +2254,20 @@ gchar* getmacaddress(const gchar* ifname)
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     ifr.ifr_addr.sa_family = AF_INET;
-    strncpy(ifr.ifr_name , ifname , IFNAMSIZ-1);
+    rc = strcpy_s(ifr.ifr_name , IFNAMSIZ-1, ifname);
+    ERR_CHK(rc);
+    if(rc == EOK)
+    {
+        ioctl(fd, SIOCGIFHWADDR, &ifr);
 
-    ioctl(fd, SIOCGIFHWADDR, &ifr);
+        close(fd);
 
-    close(fd);
+        mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
 
-    mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
-
-    //display mac address
-    //g_print("Mac : %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    g_string_printf(data,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-
+        //display mac address
+        //g_print("Mac : %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        g_string_printf(data,"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    }
     return data->str;
 }
 
@@ -2496,9 +2527,11 @@ gboolean getserialnum(GString* serial_num)
     return result;
 #else
     bool bRet;
+    errno_t rc = -1;
     IARM_Bus_MFRLib_GetSerializedData_Param_t param;
     IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
-    memset(&param, 0, sizeof(param));
+    rc = memset_s(&param, sizeof(param), 0, sizeof(param));
+    ERR_CHK(rc);
     param.type = mfrSERIALIZED_TYPE_SERIALNUMBER;
     iarmRet = IARM_Bus_Call(IARM_BUS_MFRLIB_NAME, IARM_BUS_MFRLIB_API_GetSerializedData, &param, sizeof(param));
     if(iarmRet == IARM_RESULT_SUCCESS)
@@ -2955,10 +2988,14 @@ static xmlNode * get_node_by_name(xmlNode * node, const char *node_name)
 {
     xmlNode * cur_node = NULL;
     xmlNode * ret	= NULL;
+    errno_t rc = -1;
+    int ind = -1;
 
     for (cur_node = node ; cur_node ; cur_node = cur_node->next)
     {
-        if (strcmp(cur_node->name, node_name) == 0)
+        rc = strcmp_s(cur_node->name, strlen(cur_node->name), node_name, &ind);
+        ERR_CHK(rc);
+        if ((ind == 0) && (rc == EOK))
         {
             return cur_node;
         }

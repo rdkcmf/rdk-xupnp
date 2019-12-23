@@ -21,6 +21,7 @@ AM_CFLAGS=$(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS) \
 	-I$(top_srcdir)/include -I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmbus \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/directfb \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs-hal \
+        -I$(top_srcdir)/include \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rdk/iarmmgrs/sysmgr \
 	-I$(top_srcdir)/broadband/lib/include \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/ccsp
