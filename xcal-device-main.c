@@ -773,12 +773,16 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
 {
     gchar *clientAccountId=NULL;
     SoupMessage *msg;
+    gchar *clientMacAddr=NULL;
+    gchar *clientIpAddr=NULL;
     /* Get the client account Id value */ 
     gupnp_service_action_get (action, "SAccountId", G_TYPE_STRING, &clientAccountId, NULL);
     gupnp_service_action_set (action, "GAccountId", G_TYPE_STRING, accountId, NULL);
+    gupnp_service_action_get (action, "macAddr", G_TYPE_STRING, &clientMacAddr, NULL);
+    gupnp_service_action_get (action, "ipAddr", G_TYPE_STRING, &clientIpAddr, NULL);
     if ((clientAccountId) && (!strcmp(clientAccountId, accountId)))
     {
-       g_warning("Client connection with device account ID: %s gw accountId %s", clientAccountId, accountId); 
+       g_warning("Client connection account ID same : %s,%s,%s,%s" , accountId,clientAccountId,clientMacAddr,clientIpAddr);
        gupnp_service_action_return (action);
     }
     else 
@@ -786,7 +790,7 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
        // AccountId is not matching.
        // Log the message, accountId receivede
        // Disconnect soup session TBD.
-       g_warning("Client connection with device account ID %s not matching with gw accountId %s", clientAccountId, accountId); 
+       g_warning("Client connection account ID mismatch found : %s,%s,%s,%s" , accountId,clientAccountId,clientMacAddr,clientIpAddr);
        msg = gupnp_service_action_get_message(action); 
        gupnp_service_action_return (action);
        //g_warning("service action returning error "); 

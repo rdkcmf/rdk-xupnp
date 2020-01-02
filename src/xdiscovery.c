@@ -26,7 +26,8 @@
 #include <libgssdp/gssdp.h>
 #include <ifaddrs.h>
 #include <arpa/inet.h>
-
+#include <sys/ioctl.h>
+#include <net/if.h>
 #include "xdiscovery.h"
 #include "xdiscovery_private.h"
 #ifdef INCLUDE_BREAKPAD
@@ -1362,6 +1363,7 @@ int main(int argc, char *argv[])
     g_print("Starting xdiscovery service on interface %s\n", disConf->discIf);
 
 
+    bcastmac = (gchar *)getmacaddress(disConf->discIf);
 #ifdef GUPNP_0_19
     context = gupnp_context_new (NULL, disConf->discIf,host_port, &error);
 #else
@@ -1897,7 +1899,7 @@ gboolean process_gw_services_identity(GUPnPServiceProxy *sproxy, GwyDeviceData* 
 
     g_message("Entering into process_gw_services_identity ");
 
-    gupnp_service_proxy_send_action (sproxy, "GetAccountId", &error,"SAccountId", G_TYPE_STRING, accountId, NULL, "GAccountId", G_TYPE_STRING, &temp, NULL);
+    gupnp_service_proxy_send_action (sproxy, "GetAccountId", &error,"SAccountId", G_TYPE_STRING, accountId, "macAddr", G_TYPE_STRING, bcastmac, "ipAddr",G_TYPE_STRING, ipaddress, NULL, "GAccountId", G_TYPE_STRING, &temp, NULL);
     if (error!=NULL)
     {
        g_message ("GetAccountId process gw Identity services Error: %s", error->message);
@@ -3740,4 +3742,31 @@ int getSoupStatusFromUrl(char* url)
     else
         g_message("soup session creation failed");
     return ret;
+}
+
+/**
+ * @brief This function is used to get the mac address of the target device.
+ *
+ * @param[in] ifname Name of the network interface.
+ *
+ * @return Returns the mac address of the interface given.
+ * @ingroup XUPNP_XCALDEV_FUNC
+ */
+gchar *getmacaddress(const gchar *ifname)
+{
+    int fd;
+    struct ifreq ifr;
+    unsigned char *mac;
+    GString *data = g_string_new(NULL);
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    ifr.ifr_addr.sa_family = AF_INET;
+    strncpy(ifr.ifr_name , ifname , IFNAMSIZ - 1);
+    ioctl(fd, SIOCGIFHWADDR, &ifr);
+    close(fd);
+    mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
+    //display mac address
+    //g_print("Mac : %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    g_string_printf(data, "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", mac[0], mac[1], mac[2],
+                    mac[3], mac[4], mac[5]);
+    return data->str;
 }

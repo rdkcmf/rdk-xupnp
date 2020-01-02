@@ -99,6 +99,7 @@ GString* ipMode;
 FILE *logoutfile;
 GString *ownSerialNo;
 char ipaddress[INET6_ADDRSTRLEN];
+gchar *bcastmac;
 
 typedef struct
 {
@@ -149,8 +150,12 @@ gboolean checkvalidhostname( char* hostname);
 void broadcastIPModeChange(void);
 void logMilestone(const char *msg_code);
 
+
 #if defined(ENABLE_FEATURE_TELEMETRY2_0)
 #include <telemetry_busmessage_sender.h>
 #endif
+
+
+gchar *getmacaddress(const gchar *ifname);
 
 #endif /* XDISCOVERY_PRIVATE_H_ */
