@@ -1514,7 +1514,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 
     g_message("Entering into process_gw_services ");
 
-    gupnp_service_proxy_send_action (sproxy, "GetIsGateway", &error, NULL,"IsGateway", G_TYPE_BOOLEAN, &temp_b ,NULL);
+    gupnp_service_proxy_send_action (sproxy, "GetIsGateway", &error,"deviceProtection", G_TYPE_BOOLEAN, FALSE, "macAddr", G_TYPE_STRING, bcastmac, "ipAddr",G_TYPE_STRING, ipaddress,NULL,"IsGateway", G_TYPE_BOOLEAN, &temp_b ,NULL);
     if (error!=NULL)
     {
        g_message ("GetIsGateway process gw services  Error: %s", error->message);
@@ -2143,7 +2143,7 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
         g_string_assign(gwData->gwyipv6, temp);
         g_free(temp);
     }
-    gupnp_service_proxy_send_action (sproxy, "GetGatewayIP", &error,NULL,"GatewayIP",G_TYPE_STRING, &temp ,NULL);
+    gupnp_service_proxy_send_action (sproxy, "GetGatewayIP", &error,"deviceProtection", G_TYPE_BOOLEAN, TRUE,NULL,"GatewayIP",G_TYPE_STRING, &temp ,NULL);
     if (error!=NULL)
     {
         g_message ("GetGatewayIP process gw services Error: %s", error->message);
