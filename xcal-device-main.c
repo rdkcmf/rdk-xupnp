@@ -670,7 +670,28 @@ get_hosts_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_d
 G_MODULE_EXPORT void
 get_isgateway_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
-    //g_print ("Got a call back\n");
+
+    gchar *clientMacAddr=NULL;
+    gchar *clientIpAddr=NULL;
+    gboolean deviceProtectionEnabled=TRUE;
+    if(rfc_enabled)
+    {
+        if(gupnp_service_action_get_argument_count(action))
+        {
+            gupnp_service_action_get (action, "deviceProtection", G_TYPE_BOOLEAN,&deviceProtectionEnabled, NULL);
+            if(!deviceProtectionEnabled)
+            {
+                gupnp_service_action_get (action, "macAddr", G_TYPE_STRING, &clientMacAddr, NULL);
+                gupnp_service_action_get (action, "ipAddr", G_TYPE_STRING, &clientIpAddr, NULL);
+                if((clientMacAddr) && (clientIpAddr))
+                    g_warning("Device Protection Disabled Device : %s,%s",clientMacAddr,clientIpAddr);
+                else
+                    g_warning("Device Protection Disabled Device without details");
+             }
+        }
+        else
+            g_warning("Device Protection Not supported legacy Device");
+    }
     getIsGateway(&allowgwy);
     gupnp_service_action_set (action, "IsGateway", G_TYPE_BOOLEAN, allowgwy,  NULL);
     gupnp_service_action_return (action);
@@ -772,7 +793,7 @@ get_recev_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer use
 get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     gchar *clientAccountId=NULL;
-    SoupMessage *msg;
+//    SoupMessage *msg;
     gchar *clientMacAddr=NULL;
     gchar *clientIpAddr=NULL;
     /* Get the client account Id value */ 
@@ -791,14 +812,14 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
        // Log the message, accountId receivede
        // Disconnect soup session TBD.
        g_warning("Client connection account ID mismatch found : %s,%s,%s,%s" , accountId,clientAccountId,clientMacAddr,clientIpAddr);
-       msg = gupnp_service_action_get_message(action); 
+//       msg = gupnp_service_action_get_message(action);
        gupnp_service_action_return (action);
        //g_warning("service action returning error "); 
        //gupnp_service_action_return_error (action, 402, "Account Id not matching");
        //g_warning("service action aborting session "); 
        //gupnp_service_action_abort_session(service);
     }
-    g_warning("get_account_id_cb exit "); 
+//    g_warning("get_account_id_cb exit ");
 }
 
 /*
@@ -1608,6 +1629,7 @@ main (int argc, char **argv)
            else
            {
               g_message("DeviceProtection Error: Cert file, Key file not available, continuing with older xcal");
+              rfc_enabled=0;
            }
            g_free(keyFile);
            g_free(certFile);
@@ -1615,6 +1637,7 @@ main (int argc, char **argv)
         else
         {
             g_message("Certificate or Key file unavailable, continuing with older xcal");
+            rfc_enabled=0;
         }
     } //rfc_enabled
 
