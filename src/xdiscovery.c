@@ -596,7 +596,6 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                 g_message("Exiting the device addition as UPC value matched");
                 g_free(upc);
                 deviceAddNo--;
-                partialDiscovery=TRUE;
                 return;
             }
 	}
@@ -651,6 +650,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                         g_free(gwydata);
                         g_free(sno);
                         deviceAddNo--;
+                        partialDiscovery=TRUE;
     		        g_message("Exting from device_proxy_available_cb since mandatory paramters are not there  device no %u",deviceAddNo);
 		        return;
 		    }
@@ -1061,7 +1061,7 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                     }
                     else
                     {
-                        g_message("Received XI Time Config service");
+                        g_message("Received XI Gateway Config service");
                         if (update_gwylist(gwydata)==FALSE )
                         {
                             g_message("Failed to update gw data into the list\n");
@@ -1951,6 +1951,7 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
         g_message (" GetBcastMacAddress process gw services Error: %s\n", error->message);
         g_message("TELEMETRY_XUPNP_PARTIAL_DISCOVERY:%d,BcastMacAddress",error->code);
         g_clear_error(&error);
+        return FALSE;
     }
     else
     {
@@ -2018,6 +2019,7 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
         g_message ("GetIsGateway process gw services  Error: %s\n", error->message);
         g_message("TELEMETRY_XUPNP_PARTIAL_DISCOVERY:%d,IsGateway",error->code);
         g_clear_error(&error);
+        return FALSE;
     }
     else
     {
@@ -2091,7 +2093,7 @@ gboolean process_gw_services_time_config(GUPnPServiceProxy *sproxy, GwyDeviceDat
     {
         gwData->dstoffset = temp_i;
     }
-    g_message("Exiting from process_gw_services_gateway_config ");
+    g_message("Exiting from process_gw_services_time_config ");
     return TRUE;
 }
 
@@ -2113,6 +2115,7 @@ gboolean process_gw_services_qam_config(GUPnPServiceProxy *sproxy, GwyDeviceData
         g_message ("GetBaseTrmUrl process gw services Error: %s\n", error->message);
         g_message("TELEMETRY_XUPNP_PARTIAL_DISCOVERY:%d,BaseTrmUrl",error->code);
         g_clear_error(&error);
+        return FALSE;
     }
     else
     {
@@ -2136,6 +2139,7 @@ gboolean process_gw_services_qam_config(GUPnPServiceProxy *sproxy, GwyDeviceData
         g_message ("Error: %s\n", error->message);
         g_message("TELEMETRY_XUPNP_PARTIAL_DISCOVERY:%d,RequiresTRM",error->code);
         g_clear_error(&error);
+        return FALSE;
     }
     else
     {
