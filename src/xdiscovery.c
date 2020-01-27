@@ -2467,6 +2467,7 @@ gboolean sendDiscoveryResult(const char* outfilename)
     gboolean ipModeStateChanged=FALSE;
 
     GString *localOutputContents=g_string_new(NULL);
+    GString *logDevicesList=g_string_new(NULL);
     g_string_printf(localOutputContents, "{\n\"xmediagateways\":\n\t[");
 
     GList *xdevlistDup=NULL;
@@ -2481,6 +2482,9 @@ gboolean sendDiscoveryResult(const char* outfilename)
         {
             g_string_append_printf(localOutputContents,"\n\t\t{\n\t\t\t");
             GwyDeviceData *gwdata = (GwyDeviceData *)element->data;
+            if(g_strcmp0(gwdata->recvdevtype->str, "broadband")) {
+                g_string_append_printf(logDevicesList, "%s,%s,", gwdata->bcastmacaddress->str, gwdata->devicetype->str);
+            }
             if(gwdata->sproxy_i != NULL)
             {
                 g_string_append_printf(localOutputContents,"\"sno\":\"%s\",\n", gwdata->serial_num->str);
@@ -2662,7 +2666,11 @@ gboolean sendDiscoveryResult(const char* outfilename)
         g_message("Send Discovery Result : Device List Null or Empty");
         g_mutex_unlock(mutex);
     }
-
+    if (logDevicesList->len) 
+    {
+        g_string_truncate(logDevicesList, logDevicesList->len-1);
+    }
+    g_message("DISCOVERED_MANAGED_DEVICE:%s\n", logDevicesList->str);
     //g_print("\n\t]\n}\n");
     g_string_append_printf(localOutputContents,"\n\t]\n}\n");
     //g_print("\nOutput is\n%s", outputcontents->str);
