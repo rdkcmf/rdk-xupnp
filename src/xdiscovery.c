@@ -2671,6 +2671,13 @@ gboolean sendDiscoveryResult(const char* outfilename)
         g_string_truncate(logDevicesList, logDevicesList->len-1);
     }
     g_message("DISCOVERED_MANAGED_DEVICE:%s\n", logDevicesList->str);
+
+#if defined(ENABLE_FEATURE_TELEMETRY2_0)
+    char telemetryBuff[4096] = {'\0'};
+    strncpy(telemetryBuff, logDevicesList->str, logDevicesList->len);
+    t2_event_s("Discovered_MngdDev_split", telemetryBuff);
+#endif
+
     //g_print("\n\t]\n}\n");
     g_string_append_printf(localOutputContents,"\n\t]\n}\n");
     //g_print("\nOutput is\n%s", outputcontents->str);
