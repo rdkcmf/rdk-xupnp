@@ -452,7 +452,7 @@ static void _routesysEventHandler(const char *owner, IARM_EventId_t eventId, voi
 {
     errno_t rc       = -1;
     int     ind      = -1;
-    rc = strcmp_s(owner, strlen(owner), IARM_BUS_NM_SRV_MGR_NAME, &ind )
+    rc = strcmp_s(owner, strlen(owner), IARM_BUS_NM_SRV_MGR_NAME, &ind );
     ERR_CHK(rc);
     if((ind == 0) && (rc == EOK))
     {
