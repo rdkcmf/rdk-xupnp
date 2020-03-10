@@ -3027,9 +3027,11 @@ void delOldItemsFromList(gboolean bDeleteAll)
 #endif
                     g_mutex_lock(mutex);
                     deletedDeviceNo++;
+		    /* Coverity Fix CID:125350 : Used After Free */
+                    xdevlist = g_list_remove(xdevlist, gwdata);
                     free_gwydata(gwdata);
                     g_free(gwdata);
-                    xdevlist = g_list_remove(xdevlist, gwdata);
+                    //xdevlist = g_list_remove(xdevlist, gwdata);
                     //g_print("Element Removed\n");
 
                     g_mutex_unlock(mutex);

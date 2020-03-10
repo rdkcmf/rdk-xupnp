@@ -999,8 +999,13 @@ gboolean gettimezone(void)
         return result;
     }
     result = g_file_get_contents (devConf->dsgFile, &dsgproxyfile, NULL, &error);
+
+   /* Coverity Fix for CID: 124792: Forward NULL */
     if (result == FALSE) {
-        g_warning("Problem in reading dsgproxyfile file %s", error->message);
+      
+        g_warning("Problem in reading dsgproxyfile file %s",
+            error ? error->message : "NULL");
+        
     }
     else
     {
@@ -2059,7 +2064,8 @@ gboolean updatesystemids(void)
                         channelmap_id, dac_id, plant_id, vodserver_id);
         return TRUE;
     } else {
-        gchar *diagfile;
+      	/* Coverity Fix CID: 124887 : UnInitialised variable*/
+        gchar *diagfile = NULL;
         unsigned long diagid = 0;
         gboolean  result = FALSE;
         GError *error = NULL;
@@ -2108,8 +2114,10 @@ gboolean parsedevicename(void)
     }
     result = g_file_get_contents (devConf->deviceNameFile, &devicenamefile, NULL,
                                   &error);
-    if (result == FALSE) {
-        g_warning("Problem in reading /devicename/devicename file %s", error->message);
+    
+      /* Coverity Fix for CID: 125452 : Forward NULL */
+      if (result == FALSE) {
+        g_warning("Problem in reading /devicename/devicename file %s", error ? error->message : "NULL");
     } else {
         gchar **tokens = g_strsplit_set(devicenamefile, "'=''\n''\0'", -1);
         guint toklength = g_strv_length(tokens);
@@ -2158,8 +2166,9 @@ gboolean parseipv6prefix(void)
     }
     result = g_file_get_contents (devConf->ipv6PrefixFile, &prefixfile, NULL,
                                   &error);
-    if (result == FALSE) {
-        g_warning("Problem in reading /prefix/prefix file %s", error->message);
+   /* Coverity Fix for CID: 124926 :  Forward NULL */
+      if (result == FALSE) {
+        g_warning("Problem in reading /prefix/prefix file %s", error ? error->message : "NULL");
     } else {
         gchar **tokens = g_strsplit_set(prefixfile, "'\n''\0'", -1);
         guint toklength = g_strv_length(tokens);
@@ -2618,8 +2627,10 @@ gboolean getetchosts(void)
     else
         hostsFile = g_strdup("//etc//hosts");
     result = g_file_get_contents (hostsFile, &etchostsfile, NULL, &error);
-    if (result == FALSE) {
-        g_warning("Problem in reading %s file %s", hostsFile, error->message);
+
+   /* Coverity Fix for CID: 125218 : Forward NULL*/
+      if (result == FALSE) {
+        g_warning("Problem in reading %s file %s", hostsFile, error ? error->message : "NULL");
     } else {
         gchar **tokens = g_strsplit_set(etchostsfile, "\n\0", -1);
         //etchosts->str = g_strjoinv(";", tokens);
@@ -2766,8 +2777,9 @@ gboolean parsednsconfig(void)
         return result;
     }
     result = g_file_get_contents (devConf->dnsFile, &dnsconfigfile, NULL, &error);
-    if (result == FALSE) {
-        g_warning("Problem in reading dnsconfig file %s", error->message);
+ /* Coverity Fix for CID: 125036 : Forward NULL */
+      if (result == FALSE) {
+        g_warning("Problem in reading dnsconfig file %s", error ? error->message : "NULL");
     } else {
         gchar **tokens = g_strsplit_set(dnsconfigfile, "\n\0", -1);
         //etchosts->str = g_strjoinv(";", tokens);
