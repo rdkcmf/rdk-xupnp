@@ -28,6 +28,11 @@
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <signal.h>
 #include "xdiscovery.h"
 #include "xdiscovery_private.h"
 #ifdef INCLUDE_BREAKPAD
@@ -63,6 +68,9 @@ static int rfc_enabled;
 static GMainLoop *main_loop;
 gboolean checkDevAddInProgress=FALSE;
 #define WAIT_TIME_SEC 5
+#define PNAME "/tmp/icebergwedge_t"
+#define PID 21699
+#define SHM_EXISTS 17
 guint deviceAddNo=0;
 int getSoupStatusFromUrl(char* url);
 #ifdef SAFEC_DUMMY_API
@@ -78,14 +86,330 @@ char *key_File=NULL;
 char *ca_File="/tmp/icebergwedge";
 char accountId[ACCOUNTID_SIZE]={'\0',};
 
+#ifdef BROADBAND
+// shared memory id for sharing white list
+// with mrd
+static int shmId;
+DEF_FIFO(dp_wlist_fifo,MAX_OVERFLOW, unsigned int);
+dp_wlist_t *dp_wlist=NULL;
+dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr);
+#endif
+
 typedef GTlsInteraction XupnpTlsInteraction;
 typedef GTlsInteractionClass XupnpTlsInteractionClass;
 static void xupnp_tls_interaction_init (XupnpTlsInteraction *interaction);
 static void xupnp_tls_interaction_class_init (XupnpTlsInteractionClass *xupnpClass);
 static gboolean getAccountId(char *outValue);
+static gboolean update_gwylist(GwyDeviceData* gwydata);
 
 GType xupnp_tls_interaction_get_type (void);
 G_DEFINE_TYPE (XupnpTlsInteraction, xupnp_tls_interaction, G_TYPE_TLS_INTERACTION);
+
+#ifdef BROADBAND
+void dp_signal_handlr(int sig)
+{
+     //detach and remove
+     //white list from memory.
+     if (dp_wlist && (shmId > 0)) 
+     {
+        shmdt((void *) dp_wlist);
+        shmctl(shmId, IPC_RMID, NULL);
+     }
+     exit(0);
+}
+
+/* 
+   This function takes an ipv4 address as input
+   and returns a 10 bit hash table index.
+*/
+unsigned short dp_hashindex (long ipaddr)
+{
+    unsigned short ret;
+    // Fold the ip address to get a 9 bit hansh index
+    ret =(ipaddr & 0x3FF) + ((ipaddr >> 10)&0x3FF) + ((ipaddr >> 20)&0x3FF) 
+                                                   + ((ipaddr >> 30) & 0x3FF);
+    ret = ((ret & 0x3FF) + ((ret >> 10) && 0x3FF)) &0x3FF;
+    if (ret) 
+       ret = ret-1;
+    return(ret);
+}
+
+/* 
+  Initialize the dp whitelist and associated data structures.
+*/
+int dp_wlistInit()
+{
+   int ret=0, fstat;
+   key_t key;
+   int i;
+
+   // signal handlers for cleaning up
+   // on termination of service.
+   signal(SIGHUP,dp_signal_handlr);
+   signal(SIGINT,dp_signal_handlr);
+   signal(SIGQUIT,dp_signal_handlr);
+   signal(SIGABRT,dp_signal_handlr);
+   signal(SIGTSTP,dp_signal_handlr);
+   signal(SIGKILL,dp_signal_handlr);
+
+   // create a unique key
+   if ((key =  ftok(PNAME, PID)) != (key_t) -1) { 
+      //Allocate white list in shared memory shared   
+      //with 'mrd' service.
+      //White list contain 1024 hash indexed entries 
+      //and 1024 overflow table. Hash is calculated
+      //by folding the IPv4 address to a 10 bit hash
+      //index value.
+      //Overflow table indexes are stored in a FIFO
+      //every entry in the whitelist contain a field 
+      //(ofb_index) point to a collision index in the 
+      //overflow table.
+      //On further collision,every collistion entry 
+      //subsequently contain index of (ofb_index)  
+      //another collision entry in the overflow table.
+      shmId = shmget(key, MAX_BUF_SIZE*sizeof(dp_wlist_t),  
+           S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH|IPC_CREAT);
+
+      if (shmId < 0)
+      {
+         g_message("dp_wlistInit:dp list creation, shared memory failure %d %s\n",
+                                                     errno, strerror(errno));
+         if (errno != SHM_EXISTS) {
+             dp_wlist == (void *) -1;
+             return -1;
+          }
+         shmId = shmget(key, MAX_BUF_SIZE*sizeof(dp_wlist_t), S_IRUSR|S_IRGRP|S_IROTH);
+         if (shmId < 0) {
+             g_message("dp_wlistInit:shmget  failure %d %s\n", errno, strerror(errno));
+             dp_wlist == (void *) -1;
+             return -1;
+         }
+      }
+      //get a pointer to white list created in shared memory. 
+      dp_wlist = (dp_wlist_t *) shmat(shmId, 0, 0);
+      if (dp_wlist == (void *) -1)
+      {
+          g_message("dp_wlistInit: shared memory attach failed errno %d %s\n",
+                                                   errno, strerror(errno));
+          ret = -1;
+      }
+      else 
+      {
+         // push the overflow indexs into a fifo
+         for (i=MAX_ENTRIES; i<MAX_BUF_SIZE; i++) 
+         {
+            ENQUEUE_FIFO(dp_wlist_fifo, i, fstat); 
+            if (fstat== FIFO_FULL) 
+            {
+               break;         
+            }
+         }
+
+         //initialize the  white list
+         for (i=0; i<MAX_BUF_SIZE; i++) 
+         {
+            //initialize next index entry of whilte list
+            //to -1, which indicate no collision for the.
+            //current index.
+            dp_wlist[i].ofb_index=(short ) -1; 
+         }
+       }
+  }
+  else {
+     dp_wlist == (void *) -1;
+     ret = -1;
+  }
+  return (ret);
+}
+
+/* 
+   This function lookup the dp white list for a ip address
+   and mac address.
+
+   input - ipaddr - ipv4 address
+         - MAC    - mac address 
+
+   output - stat
+            - DP_COLLISION - entry in the collision table
+            - DP_INVALID_MAC - ip address existing in whitelist
+                               mac address not matching.
+   return 
+         - index - if the lookup found entry in whitelist.
+         - -1    - entry not existing in white list 
+*/
+         
+short dpnode_lookup(long ipaddr, char MAC[], dp_wlist_ss_t *stat, 
+                                          unsigned short *lastnode)
+{
+    short index;
+
+    if (dp_wlist == (void *) -1) return (DP_WLIST_ERROR);
+    index = dp_hashindex(ipaddr); 
+    //check if the ip address is already existing in the white list
+    if (dp_wlist[index].ofb_index == (short) -1) return -1; 
+    else 
+    {
+       if (dp_wlist[index].ipaddr == ipaddr) 
+       {
+           if (!strncmp(MAC, dp_wlist[index].macaddr, MAC_ADDRESS_SIZE)) 
+           { 
+              *stat = DP_SUCCESS;
+           }
+           else 
+           {
+               *stat = DP_INVALID_MAC;
+           }
+           return (index);; 
+       }
+       else 
+       {
+            *lastnode = index;
+            //search overflow table
+            while (dp_wlist[index].ofb_index > 0) 
+            {
+                *lastnode = index;
+                index = dp_wlist[index].ofb_index;
+                if (dp_wlist[index].ipaddr == ipaddr) 
+                {
+                    if (!strncmp(MAC, dp_wlist[index].macaddr, 
+                                            MAC_ADDRESS_SIZE))  
+                    {
+                       *stat = DP_COLLISION;
+                       return (index); 
+                    }
+                    else 
+                    {
+                       *stat = DP_INVALID_MAC;
+                       return (index);
+                    }
+                }
+            }
+            *stat = DP_COLLISION;
+       }
+    }
+    return -1;
+}
+
+/* 
+   This function lookup the dp white list for a ip address
+   and mac address, if the entry is not existing add the .
+   entry into the white list. If entry is existing
+   but mac is not matching, update the mac address
+
+   input - ipaddr - ipv4 address
+         - MAC    - mac address 
+
+   return 
+            - DP_COLLISION - entry in the collision table
+            - DP_SUCCESS   - successfully added entry 
+*/
+dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
+{
+    dp_wlist_ss_t stat; 
+    dp_wlist_ss_t ret=DP_SUCCESS;
+    fstat_t fret;
+    short index, pindex;
+  
+    if (dp_wlist == (void *) -1) return (DP_WLIST_ERROR);;
+    if ((index = dpnode_lookup(ipaddr, macaddr, &stat,&pindex)) == (short) -1)
+    {
+       // check if there is collision
+       if (stat == DP_COLLISION) 
+       {
+          // collision add to the collision table and link the last index
+          // to the new node. 
+          DEQUEUE_FIFO(dp_wlist_fifo, index, fret);    
+          if (fret == FIFO_OK) 
+          { 
+             //g_message("dpnode_insert:collsion ip:%d mac:%s hash index %d\n", 
+             //                                           ipaddr, macaddr, index);
+             dp_wlist[pindex].ofb_index = index;  
+             dp_wlist[index].ipaddr = ipaddr;
+             strncpy(dp_wlist[index].macaddr, macaddr, MAC_ADDRESS_SIZE);
+             dp_wlist[index].ofb_index = 0;
+          }
+       }
+       else 
+       {
+             // add new entry 
+             index = dp_hashindex (ipaddr);
+             //g_message("dpnode_insert:new ip:%d mac:%s hash index %d\n", 
+             //                                           ipaddr, macaddr, index);
+             dp_wlist[index].ipaddr = ipaddr;
+             strncpy(dp_wlist[index].macaddr, macaddr,MAC_ADDRESS_SIZE);
+             dp_wlist[index].ofb_index = 0;
+       }
+        
+    }
+    else 
+    {
+       if (stat == DP_INVALID_MAC) 
+       {
+             //g_message("dpnode_insert:mac update ip:%d mac:%s hash index %d\n", 
+             //                                           ipaddr, macaddr, index);
+             // update mac address
+             strncpy(dp_wlist[index].macaddr, macaddr,MAC_ADDRESS_SIZE);
+       }
+       else {
+          ret = DP_WLIST_ERROR;
+       }
+    }
+    return (ret);
+}
+
+/* 
+   This function delete an entry from dp whitelist.
+
+   input - ipaddr  - ipv4 address
+         - macaddr - mac address 
+
+   return 
+        void.
+*/
+void dpnode_delete(long ipaddr, char *macaddr)
+{
+   dp_wlist_ss_t stat; 
+   int ret;
+   unsigned short index, pindex, tindex;
+
+   if (((index = dpnode_lookup(ipaddr, macaddr, &stat, &pindex)) >= 0) && (index != DP_WLIST_ERROR))
+   {
+
+      if (index < MAX_ENTRIES )
+      {
+         // The entry is in the main table
+         // If there are no subsequent nodes, delete the entry
+         if (dp_wlist[index].ofb_index ==0) 
+         {
+            // No collision just delete the node
+            dp_wlist[index].ofb_index =-1; 
+            dp_wlist[index].ipaddr = 0;
+         }
+         else 
+         {
+            // there are subsequent nodes in overflow table, delete the entry
+            // copy the subsequent node from overflow table and then 
+            // push the subsequent overflow table entry into fifo
+            tindex = dp_wlist[index].ofb_index;
+            dp_wlist[index].ofb_index = dp_wlist[tindex].ofb_index;
+            dp_wlist[index].ipaddr  = dp_wlist[tindex].ipaddr;
+            strncpy(dp_wlist[index].macaddr, dp_wlist[tindex].macaddr,MAC_ADDRESS_SIZE);
+            dp_wlist[tindex].ofb_index=-1;
+            dp_wlist[tindex].ipaddr=0;
+            ENQUEUE_FIFO(dp_wlist_fifo, tindex, ret);
+         }
+      }
+      else 
+      {
+         // Entry is in the overflow table.
+         dp_wlist[pindex].ofb_index = dp_wlist[index].ofb_index;
+         dp_wlist[index].ofb_index=-1;
+         dp_wlist[index].ipaddr=0;
+         ENQUEUE_FIFO(dp_wlist_fifo, index, ret);
+      }
+   }
+}
+#endif
 
 static void
 xupnp_tls_interaction_init (XupnpTlsInteraction *interaction)
@@ -897,6 +1221,7 @@ device_proxy_available_cb_client (GUPnPControlPoint *cp, GUPnPDeviceProxy *dprox
                     else
 		    {
 			g_message("Received XI Media Config service");
+                        gwydata->isDevRefactored = TRUE;
 			if (update_gwylist(gwydata)==FALSE )
 			{
 			    g_message("Failed to update gw data into the list");
@@ -1034,6 +1359,7 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 		    else
                     {
 			g_message("Received XI QAM Config service");
+                        gwydata->isDevRefactored = TRUE;
 			if (update_gwylist(gwydata)==FALSE )
 			{
 			    g_message("Failed to update gw data into the list\n");
@@ -1183,6 +1509,7 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                     else
                     {
                         g_message("Received XI Gateway Config service");
+                        gwydata->isDevRefactored = TRUE;
                         if (update_gwylist(gwydata)==FALSE )
                         {
                             g_message("Failed to update gw data into the list\n");
@@ -1235,6 +1562,7 @@ int main(int argc, char *argv[])
     devMutex = g_mutex_new ();
     cond = g_cond_new ();
     logoutfile = NULL;
+    int ret=0;
 
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
@@ -1404,6 +1732,16 @@ int main(int argc, char *argv[])
 	       rfc_enabled = 0;
 	    }
 	    else {
+
+#ifdef BROADBAND
+                 //initialize the device protection white list
+                 g_message("calling dp whitelistInit ");
+                 ret = dp_wlistInit();
+                 if (!ret) {
+                   g_message("initialization of dp whitelist successful ");
+                 }
+#endif
+
 	         gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
 		 xupnp_tlsinteraction = g_object_new (xupnp_tls_interaction_get_type (), NULL);
 		 g_message("tls interaction object created");
@@ -1869,7 +2207,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     }
 #endif
     gwData->devFoundFlag = TRUE;
-
+    gwData->isDevRefactored = FALSE;
     if (update_gwylist(gwData)==FALSE )
     {
         g_message("Failed to update gw data into the list");
@@ -2418,6 +2756,7 @@ gboolean init_gwydata(GwyDeviceData* gwydata)
     gwydata->devFoundFlag=FALSE;
     gwydata->isOwnGateway=FALSE;
     gwydata->isRouteSet=FALSE;
+    gwydata->isDevRefactored=FALSE;
     gwydata->sproxy=NULL;
     gwydata->sproxy_i=NULL;
     gwydata->sproxy_m=NULL;
@@ -2504,6 +2843,12 @@ gboolean update_gwylist(GwyDeviceData* gwydata)
 {
     char* sno = gwydata->serial_num->str;
     gchar* gwipaddr = gwydata->gwyip->str;
+#ifdef BROADBAND
+    int ret=0;
+    dp_wlist_ss_t wstatus;
+    struct in_addr x_r;
+#endif
+
     if (sno != NULL)
     {
         GList* xdevlistitem = g_list_find_custom (xdevlist, sno, (GCompareFunc)g_list_find_sno);
@@ -2544,6 +2889,17 @@ gboolean update_gwylist(GwyDeviceData* gwydata)
         xdevlist = g_list_insert_sorted_with_data(xdevlist, gwydata,(GCompareDataFunc)g_list_compare_sno, NULL);
         g_mutex_unlock(mutex);
         g_message("Inserted new/updated device %s in the list", sno);
+#ifdef BROADBAND
+        if ((rfc_enabled) && (g_strrstr(g_strstrip(gwydata->devicetype->str),"XG") != NULL ) && (gwydata->isDevRefactored)) {
+           // for XG devices insert ip address and mac address to whitelist 
+           ret = inet_aton(gwydata->gwyip->str, &x_r);
+           if (ret) {
+              if ((wstatus = dpnode_insert(x_r.s_addr, gwydata->bcastmacaddress->str)) != DP_WLIST_ERROR) {
+                 g_message("Inserted ip address:index  %s:%d mac address %s to whitelist", gwydata->gwyip->str, x_r.s_addr, gwydata->bcastmacaddress->str);
+              }
+           }
+        }
+#endif
         sendDiscoveryResult(disConf->outputJsonFile);
         if(xdevlistitem)
           xdevlistitem=NULL;
@@ -2568,6 +2924,10 @@ gboolean update_gwylist(GwyDeviceData* gwydata)
  */
 gboolean delete_gwyitem(const char* serial_num)
 {
+#ifdef BROADBAND
+    struct in_addr x_r;
+    int ret=0;
+#endif
     //look if the item exists
     GList* lstXdev = g_list_find_custom (xdevlist, serial_num, (GCompareFunc)g_list_find_sno);
     //if item exists delete the item
@@ -2583,6 +2943,17 @@ gboolean delete_gwyitem(const char* serial_num)
                 gatewayDetected--;
             }
             g_message("Removing Gateway Device %s from the device list %d", gwdata->serial_num->str,gatewayDetected);
+
+#ifdef BROADBAND
+            if ((rfc_enabled) && (g_strrstr(g_strstrip(gwdata->devicetype->str),"XG") != NULL ) && (gwdata->isDevRefactored)) {
+                  // Delete the entry from white list
+                  // since the device is not in the network.
+                  ret = inet_aton(gwdata->gwyip->str, &x_r);
+                  if (ret) {
+                     dpnode_delete(x_r.s_addr, " "); 
+                  }
+            }
+#endif
 #else
             g_message("Removing Gateway Device %s from the device list", gwdata->serial_num->str);
 #endif
@@ -2654,104 +3025,62 @@ gboolean sendDiscoveryResult(const char* outfilename)
             if(g_strcmp0(gwdata->recvdevtype->str, "broadband")) {
                 g_string_append_printf(logDevicesList, "%s,%s,", gwdata->bcastmacaddress->str, gwdata->devicetype->str);
             }
-            if(gwdata->sproxy_i != NULL)
             {
                 g_string_append_printf(localOutputContents,"\"sno\":\"%s\",\n", gwdata->serial_num->str);
                 g_string_append_printf(localOutputContents,"\t\t\t\"isgateway\":\"%s\",\n", gwdata->isgateway?"yes":"no");
                 g_string_append_printf(localOutputContents,"\t\t\t\"deviceName\":\"%s\",\n", gwdata->devicename->str);
-//		g_string_append_printf(localOutputContents,"\t\t\t\"bcastMacAddress\":\"%s\",\n", gwdata->bcastmacaddress->str);
-		g_string_append_printf(localOutputContents,"\t\t\t\"recvDevType\":\"%s\",\n", gwdata->recvdevtype->str);
-		g_string_append_printf(localOutputContents,"\t\t\t\"DevType\":\"%s\",\n", gwdata->devicetype->str);
-		g_string_append_printf(localOutputContents,"\t\t\t\"accountId\":\"%s\",\n", gwdata->accountid->str);
-		g_string_append_printf(localOutputContents,"\t\t\t\"modelNumber\":\"%s\",\n", gwdata->modelnumber->str);
-		g_string_append_printf(localOutputContents,"\t\t\t\"modelClass\":\"%s\",\n", gwdata->modelclass->str);
-		g_string_append_printf(localOutputContents,"\t\t\t\"make\":\"%s\",\n", gwdata->make->str);
-		g_string_append_printf(localOutputContents,"\t\t\t\"softwareRevision\":\"%s\",\n", gwdata->buildversion->str);
-		g_string_append_printf(localOutputContents,"\t\t\t\"hardwareRevision\":\"%s\",\n", gwdata->hardwarerevision->str);
-		g_string_append_printf(localOutputContents,"\t\t\t\"managementUrl\":\"%s\",\n", gwdata->managementurl->str);
-                if(g_strrstr(g_strstrip(gwdata->devicetype->str),"XI") == NULL )
+                g_string_append_printf(localOutputContents,"\t\t\t\"recvDevType\":\"%s\",\n", gwdata->recvdevtype->str);
+                g_string_append_printf(localOutputContents,"\t\t\t\"DevType\":\"%s\",\n", gwdata->devicetype->str);
+
+                if(gwdata->sproxy_i != NULL)
+                {
+                    g_string_append_printf(localOutputContents,"\t\t\t\"accountId\":\"%s\",\n", gwdata->accountid->str);
+                    g_string_append_printf(localOutputContents,"\t\t\t\"modelNumber\":\"%s\",\n", gwdata->modelnumber->str);
+                    g_string_append_printf(localOutputContents,"\t\t\t\"modelClass\":\"%s\",\n", gwdata->modelclass->str);
+                    g_string_append_printf(localOutputContents,"\t\t\t\"make\":\"%s\",\n", gwdata->make->str);
+                    g_string_append_printf(localOutputContents,"\t\t\t\"softwareRevision\":\"%s\",\n", gwdata->buildversion->str);
+                    if(g_strcmp0(gwdata->recvdevtype->str,"broadband"))
+                    {
+                        g_string_append_printf(localOutputContents,"\t\t\t\"hardwareRevision\":\"%s\",\n", gwdata->hardwarerevision->str);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"managementUrl\":\"%s\",\n", gwdata->managementurl->str);
+                    }
+                }
+                else
                 {
                     g_string_append_printf(localOutputContents,"\t\t\t\"bcastMacAddress\":\"%s\",\n", gwdata->bcastmacaddress->str);
+                    g_string_append_printf(localOutputContents,"\t\t\t\"buildVersion\":\"%s\",\n", gwdata->buildversion->str);
+                }
+                if(g_strrstr(g_strstrip(gwdata->devicetype->str),"XI") == NULL )
+                {
                     g_string_append_printf(localOutputContents,"\t\t\t\"gatewayip\":\"%s\",\n", gwdata->gwyip->str);
                     g_string_append_printf(localOutputContents,"\t\t\t\"gatewayipv6\":\"%s\",\n", gwdata->gwyipv6->str);
                     g_string_append_printf(localOutputContents,"\t\t\t\"hostMacAddress\":\"%s\",\n", gwdata->hostmacaddress->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"gatewayStbIP\":\"%s\",\n", gwdata->gatewaystbip->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"ipv6Prefix\":\"%s\",\n", gwdata->ipv6prefix->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"timezone\":\"%s\",\n", gwdata->dsgtimezone->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"rawoffset\":\"%d\",\n", gwdata->rawoffset);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"dstoffset\":\"%d\",\n", gwdata->dstoffset);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"dstsavings\":\"%d\",\n", gwdata->dstsavings);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"usesdaylighttime\":\"%s\",\n", gwdata->usesdaylighttime?"yes":"no");
-                    g_string_append_printf(localOutputContents,"\t\t\t\"baseStreamingUrl\":\"%s\",\n", gwdata->baseurl->str);
                     if(g_strcmp0(gwdata->recvdevtype->str,"broadband"))
-		    {
+                    {
+                        g_string_append_printf(localOutputContents,"\t\t\t\"gatewayStbIP\":\"%s\",\n", gwdata->gatewaystbip->str);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"ipv6Prefix\":\"%s\",\n", gwdata->ipv6prefix->str);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"timezone\":\"%s\",\n", gwdata->dsgtimezone->str);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"rawoffset\":\"%d\",\n", gwdata->rawoffset);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"dstoffset\":\"%d\",\n", gwdata->dstoffset);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"dstsavings\":\"%d\",\n", gwdata->dstsavings);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"usesdaylighttime\":\"%s\",\n", gwdata->usesdaylighttime?"yes":"no");
                         g_string_append_printf(localOutputContents,"\t\t\t\"requiresTRM\":\"%s\",\n", gwdata->requirestrm?"true":"false");
                         g_string_append_printf(localOutputContents,"\t\t\t\"baseTrmUrl\":\"%s\",\n", gwdata->basetrmurl->str);
                         g_string_append_printf(localOutputContents,"\t\t\t\"systemids\":\"%s\",\n", gwdata->systemids->str);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"playbackUrl\":\"%s\",\n", gwdata->playbackurl->str);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"dnsconfig\":\"%s\",\n", gwdata->dnsconfig->str);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"hosts\":\"%s\",\n", gwdata->etchosts->str);
                     }
-                    g_string_append_printf(localOutputContents,"\t\t\t\"playbackUrl\":\"%s\",\n", gwdata->playbackurl->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"dnsconfig\":\"%s\",\n", gwdata->dnsconfig->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"hosts\":\"%s\",\n", gwdata->etchosts->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"dataGatewayIPaddress\":\"%s\",\n", gwdata->dataGatewayIPaddress->str);
-                }
-                g_string_append_printf(localOutputContents,"\t\t\t\"receiverid\":\"%s\"\n\t\t}", gwdata->receiverid->str);
-
-	    }
-            else
-            {
-                //g_print("\"sno\":\"%s\",\n", gwdata->serial_num->str);
-                g_string_append_printf(localOutputContents,"\"sno\":\"%s\",\n", gwdata->serial_num->str);
-                //"isgateway":"yes",
-                //char strIsGateway[5];
-	            //g_print("\t\t\t\"isgateway\":\"%s\",\n", gwdata->isgateway?g_strdup("yes"):g_strdup("no"));
-                g_string_append_printf(localOutputContents,"\t\t\t\"isgateway\":\"%s\",\n", gwdata->isgateway?"yes":"no");
-                //"gatewayip":"10.21.32.212",
-                //g_print("\t\t\t\"gatewayip\":\"%s\",\n", gwdata->gwyip->str);
-                g_string_append_printf(localOutputContents,"\t\t\t\"deviceName\":\"%s\",\n", gwdata->devicename->str);
-                g_string_append_printf(localOutputContents,"\t\t\t\"bcastMacAddress\":\"%s\",\n", gwdata->bcastmacaddress->str);
-                g_string_append_printf(localOutputContents,"\t\t\t\"recvDevType\":\"%s\",\n", gwdata->recvdevtype->str);
-                g_string_append_printf(localOutputContents,"\t\t\t\"DevType\":\"%s\",\n", gwdata->devicetype->str);
-                g_string_append_printf(localOutputContents,"\t\t\t\"buildVersion\":\"%s\",\n", gwdata->buildversion->str);
-                //g_string_append_printf(outputcontents,"\t\t\t\"hostMacAddress\":\"%s\",\n");
-                if(g_strrstr(g_strstrip(gwdata->devicetype->str),"XI") == NULL )
-                {
-                    g_string_append_printf(localOutputContents,"\t\t\t\"gatewayip\":\"%s\",\n", gwdata->gwyip->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"gatewayipv6\":\"%s\",\n", gwdata->gwyipv6->str);
-                    //"timezone":"EST05EDT",
-                    //g_print("\t\t\t\"timezone\":\"%s\",\n", gwdata->dsgtimezone->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"hostMacAddress\":\"%s\",\n", gwdata->hostmacaddress->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"gatewayStbIP\":\"%s\",\n", gwdata->gatewaystbip->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"ipv6Prefix\":\"%s\",\n", gwdata->ipv6prefix->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"timezone\":\"%s\",\n", gwdata->dsgtimezone->str);
-                    //"baseurl":"http://10.21.32.212:8080/videoStreamInit?recorderId=T0100113218",
-                    //g_print("\t\t\t\"baseurl\":\"%s\",\n", gwdata->baseurl->str);
-
-                    g_string_append_printf(localOutputContents,"\t\t\t\"rawoffset\":\"%d\",\n", gwdata->rawoffset);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"dstoffset\":\"%d\",\n", gwdata->dstoffset);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"dstsavings\":\"%d\",\n", gwdata->dstsavings);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"usesdaylighttime\":\"%s\",\n", gwdata->usesdaylighttime?"yes":"no");
-                    g_string_append_printf(localOutputContents,"\t\t\t\"baseStreamingUrl\":\"%s\",\n", gwdata->baseurl->str);
-                    //g_message("\t\t\t\"requiresTRM\":\"%s\",\n", gwdata->requirestrm?g_strdup("true"):g_strdup("false"));
-                    g_string_append_printf(localOutputContents,"\t\t\t\"requiresTRM\":\"%s\",\n", gwdata->requirestrm?"true":"false");
-                    g_string_append_printf(localOutputContents,"\t\t\t\"baseTrmUrl\":\"%s\",\n", gwdata->basetrmurl->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"playbackUrl\":\"%s\",\n", gwdata->playbackurl->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"dnsconfig\":\"%s\",\n", gwdata->dnsconfig->str);
-                    //"hosts":"127.0.0.1 localhost  # for using the ssh tunnel;127.0.0.1 intel_ce_linux;",
-                    //g_print("\t\t\t\"hosts\":\"%s\",\n", gwdata->etchosts->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"hosts\":\"%s\",\n", gwdata->etchosts->str);
-                    //"systemids":"channelMapId=1901;controllerId=3414;plantId=3898094610;vodServerId=63301",
-                    //g_print("\t\t\t\"systemids\":\"%s\",\n", gwdata->systemids->str);
-                    g_string_append_printf(localOutputContents,"\t\t\t\"systemids\":\"%s\",\n", gwdata->systemids->str);
-                    //"receiverid":"T0100113218"
-                    //g_print("\t\t\t\"receiverid\":\"%s\"\n\t\t}", gwdata->receiverid->str);
+                    if(gwdata->sproxy_i != NULL)
+                    {
+                        g_string_append_printf(localOutputContents,"\t\t\t\"bcastMacAddress\":\"%s\",\n", gwdata->bcastmacaddress->str);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"dataGatewayIPaddress\":\"%s\",\n", gwdata->dataGatewayIPaddress->str);
+                    }
                 }
                 else
                 {
                     g_string_append_printf(localOutputContents,"\t\t\t\"dataGatewayIPaddress\":\"%s\",\n", gwdata->dataGatewayIPaddress->str);
                 }
-
-                //"dnsconfig":"search plant1.dac10.he.cc.ccp.cable.comcast.com;nameserver 10.252.180.16;",
-                //g_print("\t\t\t\"dnsconfig\":\"%s\",\n", gwdata->dnsconfig->str);
                 g_string_append_printf(localOutputContents,"\t\t\t\"receiverid\":\"%s\"\n\t\t}", gwdata->receiverid->str);
                 #ifdef CLIENT_XCAL_SERVER
                 if (gwdata->isgateway)
@@ -3196,11 +3525,10 @@ void delOldItemsFromList(gboolean bDeleteAll)
 #endif
                     g_mutex_lock(mutex);
                     deletedDeviceNo++;
-		    /* Coverity Fix CID:125350 : Used After Free */
+                  /* Coverity Fix CID:125350 : Used After Free */
                     xdevlist = g_list_remove(xdevlist, gwdata);
                     free_gwydata(gwdata);
                     g_free(gwdata);
-                    //xdevlist = g_list_remove(xdevlist, gwdata);
                     //g_print("Element Removed\n");
 
                     g_mutex_unlock(mutex);

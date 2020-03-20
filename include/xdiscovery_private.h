@@ -30,6 +30,60 @@
 #define XDISC_SERVICE_TIME "urn:schemas-upnp-org:service:X1Time:1"
 #define XDISC_SERVICE_PROTECTION "urn:schemas-upnp-org:service:DeviceProtection:1"
 
+#define MAX_ENTRIES 1024
+#define MAX_OVERFLOW 1024
+#define MAX_BUF_SIZE 2048
+#define MAC_ADDRESS_SIZE 20
+
+#ifdef BROADBAND
+typedef enum { DP_SUCCESS=0, DP_INVALID_MAC, DP_COLLISION, DP_WLIST_ERROR} dp_wlist_ss_t;
+typedef enum { FIFO_OK=0, FIFO_FULL=1, FIFO_EMPTY=2} fstat_t;
+
+#define DEF_FIFO(name, max_size, type) \
+    typedef struct fname1 { \
+          type entries[max_size]; \
+          unsigned int tail; \
+          unsigned int size;\
+    } fname1_t; \
+    fname1_t name;     
+
+#define INIT_FIFO(name, max_size) \
+{ \
+    name.tail = max_size;\
+    name.size = max_size; \
+}
+
+#define ENQUEUE_FIFO(name, value, ret) \
+{ \
+   if (name.tail > 0) { \
+      name.tail--; \
+      name.entries[name.tail] = value; \
+      ret = FIFO_OK; \
+   } \
+   else { \
+      ret = FIFO_FULL; \
+   } \
+} \
+
+#define DEQUEUE_FIFO(name, value, ret) \
+{ \
+   if (name.tail != name.size) {\
+       value = name.entries[name.tail]; \
+       name.tail++; \
+       ret = FIFO_OK; \
+   } \
+   else { \
+       ret = FIFO_EMPTY; \
+   } \
+}
+
+typedef struct dp_wlist {
+     long ipaddr;
+     char macaddr[MAC_ADDRESS_SIZE];
+     short ofb_index;
+}dp_wlist_t;
+#endif
+
 struct ProxyMapping {
     GUPnPDeviceProxy *proxy;
     GUPnPServiceProxyAction *action;
@@ -66,6 +120,7 @@ typedef struct _gwyDeviceData {
     gboolean devFoundFlag;
     gboolean isRouteSet;
     gboolean isOwnGateway;
+    gboolean isDevRefactored;
     GUPnPServiceInfo* sproxy;
     GUPnPServiceInfo* sproxy_i;
     GUPnPServiceInfo* sproxy_m;
