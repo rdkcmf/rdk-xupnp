@@ -805,9 +805,12 @@ G_MODULE_EXPORT void
 get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     gchar *clientAccountId=NULL;
-//    SoupMessage *msg;
+    //SoupMessage *msg;
     gchar *clientMacAddr=NULL;
     gchar *clientIpAddr=NULL;
+#ifdef BROADBAND
+    char buf[128];
+#endif
     /* Get the client account Id value */ 
     gupnp_service_action_get (action, "SAccountId", G_TYPE_STRING, &clientAccountId, NULL);
     gupnp_service_action_set (action, "GAccountId", G_TYPE_STRING, accountId, NULL);
@@ -816,6 +819,10 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
     if ((clientAccountId) && (!strcmp(clientAccountId, accountId)))
     {
        g_warning("Client connection account ID same : %s,%s,%s,%s" , accountId,clientAccountId,clientMacAddr,clientIpAddr);
+#ifdef BROADBAND
+        // add whitelist
+       snprintf(buf, sizeof(buf), "/usr/ccsp/moca/moca_whitelist_ctl.sh add %s", clientIpAddr);
+#endif
        gupnp_service_action_return (action);
     }
     else 
@@ -824,14 +831,21 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
        // Log the message, accountId receivede
        // Disconnect soup session TBD.
        g_warning("Client connection account ID mismatch found : %s,%s,%s,%s" , accountId,clientAccountId,clientMacAddr,clientIpAddr);
-//       msg = gupnp_service_action_get_message(action);
+#ifdef BROADBAND
+       snprintf(buf, sizeof(buf), "/usr/ccsp/moca/moca_whitelist_ctl.sh del %s", clientIpAddr);
+#endif
+       //msg = gupnp_service_action_get_message(action);
        gupnp_service_action_return (action);
        //g_warning("service action returning error "); 
        //gupnp_service_action_return_error (action, 402, "Account Id not matching");
        //g_warning("service action aborting session "); 
        //gupnp_service_action_abort_session(service);
     }
-//    g_warning("get_account_id_cb exit ");
+#ifdef BROADBAND
+    g_warning("system(%s)", buf);
+    system(buf);
+#endif
+    //g_warning("get_account_id_cb exit "); 
 }
 
 /*
