@@ -40,11 +40,17 @@
 int gatewayDetected=0;
 gboolean partialDiscovery=FALSE;
 #include "rdk_safeclib.h"
+#include <time.h>
+#include <sys/time.h>
 
 #define OUTPLAYURL_SIZE 160
 
 #define DEVICE_PROTECTION_CONTEXT_PORT  50760
+
 #define ACCOUNTID_SIZE 30
+
+#define MILESTONE_LOG_FILENAME "/opt/logs/rdk_milestones.log"
+
 //Symbols defined in makefile (via defs.mk)
 //#define USE_XUPNP_IARM
 //#define GUPNP_0_19
@@ -441,23 +447,21 @@ int check_rfc()
 /* get uptime in milliseconds */
 unsigned long getUptimeMS(void)
 {
-    FILE *fp = fopen("/proc/uptime", "r");
-    double uptime = 0;
-    char buf[256] = {0x0};
-    if(fp != NULL)
-    {
-          fgets(buf, sizeof(buf), fp);
-          fclose(fp);
-          uptime = atof(buf);
-    }
-    return uptime*1000;
+    struct timespec uptime;
+    double  uptimems;
+
+    //Using clock_gettime to get uptime in ms precision
+    clock_gettime(CLOCK_MONOTONIC_RAW, &uptime);
+    uptimems = (uptime.tv_sec) * 1000 + (uptime.tv_nsec) / 1000000 ; // Convert to nano to milliseconds
+
+    return uptimems;
 }
 
 /* log rdk milestones */
 void logMilestone(const char *msg_code)
 {
     FILE *fp = NULL;
-    fp = fopen("/opt/logs/rdk_milestones.log", "a+");
+    fp = fopen(MILESTONE_LOG_FILENAME, "a+");
     if (fp != NULL)
     {
       fprintf(fp, "%s:%ld\n", msg_code, getUptimeMS());
