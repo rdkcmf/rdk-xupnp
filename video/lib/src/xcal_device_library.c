@@ -553,6 +553,7 @@ BOOL getRouteData(void)
     errno_t rc = -1; 
     IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
     IARM_Bus_RouteSrvMgr_RouteData_Param_t param;
+    param.status = false;//CID:28886- Initialize param
      rc = memset_s(&param, sizeof(param), 0, sizeof(param));
      ERR_CHK(rc); 
     iarmRet = IARM_Bus_Call(IARM_BUS_NM_SRV_MGR_NAME,
@@ -3423,9 +3424,12 @@ gchar *getmacaddress(const gchar *ifname)
     int fd;
     struct ifreq ifr;
     unsigned char *mac;
-    GString *data = g_string_new(NULL);
+    GString *data = g_string_new("00:00:00:00:00:00");
     errno_t rc = -1;
     fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if(fd < 0){//CID:18597-Resolve negative returns issue
+        return data->str;
+    }
     ifr.ifr_addr.sa_family = AF_INET;
     rc = strcpy_s(ifr.ifr_name ,IFNAMSIZ - 1,ifname);
     ERR_CHK(rc);
