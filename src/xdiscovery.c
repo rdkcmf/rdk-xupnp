@@ -41,8 +41,10 @@
 int gatewayDetected=0;
 gboolean partialDiscovery=FALSE;
 #include "rdk_safeclib.h"
-#include <time.h>
-#include <sys/time.h>
+
+#ifdef LOGMILESTONE
+#include "rdk_logger_milestone.h"
+#endif
 
 #define OUTPLAYURL_SIZE 160
 
@@ -445,30 +447,6 @@ int check_rfc()
     return 0;
 }
 
-/* get uptime in milliseconds */
-unsigned long getUptimeMS(void)
-{
-    struct timespec uptime;
-    double  uptimems;
-
-    //Using clock_gettime to get uptime in ms precision
-    clock_gettime(CLOCK_MONOTONIC_RAW, &uptime);
-    uptimems = (uptime.tv_sec) * 1000 + (uptime.tv_nsec) / 1000000 ; // Convert to nano to milliseconds
-
-    return uptimems;
-}
-
-/* log rdk milestones */
-void logMilestone(const char *msg_code)
-{
-    FILE *fp = NULL;
-    fp = fopen(MILESTONE_LOG_FILENAME, "a+");
-    if (fp != NULL)
-    {
-      fprintf(fp, "%s:%ld\n", msg_code, getUptimeMS());
-      fclose(fp);
-    }
-}
 /**
  * @brief This function is used to log the messages of XUPnP applications. Each Log message
  * will be written to a file along with the timestamp formated in ISO8601 format.
@@ -1463,7 +1441,12 @@ int main(int argc, char *argv[])
     g_signal_connect (cp,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb), NULL);
     gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp), TRUE);
 
+#ifdef LOGMILESTONE
     logMilestone("UPNP_START_DISCOVERY");
+#else
+    g_message("UPNP_START_DISCOVERY");
+#endif
+
 #ifdef GUPNP_0_19
     main_loop = g_main_loop_new (NULL, FALSE);
 #else
@@ -1710,12 +1693,15 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
      {
 	g_string_assign(gwData->ipv6prefix,temp);
 	g_free(temp);
+#ifdef LOGMILESTONE
 	if (gwData && gwData->ipv6prefix && gwData->ipv6prefix->str && (g_strcmp0(gwData->ipv6prefix->str, "") != 0))
 	{
 	    logMilestone("UPNP_RECV_IPV6_PREFIX");
 	}
+#else
+	g_message("UPNP_RECV_IPV6_PREFIX");
+#endif
      }
-
      gupnp_service_proxy_send_action (sproxy, "GetPlaybackUrl", &error,NULL,"PlaybackUrl",G_TYPE_STRING, &temp ,NULL);
      if (error!=NULL)
      {
