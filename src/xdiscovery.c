@@ -1251,6 +1251,8 @@ int main(int argc, char *argv[])
 
 #ifdef GUPNP_0_19
     context = gupnp_context_new (NULL, disConf->discIf, host_port, &error);
+#elif defined(GUPNP_1_2)
+    context = gupnp_context_new (disConf->discIf, host_port, &error);
 #else
     main_context = g_main_context_new();
     context = gupnp_context_new (main_context, disConf->discIf, host_port, &error);
@@ -1282,7 +1284,11 @@ int main(int argc, char *argv[])
     if(rfc_enabled)
     {
         g_message("RFC enabled for new device refactoring");
+#if defined(GUPNP_1_2)
+        upnpContextDeviceProtect = gupnp_context_new (disConf->discIf, DEVICE_PROTECTION_CONTEXT_PORT, &error);
+#else
         upnpContextDeviceProtect = gupnp_context_new (NULL, disConf->discIf, DEVICE_PROTECTION_CONTEXT_PORT, &error);
+#endif
         if (error) {
             g_printerr ("Error creating the Device Protection Broadcast context: %s\n",
                         error->message);
@@ -1313,7 +1319,7 @@ int main(int argc, char *argv[])
     gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp), TRUE);
 
     logMilestone("UPNP_START_DISCOVERY");
-#ifdef GUPNP_0_19
+#if defined(GUPNP_0_19) || defined(GUPNP_1_2)
     main_loop = g_main_loop_new (NULL, FALSE);
 #else
     main_loop = g_main_loop_new (main_context, FALSE);

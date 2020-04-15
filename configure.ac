@@ -53,10 +53,15 @@ AC_ARG_ENABLE([gupnp_latest],
               AS_HELP_STRING([--enable-gupnp_latest],[enable gupnp to point to latest version (default is no)]),
               [
       		case "${enableval}" in
-        	 yes) GUPNP_VERSION=GUPNP_0_19
-                      PKG_CHECK_MODULES([GUPNP], [gupnp-1.0 >= 0.19.4]);;
-        	 no)  GUPNP_VERSION=GUPNP_0_14
-                      PKG_CHECK_MODULES([GUPNP], [gupnp-1.0 >= 0.14.1]);;
+                 yes) GUPNP_VERSION=GUPNP_1_2
+                      PKG_CHECK_MODULES([GUPNP], [gupnp-1.2 >= 0.19.4])
+                      PKG_CHECK_MODULES([LIBGSSDP], [gssdp-1.2 >= 0.10.0])
+		      ;;
+                 no)  PKG_CHECK_EXISTS([gupnp-1.0 >= 0.19.4],
+			  [PKG_CHECK_MODULES([GUPNP], [gupnp-1.0 >= 0.19.4], GUPNP_VERSION=GUPNP_0_19)],
+			  [PKG_CHECK_MODULES([GUPNP], [gupnp-1.0 >= 0.14.1], GUPNP_VERSION=GUPNP_0_14)])
+                      PKG_CHECK_MODULES([LIBGSSDP], [gssdp-1.0 >= 0.10.0])
+		      ;;
         	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-gupnp_latest]) ;;
        		esac
     	      ],
@@ -172,7 +177,6 @@ AC_ARG_ENABLE([breakpad],
 
 AM_CONDITIONAL([BROADBAND_SUPPORT], [test x$BROADBAND_SUPPORT = xtrue])
 PKG_CHECK_MODULES([LIBXML], [libxml-2.0 >= 2.7.8])
-PKG_CHECK_MODULES([LIBGSSDP], [gssdp-1.0] >= 0.10.0)
 PKG_CHECK_MODULES([LIBSOUP], [libsoup-2.4 >= 0.22])
 PKG_CHECK_MODULES([GLIB],[glib-2.0 >= 2.22.5])
 PKG_CHECK_MODULES([GNUTLS],[gnutls >= 2.10.0])
