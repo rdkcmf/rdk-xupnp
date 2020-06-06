@@ -1511,6 +1511,10 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     gchar *temp=NULL;
     guint *temp_i=NULL;
     gboolean *temp_b=NULL;
+    
+  /* Coverity Fix CID: 21875 REVERSE_INULL */
+    if(gwData == NULL)
+      return FALSE;
 
     g_message("Entering into process_gw_services ");
 
@@ -1694,7 +1698,8 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 	g_string_assign(gwData->ipv6prefix,temp);
 	g_free(temp);
 #ifdef LOGMILESTONE
-	if (gwData && gwData->ipv6prefix && gwData->ipv6prefix->str && (g_strcmp0(gwData->ipv6prefix->str, "") != 0))
+        
+	if (gwData->ipv6prefix && gwData->ipv6prefix->str && (g_strcmp0(gwData->ipv6prefix->str, "") != 0))
 	{
 	    logMilestone("UPNP_RECV_IPV6_PREFIX");
 	}
@@ -1868,7 +1873,8 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     if (update_gwylist(gwData)==FALSE )
     {
         g_message("Failed to update gw data into the list");
-        g_critical("Unable to update the gateway-%s in the device list",gwData->serial_num);
+        /*Coverity Fix CID: 28232 PRINTF_ARGS_MISMATCH */
+        g_critical("Unable to update the gateway-%s in the device list",gwData->serial_num->str);
         return FALSE;
     }
     g_message("Exiting from process_gw_services ");
@@ -2340,10 +2346,25 @@ gboolean process_gw_services_qam_config(GUPnPServiceProxy *sproxy, GwyDeviceData
  */
 gboolean replace_hn_with_local(GwyDeviceData* gwyData)
 {
+   /*Coverity Fix CID:29376 RESOURCE_LEAK */
+    char * tempStr = NULL;
+     
     //g_print("replace: %s with %s\n", gwyData->gwyip->str, localHostIP);
-    g_string_assign(gwyData->playbackurl, replace_string(gwyData->playbackurl->str, gwyData->gwyip->str, localHostIP));
-    g_string_assign(gwyData->baseurl, replace_string(gwyData->baseurl->str, gwyData->gwyip->str, localHostIP));
-    g_string_assign(gwyData->basetrmurl, replace_string(gwyData->basetrmurl->str, gwyData->gwyip->str, localHostIP));
+    tempStr = replace_string(gwyData->playbackurl->str, gwyData->gwyip->str, localHostIP);
+    g_string_assign(gwyData->playbackurl, tempStr);
+    free(tempStr);
+    
+   
+    tempStr =  replace_string(gwyData->baseurl->str, gwyData->gwyip->str, localHostIP);  
+    g_string_assign(gwyData->baseurl,tempStr);
+    free(tempStr);
+    
+  
+    tempStr = replace_string(gwyData->basetrmurl->str, gwyData->gwyip->str, localHostIP);
+    g_string_assign(gwyData->basetrmurl,tempStr);
+    free(tempStr);
+    
+  
     g_message("baseurl:%s, playbackurl:%s, basetrumurl:%s", gwyData->baseurl->str,
               gwyData->playbackurl->str, gwyData->gwyip->str);
     return TRUE;
@@ -3320,7 +3341,8 @@ gboolean readconffile(const char* configfile)
         /* Load the GKeyFile from keyfile.conf or return. */
         if (!g_key_file_load_from_file (keyfile, configfile, flags, &error))
         {
-            g_error(error->message);
+            /*Coverity Fix CID:28701 NON_CONST_PRINTF_FORMAT */
+            g_error("%s",error->message);
             g_clear_error(&error);
             g_key_file_free(keyfile);
             return FALSE;
@@ -3496,7 +3518,12 @@ int getipaddress(const char* ifname, char* ipAddressBuffer, gboolean ipv6Enabled
     struct ifaddrs * ifAddrStruct=NULL;
     struct ifaddrs * ifa=NULL;
     void * tmpAddrPtr=NULL;
-    getifaddrs(&ifAddrStruct);
+    /* Coverity Fix CID:28732 CHECKED_RETURN */
+    if( getifaddrs(&ifAddrStruct) < 0 )
+    {
+       g_message(" getifaddrs is failed\n");
+        return -1;
+    }
     //char addressBuffer[INET_ADDRSTRLEN] = NULL;
     int found=0;
     errno_t rc       = -1;
@@ -3747,7 +3774,14 @@ gchar *getmacaddress(const gchar *ifname)
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     ifr.ifr_addr.sa_family = AF_INET;
     strncpy(ifr.ifr_name , ifname , IFNAMSIZ - 1);
-    ioctl(fd, SIOCGIFHWADDR, &ifr);
+    /* Coverity Fix CID:18403 CHECKED_RETURN */
+    if(ioctl(fd, SIOCGIFHWADDR, &ifr) < 0 )
+    {
+       g_message(" ioctl is failed\n");
+       close(fd);
+       
+    }
+
     close(fd);
     mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
     //display mac address
