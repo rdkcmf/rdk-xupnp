@@ -193,6 +193,10 @@ BOOL updatexmldata(const char* xmlfilename, const char* struuid, const char* ser
     else if (xmlDocFormatDump(fp, doc, 1) == -1)
     {
         g_printerr ("Could not write the conf to xml file\n");
+        /*Coverity Fix CID 125137,28460  RESOURCE_LEAK */
+         fclose(fp);
+        xmlFreeDoc(doc);
+       
         return FALSE;
     }
 
@@ -737,7 +741,8 @@ get_rui_url_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user
     gupnp_service_action_set (action, "UIListing", G_TYPE_STRING, ruiUrl, NULL);
     gupnp_service_action_return (action);
 }
-
+/*Coverity Fix CID: 45236 to 45244 MISSED_RETURN */
+G_MODULE_EXPORT void
 get_modelclass_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     //g_print ("Got a call back\n");
@@ -745,6 +750,7 @@ get_modelclass_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
     gupnp_service_action_set (action, "ModelClass", G_TYPE_STRING, modelclass, NULL);
     gupnp_service_action_return (action);
 }
+G_MODULE_EXPORT void
 get_modelnumber_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     //g_print ("Got a call back\n");
@@ -752,30 +758,35 @@ get_modelnumber_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer 
     gupnp_service_action_set (action, "ModelNumber", G_TYPE_STRING, modelNumber, NULL);
     gupnp_service_action_return (action);
 }
+G_MODULE_EXPORT void
 get_deviceid_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     //g_print ("Got a call back\n");
     gupnp_service_action_set (action, "DeviceId", G_TYPE_STRING, deviceid, NULL);
     gupnp_service_action_return (action);
 }
+G_MODULE_EXPORT void
 get_hardwarerevision_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     //g_print ("Got a call back\n");
     gupnp_service_action_set (action, "HardwareRevision", G_TYPE_STRING, hardwarerevision, NULL);
     gupnp_service_action_return (action);
 }
+G_MODULE_EXPORT void
 get_softwarerevision_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     //g_print ("Got a call back\n");
     gupnp_service_action_set (action, "SoftwareRevision", G_TYPE_STRING, softwarerevision, NULL);
     gupnp_service_action_return (action);
 }
+G_MODULE_EXPORT void
 get_managementurl_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     //g_print ("Got a call back\n");
     gupnp_service_action_set (action, "ManagementURL", G_TYPE_STRING, managementurl, NULL);
     gupnp_service_action_return (action);
 }
+G_MODULE_EXPORT void
 get_make_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     //g_print ("Got a call back\n");
@@ -783,13 +794,14 @@ get_make_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_da
     gupnp_service_action_set (action, "Make", G_TYPE_STRING, Make, NULL);
     gupnp_service_action_return (action);
 }
+G_MODULE_EXPORT void
 get_recev_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     //g_print ("Got a call back\n");
     gupnp_service_action_set (action, "ReceiverId", G_TYPE_STRING, receiverId, NULL);
     gupnp_service_action_return (action);
 }
-
+G_MODULE_EXPORT void
 get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
     gchar *clientAccountId=NULL;
@@ -1493,7 +1505,8 @@ main (int argc, char **argv)
         }
         if(bcastMacaddress)
         {
-            sprintf(uuid_new,"uuid:%s",bcastMacaddress);
+            /* Coverity Fix CID:46884 DC.STRING_BUFFER */ 
+            snprintf(uuid_new,sizeof(uuid_new),"uuid:%s",bcastMacaddress);
         }
 
 	if ((getDevCertFile(devCertFile)) && (getDevCertPath(devCertPath)) && (getDevKeyFile(devKeyFile)) && (getDevKeyPath(devKeyPath)))
