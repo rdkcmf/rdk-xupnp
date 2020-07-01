@@ -111,7 +111,7 @@ BOOL getMake(char *outValue);
 BOOL getAccountId(char *outValue);
 BOOL checkCVP2Enabled();
 int check_rfc();
-
+BOOL getIpSubnet(char *outValue);
 BOOL getDevKeyPath(char *outValue);
 BOOL getDevKeyFile(char *outValue);
 BOOL getDevCertPath(char *outValue);

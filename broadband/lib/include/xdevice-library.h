@@ -108,6 +108,7 @@ BOOL getAccountId(char *outValue);
 BOOL checkCVP2Enabled();
 BOOL getUidfromRecvId();
 int check_rfc();
+BOOL getIpSubnet(char *outValue);
 
 BOOL getDevKeyPath(char *outValue);
 BOOL getDevKeyFile(char *outValue);
