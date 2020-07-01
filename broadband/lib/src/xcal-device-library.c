@@ -43,6 +43,7 @@
 #endif
 
 #define ISOLATION_IF "brlan10"
+#define PRIVATE_LAN_BRIDGE "brlan0"
 #define WIFI_IF "brlan0:0"
 #define UDN_IF "erouter0"
 #define PARTNER_ID "partnerId"
@@ -61,6 +62,7 @@
 #define DEVICE_CERT_PATH     "/tmp/"
 #define DEVICE_CERT_FILE     "icebergwedge_t"
 
+#define LINK_LOCAL_ADDR	     "169.254"
 #ifndef F_OK
 #define F_OK 0
 #endif
@@ -1043,6 +1045,46 @@ gboolean gettimezone(void)
 
     return result;
 }
+
+BOOL getIpSubnet(char *outValue)
+{
+    BOOL result = FALSE;
+    errno_t rc = -1;
+    if (!check_null(outValue)) {
+        g_message("getIpSubnet : NULL string !");
+        return result;
+    }
+    FILE *fp = NULL;
+    char buf[256] = {0};
+    char subnetOutput[64] = {0};
+
+
+    snprintf(buf, sizeof(buf), "ip -4 route show dev %s | grep -v \"%s\" | grep src | awk '{print $1}'",PRIVATE_LAN_BRIDGE,LINK_LOCAL_ADDR);
+
+    if(!(fp = popen(buf, "r")))
+    {
+           return result;
+    }
+
+    while(fgets(subnetOutput, sizeof(subnetOutput), fp)!=NULL)
+    {
+        subnetOutput[strlen(subnetOutput) - 1] = '\0';
+    }
+
+    rc = strcpy_s(outValue,MAX_OUTVALUE, subnetOutput);
+    if(rc == EOK)
+    {
+        result = TRUE;
+    }
+    else
+    {
+        ERR_CHK(rc);
+    }
+    pclose(fp);
+    fp = NULL;
+    return result;
+}
+
 BOOL getTimeZone(char *outValue)
 {
     BOOL result = FALSE;

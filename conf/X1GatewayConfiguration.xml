@@ -77,7 +77,6 @@
                 </argument>
             </argumentList>
         </action>
- 
         <action>
             <name>GetHostMacAddress</name>
             <argumentList>
@@ -114,6 +113,16 @@
                 <argument>
                     <name>IsGateway</name>
                     <relatedStateVariable>IsGateway</relatedStateVariable>
+                    <direction>out</direction>
+                </argument>
+            </argumentList>
+        </action>
+        <action>
+            <name>GetIPSubNet</name>
+            <argumentList>
+                <argument>
+                    <name>IPSubNet</name>
+                    <relatedStateVariable>IPSubNet</relatedStateVariable>
                     <direction>out</direction>
                 </argument>
             </argumentList>
@@ -179,6 +188,11 @@
             <name>IsGateway</name>
             <dataType>boolean</dataType>
             <defaultValue></defaultValue>
+        </stateVariable>
+        <stateVariable sendEvents="yes">
+            <name>IPSubNet</name>
+            <dataType>string</dataType>
+            <defaultValue>"10.0.0.0/8"</defaultValue>
         </stateVariable>
     </serviceStateTable>
 </scpd>

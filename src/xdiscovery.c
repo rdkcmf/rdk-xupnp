@@ -411,6 +411,13 @@ void dpnode_delete(long ipaddr, char *macaddr)
 }
 #endif
 
+static void addRouteToMocaBridge(char *subnetip)
+{
+    char *sysCmd[100];
+    snprintf (sysCmd, 100, "sh /etc/xupnp/addRouteToMocaBridge.sh %s &",subnetip );
+    system(sysCmd);
+}
+
 static void
 xupnp_tls_interaction_init (XupnpTlsInteraction *interaction)
 {
@@ -2416,6 +2423,20 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
     {
         gwData->isgateway = temp_b;
     }
+     gupnp_service_proxy_send_action (sproxy, "GetIPSubNet",&error,NULL,"IPSubNet",G_TYPE_STRING, &temp ,NULL);
+     if (error!=NULL)
+     {
+        g_message ("GetIPSubNet process gw services Error: %s", error->message);
+        g_clear_error(&error);
+        //return FALSE;
+     }
+     else
+     {
+        g_string_assign(gwData->ipSubNet,temp);
+        if(temp && strlen(temp))
+            addRouteToMocaBridge(temp);
+        g_free(temp);
+     }
 
     g_message("Exiting from process_gw_services_gateway_config ");
     return TRUE;
@@ -2550,6 +2571,7 @@ gboolean init_gwydata(GwyDeviceData* gwydata)
     gwydata->devicetype = g_string_new(NULL);
     gwydata->buildversion = g_string_new(NULL);
     gwydata->dsgtimezone = g_string_new(NULL);
+    gwydata->ipSubNet = g_string_new(NULL);
     gwydata->dataGatewayIPaddress = g_string_new(NULL);
     gwydata->dstoffset = 0;
     gwydata->dstsavings = 0;
@@ -2608,6 +2630,7 @@ gboolean free_gwydata(GwyDeviceData* gwydata)
         g_string_free(gwydata->buildversion, TRUE);
         g_string_free(gwydata->dataGatewayIPaddress, TRUE);
         g_string_free(gwydata->dsgtimezone, TRUE);
+        g_string_free(gwydata->ipSubNet, TRUE);
         g_string_free(gwydata->baseurl, TRUE);
         g_string_free(gwydata->basetrmurl, TRUE);
         g_string_free(gwydata->playbackurl, TRUE);
@@ -2876,6 +2899,8 @@ gboolean sendDiscoveryResult(const char* outfilename)
                     g_string_append_printf(localOutputContents,"\t\t\t\"gatewayip\":\"%s\",\n", gwdata->gwyip->str);
                     g_string_append_printf(localOutputContents,"\t\t\t\"gatewayipv6\":\"%s\",\n", gwdata->gwyipv6->str);
                     g_string_append_printf(localOutputContents,"\t\t\t\"hostMacAddress\":\"%s\",\n", gwdata->hostmacaddress->str);
+                    if(g_strcmp0(gwdata->recvdevtype->str,"hybrid"))
+                        g_string_append_printf(localOutputContents,"\t\t\t\"IPSubNet\":\"%s\",\n", gwdata->ipSubNet->str);
                     if(g_strcmp0(gwdata->recvdevtype->str,"broadband"))
                     {
                         g_string_append_printf(localOutputContents,"\t\t\t\"gatewayStbIP\":\"%s\",\n", gwdata->gatewaystbip->str);
@@ -3449,6 +3474,18 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
                     if (g_strcmp0(g_strstrip(gwdata->dsgtimezone->str),"null") != 0)
                         broadcastTimeZoneChange(gwdata);
 #endif
+                    }
+                }
+                if (g_strcmp0(g_strstrip(variable_name),"IPSubNet") == 0)
+                {
+                    updated_value = g_value_get_string(value);
+                    g_message("Updated value is %s ", updated_value);
+                    if(g_strcmp0(g_strstrip(updated_value),gwdata->ipSubNet->str) != 0)
+                    {
+                        bUpdateDiscoveryResult=TRUE;
+                        g_string_assign(gwdata->ipSubNet, updated_value);
+                        if(updated_value && strlen(updated_value))
+                            addRouteToMocaBridge(updated_value);
                     }
                 }
                 //update_gwylist(gwdata);

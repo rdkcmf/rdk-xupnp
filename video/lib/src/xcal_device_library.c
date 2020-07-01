@@ -1049,6 +1049,28 @@ BOOL getIpv6Prefix(char *outValue)
     }
     return result;
 }
+
+BOOL getIpSubnet(char *outValue)
+{
+    BOOL result = FALSE;
+    errno_t rc = -1;
+    if (!check_null(outValue)) {
+        g_message("getIpSubnet : NULL string !");
+        return result;
+    }
+    rc = strcpy_s(outValue,MAX_OUTVALUE, "");
+    if(rc == EOK)
+    {
+        result = TRUE;
+    }
+    else
+    {
+        ERR_CHK(rc);
+    }
+    return result;
+}
+
+
 /**
  * @brief This function is used to get the IP address based on IPv6 or IPv4 is enabled.
  *
