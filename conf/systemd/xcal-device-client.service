@@ -24,6 +24,9 @@ After=lighttpd.service iarmbusd.service moca.service xupnp-certs.service
 Type=forking
 ExecStart=/bin/sh -c "/usr/bin/xcal-device &"
 Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=6
 
 [Install]
 WantedBy=multi-user.target
