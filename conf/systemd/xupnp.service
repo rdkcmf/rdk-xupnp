@@ -27,6 +27,9 @@ SyslogIdentifier="xupnp"
 ExecStart=/bin/sh -c '/usr/bin/xdiscovery /etc/xdiscovery.conf &'
 ExecStartPost=/bin/sh -c 'if [ -f /lib/rdk/updateFireWall.sh ]; then /bin/sh /lib/rdk/updateFireWall.sh xdiscovery ; fi '
 Restart=always
+RestartSec=5
+StartLimitInterval=60
+StartLimitBurst=6
 
 [Install]
 WantedBy=multi-user.target
