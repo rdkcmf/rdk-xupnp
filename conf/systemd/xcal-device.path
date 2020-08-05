@@ -18,6 +18,7 @@
 ##########################################################################
 [Unit]
 Description=xcal-device monitor
+OnFailure=path-fail-notifier@%n.service
 
 [Path]
 PathExists=/tmp/ip_acquired
