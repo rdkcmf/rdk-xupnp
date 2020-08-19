@@ -18,6 +18,9 @@
 */
 #ifndef DISABLE_BREAKPAD
 #include <client/linux/handler/exception_handler.h>
+#include "breakpad_wrapper.h"
+#include "rfcapi.h"
+
 // called by 'google_breakpad::ExceptionHandler' on every crash
 namespace
 {
@@ -33,7 +36,21 @@ extern "C" void installExceptionHandler()
 {
   static google_breakpad::ExceptionHandler* excHandler = NULL;
   delete excHandler;
-  excHandler = new google_breakpad::ExceptionHandler(google_breakpad::MinidumpDescriptor("/opt/minidumps"), NULL, breakpadCallback, NULL, true, -1);
+  RFC_ParamData_t secValue;
+  std::string minidump_path;
+  WDMP_STATUS status = getRFCParameter("SecureCoreFile", "Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.SecDump.Enable", &secValue);
+  if ( ( WDMP_SUCCESS == status ) && ( 0 == strncmp(secValue.value, "falsee", 5) ) )
+  {
+		///RFC  Settings for SecureDump is : false
+		minidump_path = "/opt/minidumps";
+  }
+  else
+  {
+		//"RFC Settings for SecureDump is : true
+		minidump_path = "/opt/secure/minidumps";
+  }
+  google_breakpad::MinidumpDescriptor descriptor(minidump_path.c_str());
+  excHandler = new google_breakpad::ExceptionHandler(descriptor, NULL, breakpadCallback, NULL, true, -1);
 }
 }
 #endif
