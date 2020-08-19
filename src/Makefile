@@ -91,7 +91,8 @@ endif
 
 ifeq ($(ENABLE_BREAKPAD),y)
 CFLAGS += -I$(OPENSOURCE_HOME)/include/breakpad -DENABLE_BREAKPAD
-LDFLAGS += -L$(OPENSOURCE_HOME)/lib/ -lbreakpad_client
+CXXFLAGS += -I${top_srcdir}/src/main -I$(PKG_CONFIG_SYSROOT_DIR)${includedir} -I$(PKG_CONFIG_SYSROOT_DIR)${includedir}/wdmp-c
+LDFLAGS += -L$(OPENSOURCE_HOME)/lib/ -lbreakpad_client -lbreakpadwrapper -lrfcapi
 endif
 
 ifeq ($(USE_IARM), y)
