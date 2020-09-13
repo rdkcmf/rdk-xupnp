@@ -1114,7 +1114,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     }
     else
     {
-    if(g_strrstr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
+    if(strcasestr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
     {
        if (gupnp_service_proxy_add_notify (gwydata->sproxy, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add url notifications for %s", sno);
@@ -1379,7 +1379,7 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 	    g_message("Gateway UDN is NULL");
 	}
     }
-    if(g_strrstr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
+    if(strcasestr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
     {
        if (gupnp_service_proxy_add_notify (gwydata->sproxy_m, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
 	   g_message("Failed to add url notifications for %s", sno);
@@ -1934,7 +1934,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 	g_free(temp);
     }
 
-    if(g_strrstr(g_strstrip(gwData->devicetype->str),"XI") == NULL )
+    if(strcasestr(g_strstrip(gwData->devicetype->str),"XI") == NULL )
     {
        g_message("Discovered Device is XG or RNG Device ");
 
@@ -3050,7 +3050,7 @@ gboolean sendDiscoveryResult(const char* outfilename)
                     g_string_append_printf(localOutputContents,"\t\t\t\"bcastMacAddress\":\"%s\",\n", gwdata->bcastmacaddress->str);
                     g_string_append_printf(localOutputContents,"\t\t\t\"buildVersion\":\"%s\",\n", gwdata->buildversion->str);
                 }
-                if(g_strrstr(g_strstrip(gwdata->devicetype->str),"XI") == NULL )
+                if(strcasestr(g_strstrip(gwdata->devicetype->str),"XI") == NULL )
                 {
                     g_string_append_printf(localOutputContents,"\t\t\t\"gatewayip\":\"%s\",\n", gwdata->gwyip->str);
                     g_string_append_printf(localOutputContents,"\t\t\t\"gatewayipv6\":\"%s\",\n", gwdata->gwyipv6->str);
