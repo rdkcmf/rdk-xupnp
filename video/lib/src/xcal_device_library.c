@@ -1034,7 +1034,7 @@ BOOL getIpv6Prefix(char *outValue)
         g_message("getIpv6Prefix : NULL string !");
         return result;
     }
-    if (parseipv6prefix()) {
+    if ((parseipv6prefix()) || ((ipv6prefix->str != NULL) && (ipv6prefix->str[0] == '\0'))) {
       rc = strcpy_s(outValue,MAX_OUTVALUE,ipv6prefix->str);
       if(rc == EOK)
       {
