@@ -1952,7 +1952,11 @@ main (int argc, char **argv)
     else
         fprintf(stderr,"Updated the device xml file %s\n", xmlfilename);
 
-    upnpContext = gupnp_context_new (NULL, devConf->bcastIf, devConf->bcastPort, &error);
+#ifndef GUPNP_1_2
+    pnpContext = gupnp_context_new (NULL, devConf->bcastIf, devConf->bcastPort, &error);
+#else
+    upnpContext = gupnp_context_new (devConf->bcastIf, devConf->bcastPort, &error);
+#endif
     if (error) {
         g_printerr ("Error creating the Broadcast context: %s\n",
                     error->message);
@@ -1963,7 +1967,11 @@ main (int argc, char **argv)
 
 
     gupnp_context_set_subscription_timeout(upnpContext, 0);
+#ifndef GUPNP_1_2
     dev = gupnp_root_device_new (upnpContext, devConf->devXmlFile, devConf->devXmlPath);
+#else
+    dev = gupnp_root_device_new (upnpContext, devConf->devXmlFile, devConf->devXmlPath, &error);
+#endif
 
 #ifndef CLIENT_XCAL_SERVER
     if (devConf->disableTuneReady == FALSE)
@@ -2121,7 +2129,11 @@ main (int argc, char **argv)
         else
             g_print("Updated the RemoteUIServerDevice xml file\n");
 
-        cvpcontext = gupnp_context_new (NULL, devConf->cvpIf, devConf->cvpPort, &error);
+#ifndef GUPNP_1_2
+       cvpcontext = gupnp_context_new (NULL, devConf->cvpIf, devConf->cvpPort, &error);
+#else
+       cvpcontext = gupnp_context_new (devConf->cvpIf, devConf->cvpPort, &error);
+#endif
         if (error) {
             g_printerr ("Error creating the CVP context: %s\n", error->message);
             /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
@@ -2131,7 +2143,11 @@ main (int argc, char **argv)
 
 
         gupnp_context_set_subscription_timeout(cvpcontext, 0);
+#ifndef GUPNP_1_2
         cvpdev = gupnp_root_device_new (cvpcontext, devConf->cvpXmlFile, devConf->devXmlPath);
+#else
+        cvpdev = gupnp_root_device_new (cvpcontext, devConf->cvpXmlFile, devConf->devXmlPath, &error);
+#endif
         gupnp_root_device_set_available (cvpdev, TRUE);
 
         /* Get the CVP service from the root device */

@@ -49,18 +49,44 @@ IARM_CFLAGS=" "
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])],
 [AM_DEFAULT_VERBOSITY=1
 AC_SUBST(AM_DEFAULT_VERBOSITY)])
-AC_ARG_ENABLE([gupnp_latest],
-              AS_HELP_STRING([--enable-gupnp_latest],[enable gupnp to point to latest version (default is no)]),
+
+GSSDP_VER="gssdp-1.0"
+AC_ARG_ENABLE([version1.2],
+              AS_HELP_STRING([--enable-version1.2],[enable 1.2 versions of   gupnp and gssdp version (default is no)]),
               [
-      		case "${enableval}" in
-        	 yes) GUPNP_VERSION=GUPNP_0_19
+                case "${enableval}" in
+                 yes) GSSDP_VER="gssdp-1.2"
+                      GUPNP_VERSION=GUPNP_1_2
+                      PKG_CHECK_MODULES([GUPNP], [gupnp-1.2 >= 1.2])
+                      PKG_CHECK_MODULES([LIBGSSDP], [gssdp-1.2 >= 1.2.2]);;
+                 no)  echo "1.2 version not enabled";;
+                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-version1.2]) ;;
+                esac
+              ],
+              [echo "version 1.2 is disabled"])
+AC_ARG_ENABLE([version0.2],
+              AS_HELP_STRING([--enable-version0.2],[enable 0.2 versions of   gupnp and gssdp version (default is no)]),
+              [
+                case "${enableval}" in
+                 yes) GUPNP_VERSION=GUPNP_0_19
                       PKG_CHECK_MODULES([GUPNP], [gupnp-1.0 >= 0.19.4]);;
-        	 no)  GUPNP_VERSION=GUPNP_0_14
+                 no)  echo "0.2 version not enabled";;
+                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-version0.2]) ;;
+                esac
+              ],
+              [echo "version 0.2 is disabled"])
+AC_ARG_ENABLE([legacy],
+              AS_HELP_STRING([--enable-legacy],[enable 0.14 versions of   gupnp and gssdp version (default is no)]),
+              [
+                case "${enableval}" in
+                 yes) GUPNP_VERSION=GUPNP_0_14
                       PKG_CHECK_MODULES([GUPNP], [gupnp-1.0 >= 0.14.1]);;
-        	 *) AC_MSG_ERROR([bad value ${enableval} for --enable-gupnp_latest]) ;;
-       		esac
-    	      ],
-    	      [echo "latest gupnp is disabled"])
+                 no)  echo "0.14 version not enabled";;
+                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-legacy]) ;;
+                esac
+              ],
+              [echo "legacy version is disabled"])
+
 AC_ARG_ENABLE([iarmbus],
               AS_HELP_STRING([--enable-iarmbus],[enable iarmbus to to be used (default is no)]),
               [
@@ -172,7 +198,7 @@ AC_ARG_ENABLE([breakpad],
 
 AM_CONDITIONAL([BROADBAND_SUPPORT], [test x$BROADBAND_SUPPORT = xtrue])
 PKG_CHECK_MODULES([LIBXML], [libxml-2.0 >= 2.7.8])
-PKG_CHECK_MODULES([LIBGSSDP], [gssdp-1.0] >= 0.10.0)
+PKG_CHECK_MODULES([LIBGSSDP], ["$GSSDP_VER"] >= 0.10.0)
 PKG_CHECK_MODULES([LIBSOUP], [libsoup-2.4 >= 0.22])
 PKG_CHECK_MODULES([GLIB],[glib-2.0 >= 2.22.5])
 PKG_CHECK_MODULES([GNUTLS],[gnutls >= 2.10.0])
