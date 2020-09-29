@@ -1470,7 +1470,12 @@ main (int argc, char **argv)
     {
         g_message("Unable to get bcastMacaddress");
     }
+
+#ifndef GUPNP_1_2
     upnpContext = gupnp_context_new (NULL, devBcastIf, devBcastPort, &error);
+#else
+    upnpContext = gupnp_context_new (devBcastIf, devBcastPort, &error);
+#endif
     if (error) {
         g_message("Error creating the Broadcast context: %s",
                     error->message);
@@ -1479,7 +1484,11 @@ main (int argc, char **argv)
         return EXIT_FAILURE;
     }
     gupnp_context_set_subscription_timeout(upnpContext, 0);
+#ifndef GUPNP_1_2
     baseDev = gupnp_root_device_new (upnpContext, devXMlFile, devXMlPath);
+#else
+    baseDev = gupnp_root_device_new (upnpContext, devXMlFile, devXMlPath, &error);
+#endif
 #ifndef CLIENT_XCAL_SERVER
     if(!getDisableTuneReadyStatus())
     {
@@ -1558,7 +1567,13 @@ main (int argc, char **argv)
                 {
                     g_message("RFC enabled Updated the device xml file:%s uuid: %s", xmlfilename_new,uuid_new);
                 }
-                upnpContextDeviceProtect = gupnp_context_new_s (NULL, devBcastIf, DEVICE_PROTECTION_CONTEXT_PORT, certFile, keyFile, &error);
+
+
+#ifndef GUPNP_1_2
+                upnpContextDeviceProtect = gupnp_context_new_s (NULL,  devBcastIf, DEVICE_PROTECTION_CONTEXT_PORT, certFile, keyFile, &error);
+#else
+                upnpContextDeviceProtect = gupnp_context_new_s ( devBcastIf, DEVICE_PROTECTION_CONTEXT_PORT, certFile, keyFile, &error);
+#endif
                 if (error)
                 {
                    g_message("Error creating the Device Protection Broadcast context: %s",
@@ -1571,7 +1586,11 @@ main (int argc, char **argv)
                     gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
 		    // Set TLS config params here.
 		    gupnp_context_set_tls_params(upnpContextDeviceProtect,caFile,keyFile, NULL);
+#ifndef GUPNP_1_2
                     dev = gupnp_root_device_new (upnpContextDeviceProtect, devXMlFile_new, devXMlPath);
+#else
+                    dev = gupnp_root_device_new (upnpContextDeviceProtect, devXMlFile_new, devXMlPath, &error);
+#endif
                     gupnp_root_device_set_available (dev, TRUE);
 
                     upnpIdService = gupnp_device_info_get_service
@@ -1792,7 +1811,11 @@ main (int argc, char **argv)
         }
         else
             g_print("Updated the RemoteUIServerDevice xml file\n");
-	cvpcontext = gupnp_context_new (NULL, cvpInterface, cvpPort, &error);
+#ifndef GUPNP_1_2
+        cvpcontext = gupnp_context_new (NULL, cvpInterface, cvpPort, &error);
+#else
+        cvpcontext = gupnp_context_new (cvpInterface, cvpPort, &error);
+#endif
         if (error) {
             g_printerr ("Error creating the CVP context: %s\n", error->message);
             /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
@@ -1800,7 +1823,11 @@ main (int argc, char **argv)
             return EXIT_FAILURE;
         }
         gupnp_context_set_subscription_timeout(cvpcontext, 0);
-	cvpdev = gupnp_root_device_new (cvpcontext, cvPXmlFile, devXMlPath);
+#ifndef GUPNP_1_2
+        cvpdev = gupnp_root_device_new (cvpcontext, cvPXmlFile, devXMlPath);
+#else
+        cvpdev = gupnp_root_device_new (cvpcontext, cvPXmlFile, devXMlPath, &error);
+#endif
 	/* Get the CVP service from the root device */
         gupnp_root_device_set_available (cvpdev, TRUE);
         cvpservice = gupnp_device_info_get_service

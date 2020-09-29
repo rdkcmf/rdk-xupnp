@@ -2513,7 +2513,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
     if ((devConf->allowGwy == TRUE) && (ipv6Enabled == TRUE)
             && (devConf->ipv6PrefixFile != NULL)) {
         while (access(devConf->ipv6PrefixFile, F_OK ) == -1 ) {
-            g_message("IPv6 Prefix File Not Yet Created.");
+            g_message("IPv6 Prefix File Not Yet Created. %s ", devConf->ipv6PrefixFile);
             usleep(5000000);
         }
         while (getipv6prefix() == FALSE) {
@@ -2536,6 +2536,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
         g_string_assign(gwystbip, stbipAddressBuffer);
     }
 #endif
+    return TRUE;
 }
 
 /**
