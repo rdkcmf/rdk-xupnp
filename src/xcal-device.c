@@ -1953,7 +1953,7 @@ main (int argc, char **argv)
         fprintf(stderr,"Updated the device xml file %s\n", xmlfilename);
 
 #ifndef GUPNP_1_2
-    pnpContext = gupnp_context_new (NULL, devConf->bcastIf, devConf->bcastPort, &error);
+    upnpContext = gupnp_context_new (NULL, devConf->bcastIf, devConf->bcastPort, &error);
 #else
     upnpContext = gupnp_context_new (devConf->bcastIf, devConf->bcastPort, &error);
 #endif
