@@ -126,6 +126,26 @@
                 </argument>
             </argumentList>
         </action>
+        <action>
+            <name>GetClientIP</name>
+            <argumentList>
+                <argument>
+                    <name>ClientIP</name>
+                    <relatedStateVariable>ClientIP</relatedStateVariable>
+                    <direction>out</direction>
+                </argument>
+            </argumentList>
+        </action>
+        <action>
+            <name>GetBcastMacAddress</name>
+            <argumentList>
+                <argument>
+                    <name>BcastMacAddress</name>
+                    <relatedStateVariable>BcastMacAddress</relatedStateVariable>
+                    <direction>out</direction>
+                </argument>
+            </argumentList>
+        </action>
     </actionList>
     <serviceStateTable>
         <stateVariable sendEvents="yes">
@@ -202,6 +222,16 @@
         </stateVariable>
         <stateVariable sendEvents="yes">
             <name>ReceiverId</name>
+            <dataType>string</dataType>
+            <defaultValue></defaultValue>
+        </stateVariable>
+        <stateVariable sendEvents="yes">
+            <name>ClientIP</name>
+            <dataType>string</dataType>
+            <defaultValue>NoData</defaultValue>
+        </stateVariable>
+        <stateVariable sendEvents="yes">
+            <name>BcastMacAddress</name>
             <dataType>string</dataType>
             <defaultValue></defaultValue>
         </stateVariable>
