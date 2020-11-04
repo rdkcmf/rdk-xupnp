@@ -57,7 +57,8 @@ static  GMainLoop *main_loop;
 
 char devBcastIf[MAXSIZE],serial_Num[MAXSIZE], cvpInterface[MAXSIZE], cvPXmlFile[MAXSIZE],playBackUrl[URLSIZE],devXMlPath[MAXSIZE],uUid[MAXSIZE],ruiUrl[RUIURLSIZE];
 char devXMlFile [MAXSIZE],devBcastIf[MAXSIZE],serial_Num[MAXSIZE],cvpInterface[MAXSIZE],cvPXmlFile[MAXSIZE],ipv6preFix[MAXSIZE],trmUrl[MAXSIZE],urL[MAXSIZE];
-char gwyIp[MAXSIZE],gwyIpv6[MAXSIZE],gwystbIp[MAXSIZE],hostMacaddress[MAXSIZE],bcastMacaddress[MAXSIZE],recvdevType[MAXSIZE],deviceType[MAXSIZE],modelclass[MAXSIZE],modelNumber[MAXSIZE],deviceid[MAXSIZE],hardwarerevision[MAXSIZE],softwarerevision[MAXSIZE],managementurl[MAXSIZE],Make[MAXSIZE],accountId[MAXSIZE];
+
+char gwyIp[MAXSIZE],gwyIpv6[MAXSIZE],gwystbIp[MAXSIZE],hostMacaddress[MAXSIZE],bcastMacaddress[MAXSIZE],recvdevType[MAXSIZE],deviceType[MAXSIZE],modelclass[MAXSIZE],modelNumber[MAXSIZE],deviceid[MAXSIZE],hardwarerevision[MAXSIZE],softwarerevision[MAXSIZE],managementurl[MAXSIZE],Make[MAXSIZE],accountId[MAXSIZE],clientIp[MAXSIZE];
 char buildVersion[MAXSIZE],dnsConfig[MAXSIZE],systemIds[MAXSIZE],dataGatewayIPAddress[MAXSIZE],dsgtimeZone[MAXSIZE],deviceName[MAXSIZE],etcHosts[RUIURLSIZE],receiverId[MAXSIZE],ipsubnet[MAXSIZE];
 char devPXmlFile[MAXSIZE], devCertFile[MAXSIZE], devCertPath[MAXSIZE], devKeyFile[MAXSIZE], devKeyPath[MAXSIZE];
 gint rawoffset, dstoffset, dstsavings, devBcastPort, cvpPort;
@@ -867,6 +868,24 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
     //g_warning("get_account_id_cb exit "); 
 }
 
+/**
+ * @brief Callback function which is invoked when getClientIP action is invoked and this sets
+ * the state variable for Client IP.
+ *
+ * @param[in] service Name of the service.
+ * @param[out] action Action to be invoked.
+ * @param[in] user_data Usually null will be passed.
+ * @ingroup XUPNP_XCALDEV_FUNC
+ */
+/* GetGatewayIP */
+G_MODULE_EXPORT void
+get_client_ip_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
+{
+    //g_print ("Got a call back\n");
+    gupnp_service_action_set (action, "ClientIP", G_TYPE_STRING, clientIp, NULL);
+    gupnp_service_action_return (action);
+}
+
 /*
  * State Variable query handlers
  */
@@ -1301,6 +1320,25 @@ query_dstsavings_cb (GUPnPService *service, char *variable, GValue *value, gpoin
     g_value_init (value, G_TYPE_INT);
     g_value_set_int (value, dstsavings);
 }
+
+/**
+ * @brief Callback function which is invoked when ClientIP action is invoked and this sets
+ * the state variable with a new Gateway IP.
+ *
+ * @param[in] service Name of the service.
+ * @param[in] variable State(Query) variable.
+ * @param[in] value New value to be assigned.
+ * @param[in] user_data Usually null will be passed.
+ * @ingroup XUPNP_XCALDEV_FUNC
+ */
+/* ClientIP */
+G_MODULE_EXPORT void
+query_client_ip_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
+{
+    g_value_init (value, G_TYPE_STRING);
+    g_value_set_string (value, clientIp);
+}
+
 /**
  * @brief Callback function which is invoked when UsesDaylightTime action is invoked and this sets
  * the state variable with a new value.
@@ -1389,6 +1427,8 @@ int registerIdentityConfigurationService(GUPnPServiceInfo *upnpIdService)
     g_signal_connect (upnpIdService, "action-invoked::GetMake", G_CALLBACK (get_make_cb), NULL);
     g_signal_connect (upnpIdService, "action-invoked::GetReceiverId", G_CALLBACK (get_recev_id_cb), NULL);
     g_signal_connect (upnpIdService, "action-invoked::GetAccountId", G_CALLBACK (get_account_id_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetClientIP", G_CALLBACK (get_client_ip_cb), NULL);
+    g_signal_connect (upnpIdService, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
     g_signal_connect (upnpIdService, "query-variable::RecvDevType", G_CALLBACK (query_recvdevtype_cb), NULL);
     g_signal_connect (upnpIdService, "query-variable::DeviceType", G_CALLBACK (query_devicetype_cb), NULL);
     g_signal_connect (upnpIdService, "query-variable::BuildVersion", G_CALLBACK (query_buildversion_cb), NULL);
@@ -1402,6 +1442,8 @@ int registerIdentityConfigurationService(GUPnPServiceInfo *upnpIdService)
     g_signal_connect (upnpIdService, "query-variable::Make", G_CALLBACK (query_make_cb), NULL);
     g_signal_connect (upnpIdService, "query-variable::ReceiverId", G_CALLBACK (query_recev_id_cb), NULL);
     g_signal_connect (upnpIdService, "query-variable::AccountId", G_CALLBACK (query_account_id_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
+    g_signal_connect (upnpIdService, "query-variable::ClientIP", G_CALLBACK (query_client_ip_cb), NULL);
     return 0;
 }
 int registerMediaConfigurationService(GUPnPServiceInfo *upnpMediaConfService)
@@ -1427,7 +1469,6 @@ int registerGatewayConfigurationService(GUPnPServiceInfo *upnpGatewayConf)
     g_signal_connect (upnpGatewayConf, "action-invoked::GetHostMacAddress", G_CALLBACK (get_hostmacaddress_cb), NULL);
     g_signal_connect (upnpGatewayConf, "action-invoked::GetDataGatewayIPaddress", G_CALLBACK (get_dataGatewayIPaddress_cb), NULL);
     g_signal_connect (upnpGatewayConf, "action-invoked::GetIsGateway", G_CALLBACK (get_isgateway_cb), NULL);
-    g_signal_connect (upnpGatewayConf, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
     g_signal_connect (upnpGatewayConf, "action-invoked::GetIPSubNet", G_CALLBACK (get_ipsubnet_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::GatewayIP", G_CALLBACK (query_gwyip_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::GatewayIPv6", G_CALLBACK (query_gwyipv6_cb), NULL);
@@ -1438,7 +1479,6 @@ int registerGatewayConfigurationService(GUPnPServiceInfo *upnpGatewayConf)
     g_signal_connect (upnpGatewayConf, "query-variable::HostMacAddress", G_CALLBACK (query_hostmacaddress_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::DataGatewayIPaddress", G_CALLBACK (query_dataGatewayIPaddress_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::IsGateway", G_CALLBACK (query_isgateway_cb), NULL);
-    g_signal_connect (upnpGatewayConf, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::IPSubNet", G_CALLBACK (query_ipsubnet_cb), NULL);
     return 0;
 }
@@ -1480,6 +1520,7 @@ main (int argc, char **argv)
     g_message("Starting XCAL-DEVICE ");
     xupnpEventCallback_register(&notify_value_change);
     xdeviceInit(devConfFile,NULL);
+    getGatewayIp(clientIp);
     rfc_enabled = check_rfc();
     if(!rfc_enabled)
     {
@@ -1769,6 +1810,7 @@ main (int argc, char **argv)
     g_signal_connect (upnpService, "action-invoked::GetRecvDevType", G_CALLBACK (get_recvdevtype_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetDeviceType", G_CALLBACK (get_devicetype_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetBuildVersion", G_CALLBACK (get_buildversion_cb), NULL);
+    g_signal_connect (upnpService, "action-invoked::GetClientIP", G_CALLBACK (get_client_ip_cb), NULL);
     g_signal_connect (upnpService, "query-variable::Url", G_CALLBACK (query_url_cb), NULL);
     g_signal_connect (upnpService, "query-variable::TrmUrl", G_CALLBACK (query_trm_url_cb), NULL);
     g_signal_connect (upnpService, "query-variable::GatewayIP", G_CALLBACK (query_gwyip_cb), NULL);
@@ -1793,6 +1835,7 @@ main (int argc, char **argv)
     g_signal_connect (upnpService, "query-variable::RecvDevType", G_CALLBACK (query_recvdevtype_cb), NULL);
     g_signal_connect (upnpService, "query-variable::DeviceType", G_CALLBACK (query_devicetype_cb), NULL);
     g_signal_connect (upnpService, "query-variable::BuildVersion", G_CALLBACK (query_buildversion_cb), NULL);
+    g_signal_connect (upnpService, "query-variable::ClientIP", G_CALLBACK (query_client_ip_cb), NULL);
 
     if(rfc_enabled)
     {

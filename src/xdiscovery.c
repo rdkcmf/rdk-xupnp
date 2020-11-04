@@ -321,8 +321,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
           DEQUEUE_FIFO(dp_wlist_fifo, index, fret);    
           if (fret == FIFO_OK) 
           { 
-             //g_message("dpnode_insert:collsion ip:%d mac:%s hash index %d\n", 
-             //                                           ipaddr, macaddr, index);
+             g_message("dpnode_insert:collsion ip:%d mac:%s hash index %d\n",ipaddr, macaddr, index);
              dp_wlist[pindex].ofb_index = index;  
              dp_wlist[index].ipaddr = ipaddr;
              strncpy(dp_wlist[index].macaddr, macaddr, MAC_ADDRESS_SIZE);
@@ -333,8 +332,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
        {
              // add new entry 
              index = dp_hashindex (ipaddr);
-             //g_message("dpnode_insert:new ip:%d mac:%s hash index %d\n", 
-             //                                           ipaddr, macaddr, index);
+             g_message("dpnode_insert:new ip:%d mac:%s hash index %d\n",ipaddr, macaddr, index);
              dp_wlist[index].ipaddr = ipaddr;
              strncpy(dp_wlist[index].macaddr, macaddr,MAC_ADDRESS_SIZE);
              dp_wlist[index].ofb_index = 0;
@@ -345,8 +343,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
     {
        if (stat == DP_INVALID_MAC) 
        {
-             //g_message("dpnode_insert:mac update ip:%d mac:%s hash index %d\n", 
-             //                                           ipaddr, macaddr, index);
+             g_message("dpnode_insert:mac update ip:%d mac:%s hash index %d\n",ipaddr, macaddr, index);
              // update mac address
              strncpy(dp_wlist[index].macaddr, macaddr,MAC_ADDRESS_SIZE);
        }
@@ -382,6 +379,7 @@ void dpnode_delete(long ipaddr, char *macaddr)
          if (dp_wlist[index].ofb_index ==0) 
          {
             // No collision just delete the node
+            g_message("No Collision ip:%d mac:%s \n",ipaddr, macaddr);
             dp_wlist[index].ofb_index =-1; 
             dp_wlist[index].ipaddr = 0;
          }
@@ -390,6 +388,7 @@ void dpnode_delete(long ipaddr, char *macaddr)
             // there are subsequent nodes in overflow table, delete the entry
             // copy the subsequent node from overflow table and then 
             // push the subsequent overflow table entry into fifo
+            g_message("Collision ip:%d mac:%s \n",ipaddr, macaddr);
             tindex = dp_wlist[index].ofb_index;
             dp_wlist[index].ofb_index = dp_wlist[tindex].ofb_index;
             dp_wlist[index].ipaddr  = dp_wlist[tindex].ipaddr;
@@ -2104,6 +2103,12 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 	    g_string_assign(gwData->gwyip,temp);
 	    g_free(temp);
 	}
+ 
+        if ( processStringRequest(sproxy, "GetClientIP", "ClientIP" , &temp, FALSE))
+        {
+            g_string_assign(gwData->clientip,temp);
+            g_free(temp);
+        }
 
         if ( processStringRequest(sproxy, "GetGatewayIPv6", "GatewayIPv6" , &temp, FALSE))
         {
@@ -2309,6 +2314,17 @@ gboolean process_gw_services_identity(GUPnPServiceProxy *sproxy, GwyDeviceData* 
         g_string_assign(gwData->receiverid, temp);
         g_free(temp);
     }
+    if ( processStringRequest(sproxy, "GetClientIP", "ClientIP" , &temp, FALSE))
+    {
+        g_string_assign(gwData->clientip, temp);
+        g_free(temp);
+    }
+    if ( processStringRequest(sproxy, "GetBcastMacAddress", "BcastMacAddress" , &temp, FALSE))
+    {
+        g_string_assign(gwData->bcastmacaddress, temp);
+        g_free(temp);
+    }
+
     g_message("Exiting from process_gw_services_identity ");
     return TRUE;
 }
@@ -2371,8 +2387,8 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
     }
     if ( processStringRequest(sproxy, "GetBcastMacAddress", "BcastMacAddress" , &temp, FALSE))
     {
-        g_string_assign(gwData->bcastmacaddress, temp);
-        g_free(temp);
+	    g_string_assign(gwData->bcastmacaddress,temp);
+	    g_free(temp);
     }
     if ( processStringRequest(sproxy, "GetGatewayIPv6", "GatewayIPv6" , &temp, FALSE))
     {
@@ -2596,6 +2612,7 @@ gboolean init_gwydata(GwyDeviceData* gwydata)
     gwydata->managementurl = g_string_new(NULL);
     gwydata->make = g_string_new(NULL);
     gwydata->accountid = g_string_new(NULL);
+    gwydata->clientip = g_string_new(NULL);
     gwydata->devFoundFlag=FALSE;
     gwydata->isOwnGateway=FALSE;
     gwydata->isRouteSet=FALSE;
@@ -2642,6 +2659,7 @@ gboolean free_gwydata(GwyDeviceData* gwydata)
         g_string_free(gwydata->ipv6prefix, TRUE);
         g_string_free(gwydata->devicename, TRUE);
         g_string_free(gwydata->bcastmacaddress, TRUE);
+        g_string_free(gwydata->clientip, TRUE);
         if(gwydata->sproxy)
         {
             g_clear_object(&(gwydata->sproxy));
@@ -2734,14 +2752,54 @@ gboolean update_gwylist(GwyDeviceData* gwydata)
         g_mutex_unlock(mutex);
         g_message("Inserted new/updated device %s in the list", sno);
 #ifdef BROADBAND
-        if ((rfc_enabled) && (g_strrstr(g_strstrip(gwydata->devicetype->str),"XG") != NULL ) && (gwydata->isDevRefactored)) {
-           // for XG devices insert ip address and mac address to whitelist 
-           ret = inet_aton(gwydata->gwyip->str, &x_r);
-           if (ret) {
-              if ((wstatus = dpnode_insert(x_r.s_addr, gwydata->bcastmacaddress->str)) != DP_WLIST_ERROR) {
-                 g_message("Inserted ip address:index  %s:%d mac address %s to whitelist", gwydata->gwyip->str, x_r.s_addr, gwydata->bcastmacaddress->str);
-              }
-           }
+        if ((rfc_enabled) && (gwydata->isDevRefactored)) {
+           // for XG devices insert ip address and mac address to whitelist
+            if(g_strrstr(g_strstrip(gwydata->devicetype->str),"XG") != NULL)
+            {
+                if (gwydata->gwyip->str) {
+                    ret = inet_aton(gwydata->gwyip->str, &x_r);
+                    if (ret) {
+                        if ((wstatus = dpnode_insert(x_r.s_addr, gwydata->bcastmacaddress->str)) != DP_WLIST_ERROR) {
+                            g_message("Inserted ip address:index  %s:%d mac address %s to whitelist", gwydata->gwyip->str, x_r.s_addr, gwydata->bcastmacaddress->str);
+                        }
+                        else
+                        {
+                            g_message("dpnode_insert failure");
+                        }
+                    }
+                    else
+                    {
+                        g_message("ip address conversion failure");
+                    }
+                }
+                else
+                {
+                    g_message("gateway ip address empty");
+                } 
+            }           
+            else if ((g_strrstr(g_strstrip(gwydata->devicetype->str),"XID") != NULL ) || (g_strrstr(g_strstrip(gwydata->devicetype->str),"XI3") != NULL))
+            {
+                if (gwydata->clientip->str) {
+                    ret = inet_aton(gwydata->clientip->str, &x_r);
+                    if (ret) {
+                        if ((wstatus = dpnode_insert(x_r.s_addr, gwydata->bcastmacaddress->str)) != DP_WLIST_ERROR) {
+                            g_message("Inserted ip address:index  %s:%d mac address %s to whitelist", gwydata->clientip->str, x_r.s_addr, gwydata->bcastmacaddress->str);
+                        }
+                        else
+                        {
+                            g_message("dpnode_insert failure");
+                        }
+                    }
+                    else
+                    {
+                        g_message("ip address conversion failure");
+                    }
+                }
+                else
+                {
+                    g_message("client ip address empty");
+                }
+            }
         }
 #endif
         sendDiscoveryResult(disConf->outputJsonFile);
@@ -2803,7 +2861,19 @@ gboolean delete_gwyitem(const char* serial_num)
 #endif
         }
         else
+        {
             g_message("Removing Client Device %s from the device list", gwdata->serial_num->str);
+#ifdef BROADBAND
+            if ((rfc_enabled) && ((g_strrstr(g_strstrip(gwdata->devicetype->str),"XID") != NULL ) || (g_strrstr(g_strstrip(gwdata->devicetype->str),"XI3") != NULL )) && (gwdata->isDevRefactored)) {
+                  // Delete the entry from white list
+                  // since the device is not in the network.
+                  ret = inet_aton(gwdata->clientip->str, &x_r);
+                  if (ret) {
+                     dpnode_delete(x_r.s_addr, " "); 
+                  }
+            }
+#endif
+        }
 /*        g_mutex_lock(mutex);
         free_gwydata(gwdata);
         g_free(gwdata);
@@ -2875,6 +2945,7 @@ gboolean sendDiscoveryResult(const char* outfilename)
                 g_string_append_printf(localOutputContents,"\t\t\t\"deviceName\":\"%s\",\n", gwdata->devicename->str);
                 g_string_append_printf(localOutputContents,"\t\t\t\"recvDevType\":\"%s\",\n", gwdata->recvdevtype->str);
                 g_string_append_printf(localOutputContents,"\t\t\t\"DevType\":\"%s\",\n", gwdata->devicetype->str);
+                g_string_append_printf(localOutputContents,"\t\t\t\"bcastMacAddress\":\"%s\",\n", gwdata->bcastmacaddress->str);
 
                 if(gwdata->sproxy_i != NULL)
                 {
@@ -2891,7 +2962,6 @@ gboolean sendDiscoveryResult(const char* outfilename)
                 }
                 else
                 {
-                    g_string_append_printf(localOutputContents,"\t\t\t\"bcastMacAddress\":\"%s\",\n", gwdata->bcastmacaddress->str);
                     g_string_append_printf(localOutputContents,"\t\t\t\"buildVersion\":\"%s\",\n", gwdata->buildversion->str);
                 }
                 if(strcasestr(g_strstrip(gwdata->devicetype->str),"XI") == NULL )
@@ -2919,12 +2989,13 @@ gboolean sendDiscoveryResult(const char* outfilename)
                     }
                     if(gwdata->sproxy_i != NULL)
                     {
-                        g_string_append_printf(localOutputContents,"\t\t\t\"bcastMacAddress\":\"%s\",\n", gwdata->bcastmacaddress->str);
                         g_string_append_printf(localOutputContents,"\t\t\t\"dataGatewayIPaddress\":\"%s\",\n", gwdata->dataGatewayIPaddress->str);
+                        g_string_append_printf(localOutputContents,"\t\t\t\"clientip\":\"%s\",\n", gwdata->clientip->str);
                     }
                 }
                 else
                 {
+                    g_string_append_printf(localOutputContents,"\t\t\t\"clientip\":\"%s\",\n", gwdata->clientip->str);
                     g_string_append_printf(localOutputContents,"\t\t\t\"dataGatewayIPaddress\":\"%s\",\n", gwdata->dataGatewayIPaddress->str);
                 }
                 g_string_append_printf(localOutputContents,"\t\t\t\"receiverid\":\"%s\"\n\t\t}", gwdata->receiverid->str);

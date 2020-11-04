@@ -48,16 +48,6 @@
             </argumentList>
         </action>
         <action>
-            <name>GetBcastMacAddress</name>
-            <argumentList>
-                <argument>
-                    <name>BcastMacAddress</name>
-                    <relatedStateVariable>BcastMacAddress</relatedStateVariable>
-                    <direction>out</direction>
-                </argument>
-            </argumentList>
-        </action>
-        <action>
             <name>GetGatewayIPv6</name>
             <argumentList>
                 <argument>
@@ -146,11 +136,6 @@
         </stateVariable>
         <stateVariable sendEvents="yes">
             <name>GatewayIPv6</name>
-            <dataType>string</dataType>
-            <defaultValue></defaultValue>
-        </stateVariable>
-        <stateVariable sendEvents="yes">
-            <name>BcastMacAddress</name>
             <dataType>string</dataType>
             <defaultValue></defaultValue>
         </stateVariable>
