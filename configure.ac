@@ -21,8 +21,8 @@
 
 dnl AC_PREREQ([2.65])
 AC_INIT(xupnp, version-1.0, balaji_punnuru@cable.comcast.com,xupnp)
-AC_CONFIG_HEADERS([cfg/config.h])
-AC_CONFIG_MACRO_DIR([cfg])
+AC_CONFIG_HEADERS([m4/config.h])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([cfg])
 AM_INIT_AUTOMAKE([foreign no-dist-gzip dist-bzip2 1.9 subdir-objects])
 LT_INIT
