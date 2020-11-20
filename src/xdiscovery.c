@@ -51,7 +51,7 @@ gboolean partialDiscovery=FALSE;
 #include "rdk_logger_milestone.h"
 #endif
 
-#define OUTPLAYURL_SIZE 160
+#define OUTPLAYURL_SIZE 180 //current max size of playbackurl with ocap locator is 145 adding few more just to accomdate future increase in receiver id or ipv6.
 
 #define DEVICE_PROTECTION_CONTEXT_PORT  50760
 
@@ -865,6 +865,13 @@ gboolean checkDeviceExists(const char* sno,char* outPlayUrl)
                     if ( rc != EOK)
                     {
                         retval = FALSE;
+                    }
+                    else
+                    {
+                        if (outPlayUrl)
+                        {
+                            strcat(outPlayUrl,"&live=ocap://0xffff");
+                        }
                     }
                 }
                 break;
