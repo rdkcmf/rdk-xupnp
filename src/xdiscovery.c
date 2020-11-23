@@ -1739,8 +1739,6 @@ int main(int argc, char *argv[])
 	}
 	if (((cert_File != NULL) && (key_File !=NULL)) && ((g_file_test(cert_File, G_FILE_TEST_EXISTS)) && (g_file_test(key_File, G_FILE_TEST_EXISTS)) 
                         && (g_file_test(ca_File, G_FILE_TEST_EXISTS)))) { 
-	    g_message("cert_File Path %s", cert_File);
-	    g_message("Key File Path %s", key_File);
 	    
 #ifndef GUPNP_1_2
             upnpContextDeviceProtect = gupnp_context_new_s ( NULL,  disConf->discIf, DEVICE_PROTECTION_CONTEXT_PORT, cert_File, key_File, &error);
@@ -1770,7 +1768,6 @@ int main(int argc, char *argv[])
 		 g_message("tls interaction object created");
 		 // Set TLS config params here.
 		 gupnp_context_set_tls_params(upnpContextDeviceProtect,ca_File,key_File, xupnp_tlsinteraction);
-		 g_message("gupnp_context_set_tls_params done %s", ca_File);
 
 		 cp_client = gupnp_control_point_new(upnpContextDeviceProtect, "urn:schemas-upnp-org:device:X1Renderer:1");
 		 g_signal_connect (cp_client,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_client), NULL);
@@ -3533,7 +3530,7 @@ gboolean readconffile(const char* configfile)
             g_key_file_free(keyfile);
             return FALSE;
         }
-        g_message("Starting with Settings %s\n", g_key_file_to_data(keyfile, NULL, NULL));
+        //g_message("Starting with Settings %s\n", g_key_file_to_data(keyfile, NULL, NULL));
 
         disConf = g_new(ConfSettings,1);
         /*

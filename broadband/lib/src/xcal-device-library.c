@@ -2378,8 +2378,8 @@ gboolean readconffile(const char *configfile)
         }
         return FALSE;
     }
-    g_message("Starting with Settings %s\n", g_key_file_to_data(keyfile, NULL,
-              NULL));
+    //g_message("Starting with Settings %s\n", g_key_file_to_data(keyfile, NULL,
+    //          NULL));
     devConf = g_new0(ConfSettings, 1);
     /*
     # Names of all network interfaces used for publishing

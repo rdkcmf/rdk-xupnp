@@ -1583,7 +1583,7 @@ main (int argc, char **argv)
            {
                certFile  = g_build_filename (devCertPath, devCertFile, NULL);
            }
-           g_message("certFile %s ", certFile);
+           g_message("certFile loaded");
 
            if (g_path_is_absolute (devKeyFile))
            {
@@ -1593,7 +1593,7 @@ main (int argc, char **argv)
            {
               keyFile  = g_build_filename (devKeyPath, devKeyFile, NULL);
            }
-           g_message("keytFile %s ", keyFile);
+           g_message("keytFile loaded ");
 
            if ((g_file_test(certFile, G_FILE_TEST_EXISTS)) && (g_file_test(keyFile, G_FILE_TEST_EXISTS))
                         && (g_file_test(caFile, G_FILE_TEST_EXISTS))) 
