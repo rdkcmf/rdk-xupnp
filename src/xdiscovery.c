@@ -2139,6 +2139,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 	    return FALSE;
         }
 	g_message("GetPlaybackUrl = %s",gwData->playbackurl->str);
+
         if ( processStringRequest(sproxy, "GetSystemIds", "SystemIds" , &temp, FALSE))
         {
 	    g_string_assign(gwData->systemids,temp);
