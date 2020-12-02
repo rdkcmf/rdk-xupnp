@@ -1839,6 +1839,7 @@ int main(int argc, char *argv[])
 }
 /**
  * @brief This function is used to retrieve a boolean parameter from discovered data.
+ * Use this function only when there are no parameters passed to the action call
  *
  * @param[in] sproxy The Service proxy object
  * @param[in] requestFn The required parameter to be retrieved
@@ -1854,8 +1855,6 @@ gboolean processBooleanRequest(const GUPnPServiceProxy *sproxy ,const char * req
 {
     GError *error = NULL;
     GUPnPServiceProxyAction *action;
-    
-    g_message("[%s] processing  %s ", __FUNCTION__ ,requestFn);
 
 #ifdef GUPNP_1_2
     action = gupnp_service_proxy_action_new (requestFn, NULL);
@@ -1881,12 +1880,12 @@ gboolean processBooleanRequest(const GUPnPServiceProxy *sproxy ,const char * req
         g_clear_error(&error);
         return FALSE;
     }
-    g_message("[%s] Successfully processed value %d.. returning ", __FUNCTION__, *result );
     return TRUE;
 }
 
 /**
  * @brief This function is used to retrieve a string parameter from discovered data.
+ * Use this function only when there are no parameters passed to the action call
  *
  * @param[in] sproxy The Service proxy object
  * @param[in] requestFn The required parameter to be retrieved
@@ -1901,8 +1900,7 @@ gboolean processStringRequest(const GUPnPServiceProxy *sproxy ,const char * requ
 {
     GError *error = NULL;
     GUPnPServiceProxyAction *action;
-    
-    g_message("[%s] processing  %s ", __FUNCTION__ ,requestFn);
+
 #ifdef GUPNP_1_2
     action = gupnp_service_proxy_action_new (requestFn, NULL);
     gupnp_service_proxy_call_action (sproxy, action, NULL, &error);
@@ -1927,12 +1925,13 @@ gboolean processStringRequest(const GUPnPServiceProxy *sproxy ,const char * requ
         g_clear_error(&error);
         return FALSE;
     }
-    g_message("[%s] Successfully processed value %s.. returning ", __FUNCTION__, *result );
+
     return TRUE;
 }
 
 /**
  * @brief This function is used to retrieve a int parameter from discovered data.
+ * Use this function only when there are no parameters passed to the action call
  *
  * @param[in] sproxy The Service proxy object
  * @param[in] requestFn The required parameter to be retrieved
@@ -1947,8 +1946,7 @@ gboolean processIntRequest(const GUPnPServiceProxy *sproxy ,const char * request
 {
     GError *error = NULL;
     GUPnPServiceProxyAction *action;
-    
-    g_message("[%s] processing  %s ", __FUNCTION__ ,requestFn);
+
 
 #ifdef GUPNP_1_2
     action = gupnp_service_proxy_action_new (requestFn, NULL);
@@ -1974,7 +1972,7 @@ gboolean processIntRequest(const GUPnPServiceProxy *sproxy ,const char * request
         g_clear_error(&error);
         return FALSE;
     }
-    g_message("[%s] Successfully processed value %d.. returning ", __FUNCTION__, *result );
+
     return TRUE;
 }
 
@@ -2246,6 +2244,33 @@ gboolean process_gw_services_identity(GUPnPServiceProxy *sproxy, GwyDeviceData* 
     gchar *temp=NULL;
 
     g_message("Entering into process_gw_services_identity ");
+/*
+  DELIA-47613 : Need to use direct calls whenever there is an input parameter(s) to the service proxy call
+*/
+#ifdef GUPNP_1_2
+    GUPnPServiceProxyAction * action = gupnp_service_proxy_action_new ("GetAccountId", &error,"SAccountId", G_TYPE_STRING, accountId, "macAddr", G_TYPE_STRING, bcastmac, "ipAddr",G_TYPE_STRING, ipaddress, NULL);
+    gupnp_service_proxy_call_action (sproxy, action, NULL, &error);
+    if (error!=NULL)
+    {
+        gupnp_service_proxy_action_get_result (action,
+                                               &error, "GAccountId", G_TYPE_STRING, &temp, NULL);
+        g_clear_pointer (&action, gupnp_service_proxy_action_unref);
+    }
+#else
+     gupnp_service_proxy_send_action (sproxy, "GetAccountId", &error,"SAccountId", G_TYPE_STRING, accountId, "macAddr", G_TYPE_STRING, bcastmac, "ipAddr",G_TYPE_STRING, ipaddress, NULL, "GAccountId", G_TYPE_STRING, &temp, NULL);
+#endif
+    if (error!=NULL)
+    {
+       g_message ("GetAccountId process gw Identity services Error: %s", error->message);
+       g_clear_error(&error);
+    }
+    else
+    {
+      g_message ("Received account id: %s", temp);
+      g_string_assign(gwData->accountid, temp);
+      g_free(temp);
+    }
+
     if ( processStringRequest(sproxy, "GetRecvDevType", "RecvDevType" , &temp, FALSE))
     {
         g_string_assign(gwData->recvdevtype, temp);
@@ -2299,11 +2324,6 @@ gboolean process_gw_services_identity(GUPnPServiceProxy *sproxy, GwyDeviceData* 
     if ( processStringRequest(sproxy, "GetMake", "Make" , &temp, FALSE))
     {
         g_string_assign(gwData->make, temp);
-        g_free(temp);
-    }
-    if ( processStringRequest(sproxy, "GetAccountId", "AccountId" , &temp, FALSE))
-    {
-        g_string_assign(gwData->accountid, temp);
         g_free(temp);
     }
     if ( processStringRequest(sproxy, "GetReceiverId", "ReceiverId" , &temp, FALSE))
