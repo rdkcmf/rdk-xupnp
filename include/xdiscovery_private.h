@@ -136,6 +136,7 @@ typedef struct _gwyDeviceData {
     GString* make;
     GString* accountid;
     GString* ipSubNet;
+    GString* clientip;
 } GwyDeviceData;
 
 GList* xdevlist= NULL;
