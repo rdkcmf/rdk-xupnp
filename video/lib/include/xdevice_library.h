@@ -116,6 +116,7 @@ BOOL getDevKeyPath(char *outValue);
 BOOL getDevKeyFile(char *outValue);
 BOOL getDevCertPath(char *outValue);
 BOOL getDevCertPath(char *outValue);
+void notify_timezone(void);
 //typedef INT (*xdevice_service_callback)(enum serviceListCb , char *data);
 //void xdevice_service_register(xdevice_service_callback callback_proc);
 #else

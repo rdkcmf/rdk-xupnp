@@ -36,6 +36,8 @@
 #include <memory.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
+#include <glib/gstdio.h>
+#include <ctype.h>
 #ifdef ENABLE_RFC
 #include "rfcapi.h"
 #endif
@@ -96,10 +98,14 @@ static STRING_MAP partnerNameMap[] = {
     {COMCAST_PARTNET_KEY, "comcast"},
     {COX_PARTNET_KEY    , "cox"},
 };
+
+#if 0
 static STRING_MAP friendlyNameMap[] = {
     {COMCAST_PARTNET_KEY, "XFINITY"},
     {COX_PARTNET_KEY    , "Contour"},
 };
+#endif
+
 static STRING_MAP productNameMap[] = {
     {COMCAST_PARTNET_KEY, "xfinity"},
     {COX_PARTNET_KEY    , "contour"},
@@ -140,6 +146,8 @@ static struct TZStruct
 };
 
 xupnpEventCallback eventCallback;
+
+static GString *get_uri_value();
 
 void xupnpEventCallback_register(xupnpEventCallback callback_func)
 {
@@ -700,7 +708,6 @@ static void _sysEventHandler(const char *owner, IARM_EventId_t eventId,
             data;
     IARM_Bus_SYSMgr_SystemState_t stateId =
         sysEventData->data.systemStates.stateId;
-    int state = sysEventData->data.systemStates.state;
     switch (stateId) {
     case IARM_BUS_SYSMGR_SYSSTATE_TUNEREADY:
         if (tune_ready != sysEventData->data.systemStates.state) {
@@ -1831,7 +1838,7 @@ BOOL getCVPIf(char *outValue)
 BOOL getCVPPort(int *outValue)
 {
     BOOL result = FALSE;
-    if (!check_null(outValue)) {
+    if (!check_null((char *)outValue)) {
         g_message("getCVPPort : NULL string !");
         return result;
     }
@@ -2256,7 +2263,6 @@ gboolean getipv6prefix(void)
 
 BOOL xdeviceInit(char *devConfFile, char *devLogFile)
 {
-    GError *error = NULL;
     url = g_string_new(NULL);
     trmurl = g_string_new(NULL);
     trmurlCVP2 = g_string_new(NULL);
@@ -2366,10 +2372,11 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
         }
     }
 #ifndef CLIENT_XCAL_SERVER
-	int result;
-    if ( access(devConf->ipv6FileLocation, F_OK ) != -1 )
-	ipv6Enabled=TRUE;
-        result = getipaddress(devConf->bcastIf, ipAddressBuffer, TRUE);
+    int result;
+    if ( access(devConf->ipv6FileLocation, F_OK ) != -1 ) {
+        ipv6Enabled=TRUE;
+    }
+    result = getipaddress(devConf->bcastIf, ipAddressBuffer, TRUE);
     if (!result) {
         fprintf(stderr,
                 "In Ipv6 Could not locate the link  local ipv6 address of the broadcast interface %s\n",
@@ -2861,7 +2868,6 @@ BOOL readconffile(const char *configfile)
     GKeyFile *keyfile = NULL;
     GKeyFileFlags flags;
     GError *error = NULL;
-    gsize length;
     /* Create a new GKeyFile object and a bitwise list of flags. */
     keyfile = g_key_file_new ();
     flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
@@ -3498,8 +3504,8 @@ int getipaddress(const char *ifname, char *ipAddressBuffer,gboolean ipv6Enabled)
                 tmpAddrPtr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
                 inet_ntop(AF_INET6, tmpAddrPtr, ipAddressBuffer, INET6_ADDRSTRLEN);
                 //if (strcmp(ifa->ifa_name,"eth0")==0trcmp0(g_strstrip(devConf->mocaMacIf),ifname) == 0)
-                if ((g_strcmp0(g_strstrip(devConf->bcastIf), ifname) == 0)
-                        && (IN6_IS_ADDR_LINKLOCAL(tmpAddrPtr))
+                if (((g_strcmp0(g_strstrip(devConf->bcastIf), ifname) == 0)
+                        && (IN6_IS_ADDR_LINKLOCAL(tmpAddrPtr)))
                         || ((!(IN6_IS_ADDR_LINKLOCAL(tmpAddrPtr)))
                             && (g_strcmp0(g_strstrip(devConf->hostMacIf), ifname) == 0))) {
                     found = 1;
@@ -3527,25 +3533,35 @@ int getipaddress(const char *ifname, char *ipAddressBuffer,gboolean ipv6Enabled)
 
 static char * getPartnerName()
 {
-        return getStrValueFromMap(getPartnerId(partner_id->str), ARRAY_COUNT(partnerNameMap), partnerNameMap);
+        getPartnerId(partner_id->str);
+        return getStrValueFromMap(partner_id->str, ARRAY_COUNT(partnerNameMap), partnerNameMap);
 }
+
+#if 0
 static char * getFriendlyName()
 {
-        return getStrValueFromMap(getPartnerId(partner_id->str), ARRAY_COUNT(friendlyNameMap), friendlyNameMap);
+        getPartnerId(partner_id->str);
+        return getStrValueFromMap(partner_id->str, ARRAY_COUNT(friendlyNameMap), friendlyNameMap);
 }
+#endif
+
 static char * getProductName()
 {
-        return getStrValueFromMap(getPartnerId(partner_id->str), ARRAY_COUNT(productNameMap), productNameMap);
+        getPartnerId(partner_id->str);
+        return getStrValueFromMap(partner_id->str, ARRAY_COUNT(productNameMap), productNameMap);
 }
 static char * getServiceName()
 {
-        return getStrValueFromMap(getPartnerId(partner_id->str), ARRAY_COUNT(serviceNameMap), serviceNameMap);
+        getPartnerId(partner_id->str);
+        return getStrValueFromMap(partner_id->str, ARRAY_COUNT(serviceNameMap), serviceNameMap);
 }
 static char * getServiceDescription()
 {
-        return getStrValueFromMap(getPartnerId(partner_id->str), ARRAY_COUNT(serviceDescriptionMap), serviceDescriptionMap);
+        getPartnerId(partner_id->str);
+        return getStrValueFromMap(partner_id->str, ARRAY_COUNT(serviceDescriptionMap), serviceDescriptionMap);
 }
 static char * getGatewayName()
 {
-        return getStrValueFromMap(getPartnerId(partner_id->str), ARRAY_COUNT(gatewayNameMap), gatewayNameMap);
+        getPartnerId(partner_id->str);
+        return getStrValueFromMap(partner_id->str, ARRAY_COUNT(gatewayNameMap), gatewayNameMap);
 }

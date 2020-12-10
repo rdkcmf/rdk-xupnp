@@ -20,6 +20,9 @@
  * @file xdiscovery.c
  * @brief This source file contains functions  that will run as task for maintaining the device list.
  */
+#ifndef _GNU_SOURCE
+ #define _GNU_SOURCE
+#endif
 #include <libgupnp/gupnp-control-point.h>
 #include <string.h>
 #include <unistd.h>
@@ -36,6 +39,9 @@
 #include "xdiscovery.h"
 #include "xdiscovery_private.h"
 #include "secure_wrapper.h"
+#include <glib/gprintf.h>
+#include <string.h>
+#include <glib/gstdio.h>
 #ifdef INCLUDE_BREAKPAD
 #include "breakpad_wrapper.h"
 #endif
@@ -56,6 +62,11 @@ gboolean partialDiscovery=FALSE;
 #ifdef LOGMILESTONE
 #include "rdk_logger_milestone.h"
 #endif
+
+#ifdef BROADBAND
+#include <syscfg/syscfg.h>
+#endif
+#include <libsoup/soup.h>
 
 #define OUTPLAYURL_SIZE 180 //current max size of playbackurl with ocap locator is 145 adding few more just to accomdate future increase in receiver id or ipv6.
 
@@ -190,13 +201,13 @@ int dp_wlistInit()
          g_message("dp_wlistInit:dp list creation, shared memory failure %d %s\n",
                                                      errno, strerror(errno));
          if (errno != SHM_EXISTS) {
-             dp_wlist == (void *) -1;
+             dp_wlist = (void *) -1;
              return -1;
           }
          shmId = shmget(key, MAX_BUF_SIZE*sizeof(dp_wlist_t), S_IRUSR|S_IRGRP|S_IROTH);
          if (shmId < 0) {
              g_message("dp_wlistInit:shmget  failure %d %s\n", errno, strerror(errno));
-             dp_wlist == (void *) -1;
+             dp_wlist = (void *) -1;
              return -1;
          }
       }
@@ -231,7 +242,7 @@ int dp_wlistInit()
        }
   }
   else {
-     dp_wlist == (void *) -1;
+     dp_wlist = (void *) -1;
      ret = -1;
   }
   return (ret);
@@ -336,7 +347,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
           DEQUEUE_FIFO(dp_wlist_fifo, index, fret);    
           if (fret == FIFO_OK) 
           { 
-             g_message("dpnode_insert:collsion ip:%d mac:%s hash index %d\n",ipaddr, macaddr, index);
+             g_message("dpnode_insert:collsion ip:%lu mac:%s hash index %d\n",ipaddr, macaddr, index);
              dp_wlist[pindex].ofb_index = index;  
              dp_wlist[index].ipaddr = ipaddr;
              strncpy(dp_wlist[index].macaddr, macaddr, MAC_ADDRESS_SIZE);
@@ -347,7 +358,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
        {
              // add new entry 
              index = dp_hashindex (ipaddr);
-             g_message("dpnode_insert:new ip:%d mac:%s hash index %d\n",ipaddr, macaddr, index);
+             g_message("dpnode_insert:new ip:%lu mac:%s hash index %d\n",ipaddr, macaddr, index);
              dp_wlist[index].ipaddr = ipaddr;
              strncpy(dp_wlist[index].macaddr, macaddr,MAC_ADDRESS_SIZE);
              dp_wlist[index].ofb_index = 0;
@@ -358,7 +369,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
     {
        if (stat == DP_INVALID_MAC) 
        {
-             g_message("dpnode_insert:mac update ip:%d mac:%s hash index %d\n",ipaddr, macaddr, index);
+             g_message("dpnode_insert:mac update ip:%lu mac:%s hash index %d\n",ipaddr, macaddr, index);
              // update mac address
              strncpy(dp_wlist[index].macaddr, macaddr,MAC_ADDRESS_SIZE);
        }
@@ -381,7 +392,7 @@ dp_wlist_ss_t dpnode_insert(long ipaddr, char *macaddr)
 void dpnode_delete(long ipaddr, char *macaddr)
 {
    dp_wlist_ss_t stat; 
-   int ret;
+   int ret = 0;
    unsigned short index, pindex, tindex;
 
    if (((index = dpnode_lookup(ipaddr, macaddr, &stat, &pindex)) >= 0) && (index != DP_WLIST_ERROR))
@@ -394,7 +405,7 @@ void dpnode_delete(long ipaddr, char *macaddr)
          if (dp_wlist[index].ofb_index ==0) 
          {
             // No collision just delete the node
-            g_message("No Collision ip:%d mac:%s \n",ipaddr, macaddr);
+            g_message("No Collision ip:%lu mac:%s \n",ipaddr, macaddr);
             dp_wlist[index].ofb_index =-1; 
             dp_wlist[index].ipaddr = 0;
          }
@@ -403,7 +414,7 @@ void dpnode_delete(long ipaddr, char *macaddr)
             // there are subsequent nodes in overflow table, delete the entry
             // copy the subsequent node from overflow table and then 
             // push the subsequent overflow table entry into fifo
-            g_message("Collision ip:%d mac:%s \n",ipaddr, macaddr);
+            g_message("Collision ip:%lu mac:%s \n",ipaddr, macaddr);
             tindex = dp_wlist[index].ofb_index;
             dp_wlist[index].ofb_index = dp_wlist[tindex].ofb_index;
             dp_wlist[index].ipaddr  = dp_wlist[tindex].ipaddr;
@@ -422,6 +433,7 @@ void dpnode_delete(long ipaddr, char *macaddr)
          ENQUEUE_FIFO(dp_wlist_fifo, index, ret);
       }
    }
+   (void)(ret); // unused variable.
 }
 #endif
 
@@ -556,7 +568,7 @@ IARM_Result_t _GetXUPNPDeviceInfo(void *arg);
 static IARM_Result_t GetXUPNPDeviceInfo(char *pDeviceInfo, unsigned long length)
 {
     g_mutex_lock(devMutex);
-    g_message("<<<<<<<IARM XUPnP Call Reached API Processor - length: %ld Output Data length: %ld>>>>>>>>", length, outputcontents->len);
+    g_message("<<<<<<<IARM XUPnP Call Reached API Processor - length: %ld Output Data length: %d>>>>>>>>", length, outputcontents->len);
 
     //IarmDeviceData *param = (IarmDeviceData *)arg;
     if (outputcontents->len <= length)
@@ -819,7 +831,7 @@ void xupnp_logger (const gchar *log_domain, GLogLevelFlags log_level,
     if (logoutfile == NULL)
     {
         // Fall back to console output if unable to open file
-        g_print ("%s: g_time_val_to_iso8601(&timeval): %s\n", message);
+        g_print ("g_time_val_to_iso8601(&timeval): %s\n", message);
         return;
     }
 
@@ -879,7 +891,7 @@ gboolean checkDeviceExists(const char* sno,char* outPlayUrl)
         element = g_list_first(xdevlist);
         while(element)
         {
-            gint result = g_strcmp0(g_strstrip(((GwyDeviceData *)element->data)->serial_num->str),g_strstrip(sno));
+            gint result = g_strcmp0(g_strstrip((gchar *)(((GwyDeviceData *)element->data)->serial_num->str)),g_strstrip((gchar *)sno));
             //Matched the serial number
             if (result==0)
             {
@@ -928,17 +940,17 @@ device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     if((g_strcmp0(g_strstrip(ownSerialNo->str),sno) == 0))
     {
         g_message ("Self Device [%s][%s] not removing",sno,ownSerialNo->str);
-        g_free(sno);
+        g_free((gpointer)sno);
         return;
     }
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE);
 
-    if (gupnp_service_proxy_get_subscribed(sproxy) == TRUE)
+    if (gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)sproxy) == TRUE)
     {
         g_message("Removing notifications on %s", sno);
-        gupnp_service_proxy_set_subscribed(sproxy, FALSE);
-        gupnp_service_proxy_remove_notify(sproxy, "PlaybackUrl", on_last_change, NULL);
-        gupnp_service_proxy_remove_notify(sproxy, "SystemIds", on_last_change, NULL);
+        gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)sproxy, FALSE);
+        gupnp_service_proxy_remove_notify((GUPnPServiceProxy *)sproxy, "PlaybackUrl", on_last_change, NULL);
+        gupnp_service_proxy_remove_notify((GUPnPServiceProxy *)sproxy, "SystemIds", on_last_change, NULL);
     }
 
     if (checkDeviceExists(sno,gwyPlayUrl))
@@ -948,7 +960,7 @@ device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
             if (getSoupStatusFromUrl(gwyPlayUrl))
             {
                 g_message("Network Multicast issue for device %s",sno);
-                g_free(sno);
+                g_free((gpointer)sno);
                 g_object_unref(sproxy);
                 return;
             }
@@ -972,7 +984,7 @@ device_proxy_unavailable_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
             sendDiscoveryResult(disConf->outputJsonFile);
         }
     }
-    g_free(sno);
+    g_free((gpointer)sno);
     g_object_unref(sproxy);
 }
 
@@ -985,14 +997,14 @@ device_proxy_unavailable_cb_client (GUPnPControlPoint *cp, GUPnPDeviceProxy *dpr
     if((g_strcmp0(g_strstrip(ownSerialNo->str),sno) == 0))
     {
         g_message ("Self Device [%s][%s] not removing",sno,ownSerialNo->str);
-        g_free(sno);
+        g_free((gpointer)sno);
         return;
     }
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_MEDIA);
-    if (gupnp_service_proxy_get_subscribed(sproxy) == TRUE)
+    if (gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)sproxy) == TRUE)
     {
 	g_message("Removing notifications on %s", sno);
-	gupnp_service_proxy_set_subscribed(sproxy, FALSE);
+	gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)sproxy, FALSE);
     }
     if (delete_gwyitem(sno) == FALSE)
     {
@@ -1003,7 +1015,7 @@ device_proxy_unavailable_cb_client (GUPnPControlPoint *cp, GUPnPDeviceProxy *dpr
         g_message("Deleted %s from list", sno);
         sendDiscoveryResult(disConf->outputJsonFile);
     }
-    g_free(sno);
+    g_free((gpointer)sno);
     g_object_unref(sproxy);
 }
 
@@ -1016,15 +1028,15 @@ device_proxy_unavailable_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     if((g_strcmp0(g_strstrip(ownSerialNo->str),sno) == 0))
     {
         g_message ("Self Device [%s][%s] not removing",sno,ownSerialNo->str);
-        g_free(sno);
+        g_free((gpointer)sno);
         return;
     }
     GUPnPServiceInfo *sproxy = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_MEDIA);
-    if (gupnp_service_proxy_get_subscribed(sproxy) == TRUE)
+    if (gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)sproxy) == TRUE)
     {
 	g_message("Removing notifications on %s", sno);
-	gupnp_service_proxy_set_subscribed(sproxy, FALSE);
-	gupnp_service_proxy_remove_notify(sproxy, "PlaybackUrl", on_last_change, NULL);
+	gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)sproxy, FALSE);
+	gupnp_service_proxy_remove_notify((GUPnPServiceProxy *)sproxy, "PlaybackUrl", on_last_change, NULL);
     }
     if (checkDeviceExists(sno, gwyPlayUrl))
     {
@@ -1033,7 +1045,7 @@ device_proxy_unavailable_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
             if (getSoupStatusFromUrl(gwyPlayUrl))
             {
                 g_message("Network Multicast issue for device %s",sno);
-                g_free(sno);
+                g_free((gpointer)sno);
                 g_object_unref(sproxy);
                 return;
             }
@@ -1056,7 +1068,7 @@ device_proxy_unavailable_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
             sendDiscoveryResult(disConf->outputJsonFile);
         }
     }
-    g_free(sno);
+    g_free((gpointer)sno);
     g_object_unref(sproxy);
 }
 
@@ -1140,7 +1152,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                     g_string_assign(gwydata->receiverid, receiverid);
                     g_free(receiverid);
 
-                    if(!process_gw_services(gwydata->sproxy, gwydata))
+                    if(!process_gw_services((GUPnPServiceProxy *)gwydata->sproxy, gwydata))
                     {
 		        free_gwydata(gwydata);
                         g_free(gwydata);
@@ -1165,23 +1177,23 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     }
     else if(g_strrstr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
     {
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add url notifications for %s", sno);
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy, "SystemIds", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy, "SystemIds", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add systemid notifications for %s", sno);
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy, "DnsConfig", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy, "DnsConfig", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add DNS notifications for %s", sno);
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy, "TimeZone", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy, "TimeZone", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add TimeZone notifications for %s", sno);
     }
     else
     {
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy, "DataGatewayIPaddress", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy, "DataGatewayIPaddress", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add DataGatewayIPaddress notifications for %s", sno);
     }
-    gupnp_service_proxy_set_subscribed(gwydata->sproxy, TRUE);
+    gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)gwydata->sproxy, TRUE);
 
-    if (gupnp_service_proxy_get_subscribed(gwydata->sproxy) == FALSE)
+    if (gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)gwydata->sproxy) == FALSE)
     {
         g_message("Failed to register for notifications on %s", sno);
         g_clear_object(&(gwydata->sproxy));
@@ -1243,7 +1255,7 @@ device_proxy_available_cb_client (GUPnPControlPoint *cp, GUPnPDeviceProxy *dprox
                     g_message("Client device receiver id is %s",receiverid);
                     g_string_assign(gwydata->receiverid, receiverid);
                     g_free(receiverid);
-                    if(!process_gw_services_identity(gwydata->sproxy_i, gwydata))
+                    if(!process_gw_services_identity((GUPnPServiceProxy *)gwydata->sproxy_i, gwydata))
                     {
                         free_gwydata(gwydata);
                         g_free(gwydata);
@@ -1256,7 +1268,7 @@ device_proxy_available_cb_client (GUPnPControlPoint *cp, GUPnPDeviceProxy *dprox
                     {
 			g_message("Received XI Identity service");
                     }
-		    if(!process_gw_services_media_config(gwydata->sproxy_m, gwydata))
+		    if(!process_gw_services_media_config((GUPnPServiceProxy *)gwydata->sproxy_m, gwydata))
 		    {
 			free_gwydata(gwydata);
 			g_free(gwydata);
@@ -1272,8 +1284,8 @@ device_proxy_available_cb_client (GUPnPControlPoint *cp, GUPnPDeviceProxy *dprox
 			if (update_gwylist(gwydata)==FALSE )
 			{
 			    g_message("Failed to update gw data into the list");
-			    g_critical("Unable to update the Client device-%s in the list",gwydata->serial_num);
-			    return FALSE;
+			    g_critical("Unable to update the Client device-%s in the list",(char*)gwydata->serial_num);
+			    return;
 			}
 		    }
                 }
@@ -1337,7 +1349,7 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 		    g_message("Gateway device receiver id is %s",receiverid);
 		    g_string_assign(gwydata->receiverid, receiverid);
 		    g_free(receiverid);
-		    if(!process_gw_services_identity(gwydata->sproxy_i, gwydata))
+		    if(!process_gw_services_identity((GUPnPServiceProxy *)gwydata->sproxy_i, gwydata))
 		    {
 			free_gwydata(gwydata);
 			g_free(gwydata);
@@ -1351,7 +1363,7 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 		    {
 			g_message("Received XI Identity service");
 		    }
-		    if(!process_gw_services_media_config(gwydata->sproxy_m, gwydata))
+		    if(!process_gw_services_media_config((GUPnPServiceProxy *)gwydata->sproxy_m, gwydata))
 		    {
 			free_gwydata(gwydata);
 			g_free(gwydata);
@@ -1365,7 +1377,7 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 		    {
 			g_message("Received XI Media Config service");
 		    }
-		    if(!process_gw_services_time_config(gwydata->sproxy_t, gwydata))
+		    if(!process_gw_services_time_config((GUPnPServiceProxy *)gwydata->sproxy_t, gwydata))
 		    {
 			free_gwydata(gwydata);
 			g_free(gwydata);
@@ -1379,7 +1391,7 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 		    {
 			g_message("Received XI Time Config service");
 		    }
-		    if(!process_gw_services_gateway_config(gwydata->sproxy_g, gwydata))
+		    if(!process_gw_services_gateway_config((GUPnPServiceProxy *)gwydata->sproxy_g, gwydata))
 		    {
 			free_gwydata(gwydata);
 			g_free(gwydata);
@@ -1393,7 +1405,7 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 		    {
 			g_message("Received XI Gateway Config service");
 		    }
-		    if(!process_gw_services_qam_config(gwydata->sproxy_q, gwydata))
+		    if(!process_gw_services_qam_config((GUPnPServiceProxy *)gwydata->sproxy_q, gwydata))
 		    {
 			free_gwydata(gwydata);
 			g_free(gwydata);
@@ -1410,8 +1422,8 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 			if (update_gwylist(gwydata)==FALSE )
 			{
 			    g_message("Failed to update gw data into the list\n");
-			    g_critical("Unable to update the gateway-%s in the device list",gwydata->serial_num);
-			    return FALSE;
+			    g_critical("Unable to update the gateway-%s in the device list",(char*)gwydata->serial_num);
+			    return;
 			}
 		    }
 		}
@@ -1426,28 +1438,28 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 	    g_message("Gateway UDN is NULL");
 	}
     }
-    if(strcasestr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
+    if(!strcasestr(g_strstrip(gwydata->devicetype->str),"XI") )
     {
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy_m, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy_m, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
 	   g_message("Failed to add url notifications for %s", sno);
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy_q, "SystemIds", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy_q, "SystemIds", G_TYPE_STRING, on_last_change, NULL) == FALSE)
 	   g_message("Failed to add systemid notifications for %s", sno);
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy_g, "DnsConfig", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy_g, "DnsConfig", G_TYPE_STRING, on_last_change, NULL) == FALSE)
 	   g_message("Failed to add DNS notifications for %s", sno);
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy_t, "TimeZone", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy_t, "TimeZone", G_TYPE_STRING, on_last_change, NULL) == FALSE)
 	   g_message("Failed to add TimeZone notifications for %s", sno);
-       if (gupnp_service_proxy_add_notify (gwydata->sproxy_q, "VideoBaseUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+       if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy_q, "VideoBaseUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
 	   g_message("Failed to add VideoBaseUrl notifications for %s", sno);
     }
-    gupnp_service_proxy_set_subscribed(gwydata->sproxy_m, TRUE);
-    gupnp_service_proxy_set_subscribed(gwydata->sproxy_t, TRUE);
-    gupnp_service_proxy_set_subscribed(gwydata->sproxy_g, TRUE);
-    gupnp_service_proxy_set_subscribed(gwydata->sproxy_q, TRUE);
+    gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)gwydata->sproxy_m, TRUE);
+    gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)gwydata->sproxy_t, TRUE);
+    gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)gwydata->sproxy_g, TRUE);
+    gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)gwydata->sproxy_q, TRUE);
 
-    if (gupnp_service_proxy_add_notify (gwydata->sproxy_m, "FogTsbUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
+    if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy_m, "FogTsbUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
 	   g_message("Failed to add FogTsbUrl notifications for %s", sno);
 
-    if ((gupnp_service_proxy_get_subscribed(gwydata->sproxy_m) == FALSE) && (gupnp_service_proxy_get_subscribed(gwydata->sproxy_t) == FALSE) && (gupnp_service_proxy_get_subscribed(gwydata->sproxy_g) == FALSE) && (gupnp_service_proxy_get_subscribed(gwydata->sproxy_q) == FALSE))
+    if ((gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)gwydata->sproxy_m) == FALSE) && (gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)gwydata->sproxy_t) == FALSE) && (gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)gwydata->sproxy_g) == FALSE) && (gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)gwydata->sproxy_q) == FALSE))
     {
 	g_message("Failed to register for notifications on %s", sno);
 	g_object_unref(gwydata->sproxy_m);
@@ -1468,20 +1480,20 @@ device_proxy_unavailable_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy
     if((g_strcmp0(g_strstrip(ownSerialNo->str),sno) == 0))
     {
         g_message ("Self Device [%s][%s] not removing",sno,ownSerialNo->str);
-        g_free(sno);
+        g_free((gpointer)sno);
         return;
     }
     if (delete_gwyitem(sno) == FALSE)
     {
 	g_message("%s found, but unable to delete it from list", sno);
-	return FALSE;
+	return;
     }
     else
     {
 	g_message("Deleted %s from list", sno);
 	sendDiscoveryResult(disConf->outputJsonFile);
     }
-    g_free(sno);
+    g_free((gpointer)sno);
 }
 
 static void
@@ -1501,7 +1513,7 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     {
 	deviceAddNo--;
 	g_message("Existing available_cb_bgw as SNO is present in list so no update of devices %s device no %u",sno,deviceAddNo);
-	g_free(sno);
+	g_free((gpointer)sno);
 	return;
     }
     GwyDeviceData *gwydata = g_new(GwyDeviceData,1);
@@ -1524,7 +1536,7 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                     g_message("Gateway device receiver id is %s",receiverid);
                     g_string_assign(gwydata->receiverid, receiverid);
                     g_free(receiverid);
-                    if(!process_gw_services_identity(gwydata->sproxy_i, gwydata))
+                    if(!process_gw_services_identity((GUPnPServiceProxy *)gwydata->sproxy_i, gwydata))
                     {
                         free_gwydata(gwydata);
                         g_free(gwydata);
@@ -1537,7 +1549,7 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                     {
                         g_message("Received XI Identity service");
                     }
-                    if(!process_gw_services_time_config(gwydata->sproxy_t, gwydata))
+                    if(!process_gw_services_time_config((GUPnPServiceProxy *)gwydata->sproxy_t, gwydata))
                     {
                         free_gwydata(gwydata);
                         g_free(gwydata);
@@ -1550,7 +1562,7 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                     {
                         g_message("Received XI Time Config service");
                     }
-                    if(!process_gw_services_gateway_config(gwydata->sproxy_g, gwydata))
+                    if(!process_gw_services_gateway_config((GUPnPServiceProxy *)gwydata->sproxy_g, gwydata))
                     {
                         free_gwydata(gwydata);
                         g_free(gwydata);
@@ -1566,8 +1578,8 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
                         if (update_gwylist(gwydata)==FALSE )
                         {
                             g_message("Failed to update gw data into the list\n");
-                            g_critical("Unable to update the gateway-%s in the device list",gwydata->serial_num);
-                            return FALSE;
+                            g_critical("Unable to update the gateway-%s in the device list",(char*)gwydata->serial_num);
+                            return;
                         }
                     }
                 }
@@ -1583,11 +1595,11 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
         }
     }
 
-    gupnp_service_proxy_set_subscribed(gwydata->sproxy_i, TRUE);
-    gupnp_service_proxy_set_subscribed(gwydata->sproxy_t, TRUE);
-    gupnp_service_proxy_set_subscribed(gwydata->sproxy_g, TRUE);
+    gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)gwydata->sproxy_i, TRUE);
+    gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)gwydata->sproxy_t, TRUE);
+    gupnp_service_proxy_set_subscribed((GUPnPServiceProxy *)gwydata->sproxy_g, TRUE);
 
-    if ((gupnp_service_proxy_get_subscribed(gwydata->sproxy_i) == FALSE) && (gupnp_service_proxy_get_subscribed(gwydata->sproxy_t) == FALSE) && (gupnp_service_proxy_get_subscribed(gwydata->sproxy_g) == FALSE))
+    if ((gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)gwydata->sproxy_i) == FALSE) && (gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)gwydata->sproxy_t) == FALSE) && (gupnp_service_proxy_get_subscribed((GUPnPServiceProxy *)gwydata->sproxy_g) == FALSE))
     {
 	    g_message("Failed to register for notifications on %s", sno);
 	    g_object_unref(gwydata->sproxy_i);
@@ -1609,14 +1621,12 @@ int main(int argc, char *argv[])
     gboolean bInterfaceReady=FALSE;
 
     GError* error = 0;
-    GThread *thread;
     GTlsInteraction *xupnp_tlsinteraction= NULL;
     mutex = g_mutex_new ();
     devMutex = g_mutex_new ();
     cond = g_cond_new ();
     logoutfile = NULL;
-    int ret=0;
-
+    
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
 #endif
@@ -1809,6 +1819,7 @@ int main(int argc, char *argv[])
 	    else {
 
 #ifdef BROADBAND
+                 int ret = 0;
                  //initialize the device protection white list
                  g_message("calling dp whitelistInit ");
                  ret = dp_wlistInit();
@@ -1867,7 +1878,7 @@ int main(int argc, char *argv[])
     if(!bSerialNum)
         getserialnum(ownSerialNo);
 
-    thread = g_thread_create(verify_devices, NULL,FALSE, NULL);
+    g_thread_create(verify_devices, NULL,FALSE, NULL);
     g_message("Started discovery on interface %s", disConf->discIf);
     g_main_loop_run (main_loop);
     g_main_loop_unref (main_loop);
@@ -1911,11 +1922,11 @@ gboolean processBooleanRequest(const GUPnPServiceProxy *sproxy ,const char * req
 		const char * responseFn,gboolean * result, gboolean isInCriticalPath)
 {
     GError *error = NULL;
-    GUPnPServiceProxyAction *action;
-
+    
 #ifdef GUPNP_1_2
+    GUPnPServiceProxyAction *action;
     action = gupnp_service_proxy_action_new (requestFn, NULL);
-    gupnp_service_proxy_call_action (sproxy, action, NULL, &error);
+    gupnp_service_proxy_call_action ((GUPnPServiceProxy *)sproxy, action, NULL, &error);
 
     if( NULL == error )
     {
@@ -1925,7 +1936,7 @@ gboolean processBooleanRequest(const GUPnPServiceProxy *sproxy ,const char * req
 
     }
 #else
-    gupnp_service_proxy_send_action (sproxy, requestFn, &error, NULL, responseFn, G_TYPE_BOOLEAN, result ,NULL);
+    gupnp_service_proxy_send_action ((GUPnPServiceProxy *)sproxy, requestFn, &error, NULL, responseFn, G_TYPE_BOOLEAN, result ,NULL);
 #endif
     if ( NULL != error ) //Didn't went well
     {
@@ -1956,11 +1967,11 @@ gboolean processStringRequest(const GUPnPServiceProxy *sproxy ,const char * requ
 		const char * responseFn, gchar ** result, gboolean isInCriticalPath)
 {
     GError *error = NULL;
-    GUPnPServiceProxyAction *action;
-
+    
 #ifdef GUPNP_1_2
+    GUPnPServiceProxyAction *action;
     action = gupnp_service_proxy_action_new (requestFn, NULL);
-    gupnp_service_proxy_call_action (sproxy, action, NULL, &error);
+    gupnp_service_proxy_call_action ((GUPnPServiceProxy *)sproxy, action, NULL, &error);
 
     if( NULL == error )
     {
@@ -1970,7 +1981,7 @@ gboolean processStringRequest(const GUPnPServiceProxy *sproxy ,const char * requ
 
     }
 #else
-    gupnp_service_proxy_send_action (sproxy, requestFn, &error,NULL, responseFn, G_TYPE_STRING, result ,NULL);
+    gupnp_service_proxy_send_action ((GUPnPServiceProxy *)sproxy, requestFn, &error,NULL, responseFn, G_TYPE_STRING, result ,NULL);
 #endif
     if ( NULL != error ) //Didn't went well
     {
@@ -1982,7 +1993,6 @@ gboolean processStringRequest(const GUPnPServiceProxy *sproxy ,const char * requ
         g_clear_error(&error);
         return FALSE;
     }
-
     return TRUE;
 }
 
@@ -2002,12 +2012,11 @@ gboolean processIntRequest(const GUPnPServiceProxy *sproxy ,const char * request
 		const char * responseFn,guint * result, gboolean isInCriticalPath)
 {
     GError *error = NULL;
-    GUPnPServiceProxyAction *action;
-
-
+    
 #ifdef GUPNP_1_2
+    GUPnPServiceProxyAction *action;
     action = gupnp_service_proxy_action_new (requestFn, NULL);
-    gupnp_service_proxy_call_action (sproxy, action, NULL, &error);
+    gupnp_service_proxy_call_action ((GUPnPServiceProxy *)sproxy, action, NULL, &error);
 
     if( NULL == error )
     {
@@ -2017,7 +2026,7 @@ gboolean processIntRequest(const GUPnPServiceProxy *sproxy ,const char * request
 
     }
 #else
-    gupnp_service_proxy_send_action (sproxy, requestFn , &error,NULL, responseFn, G_TYPE_INT, result ,NULL);
+    gupnp_service_proxy_send_action ((GUPnPServiceProxy *)sproxy, requestFn , &error,NULL, responseFn, G_TYPE_INT, result ,NULL);
 #endif
     if ( NULL != error ) //Didn't went well
     {
@@ -2029,7 +2038,6 @@ gboolean processIntRequest(const GUPnPServiceProxy *sproxy ,const char * request
         g_clear_error(&error);
         return FALSE;
     }
-
     return TRUE;
 }
 
@@ -2091,7 +2099,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     }    
     else
     {
-       gwData->isgateway = temp_b;
+       gwData->isgateway = (gboolean)temp_b;
     }
     if ( processStringRequest(sproxy, "GetRecvDevType", "RecvDevType" , &temp, FALSE))
     {
@@ -2127,7 +2135,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
         g_free(temp);
     }
 
-    if(strcasestr(g_strstrip(gwData->devicetype->str),"XI") == NULL )
+    if(!strcasestr(g_strstrip(gwData->devicetype->str),"XI") )
     {
         g_message("Discovered Device is XG or RNG Device ");
 	if (! processStringRequest(sproxy, "GetBaseUrl", "BaseUrl" , &temp, TRUE))
@@ -2228,7 +2236,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
         }
         else
         {
-	    gwData->requirestrm = temp_b;
+	    gwData->requirestrm = (gboolean)temp_b;
 	}
 
         if ( processStringRequest(sproxy, "GetHostMacAddress", "HostMacAddress" , &temp, FALSE))
@@ -2239,22 +2247,22 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 
         if ( processIntRequest( sproxy, "GetRawOffSet", "RawOffSet" , &temp_i, FALSE))
         {
-	    gwData->rawoffset = temp_i;
+	    gwData->rawoffset = (gint)temp_i;
 	}
 
         if ( processIntRequest( sproxy, "GetDSTSavings", "DSTSavings" , &temp_i, FALSE))
         {
-	    gwData->dstsavings = temp_i;
+	    gwData->dstsavings = (gint)temp_i;
 	}
 
         if ( processBooleanRequest( sproxy, "GetUsesDaylightTime", "UsesDaylightTime" , &temp_b, FALSE))
         {
-	    gwData->usesdaylighttime = temp_b;
+	    gwData->usesdaylighttime = (gboolean)temp_b;
 	}
 
         if ( processIntRequest( sproxy, "GetDSTOffset", "DSTOffset" , &temp_i, FALSE))
         {
-	    gwData->dstoffset = temp_i;
+	    gwData->dstoffset = (gint)temp_i;
 	}
     } // If discovered device is XG1 or RNG device 
     else
@@ -2409,7 +2417,6 @@ gboolean process_gw_services_media_config(GUPnPServiceProxy *sproxy, GwyDeviceDa
     /* Does not look elegant, but call all the actions one after one - Seems like
      UPnP service proxy does not provide a way to call all the actions in a list
     */
-    GError *error = NULL;
     gchar *temp=NULL;
 
     g_message("Entering into process_gw services_media_config ");
@@ -2418,7 +2425,8 @@ gboolean process_gw_services_media_config(GUPnPServiceProxy *sproxy, GwyDeviceDa
         g_string_assign(gwData->playbackurl, temp);
         g_free(temp);
     }
-/*    gupnp_service_proxy_send_action (sproxy, "GetFogTsbUrl",&error,NULL,"FogTsbUrl",G_TYPE_STRING, gwData->fogtsburl ,NULL);
+/*    GError *error = NULL;
+      gupnp_service_proxy_send_action (sproxy, "GetFogTsbUrl",&error,NULL,"FogTsbUrl",G_TYPE_STRING, gwData->fogtsburl ,NULL);
     if (error!=NULL)
     {
         g_message (" GetFogTsbUrl process gw services Error: %s\n", error->message);
@@ -2511,7 +2519,7 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
     }
     else
     {
-        gwData->isgateway = temp_b;
+        gwData->isgateway = (gboolean)temp_b;
     }
 
     if ( processStringRequest(sproxy, "GetIPSubNet", "IPSubNet" , &temp, FALSE))
@@ -2532,7 +2540,6 @@ gboolean process_gw_services_time_config(GUPnPServiceProxy *sproxy, GwyDeviceDat
     /* Does not look elegant, but call all the actions one after one - Seems like
      UPnP service proxy does not provide a way to call all the actions in a list
     */
-    GError *error = NULL;
     gchar *temp=NULL;
     guint temp_i=0;
     gboolean temp_b=FALSE;
@@ -2545,19 +2552,19 @@ gboolean process_gw_services_time_config(GUPnPServiceProxy *sproxy, GwyDeviceDat
     }
     if ( processIntRequest( sproxy, "GetRawOffSet", "RawOffSet" , &temp_i, FALSE))
     {
-        gwData->rawoffset = temp_i;
+        gwData->rawoffset = (gint)temp_i;
     }
     if ( processIntRequest( sproxy, "GetDSTSavings", "DSTSavings" , &temp_i, FALSE))
     {
-        gwData->dstsavings = temp_i;
+        gwData->dstsavings = (gint)temp_i;
     }
     if ( processBooleanRequest( sproxy, "GetUsesDaylightTime", "UsesDaylightTime" , &temp_b, FALSE ))
     {
-        gwData->usesdaylighttime = temp_b;
+        gwData->usesdaylighttime = (gboolean)temp_b;
     }
     if ( processIntRequest( sproxy, "GetDSTOffset", "DSTOffset" , &temp_i, FALSE))
     {
-        gwData->dstoffset = temp_i;
+        gwData->dstoffset = (gint)temp_i;
     }
     g_message("Exiting from process_gw_services_time_config ");
     return TRUE;
@@ -2568,7 +2575,6 @@ gboolean process_gw_services_qam_config(GUPnPServiceProxy *sproxy, GwyDeviceData
     /* Does not look elegant, but call all the actions one after one - Seems like
      UPnP service proxy does not provide a way to call all the actions in a list
     */
-    GError *error = NULL;
     gchar *temp=NULL;
     gboolean temp_b=FALSE;
 
@@ -2587,9 +2593,10 @@ gboolean process_gw_services_qam_config(GUPnPServiceProxy *sproxy, GwyDeviceData
     }
     if ( processBooleanRequest(sproxy, "GetRequiresTRM", "RequiresTRM" , &temp_b, TRUE))
     {
-        gwData->requirestrm = temp_b;
+        gwData->requirestrm = (gboolean)temp_b;
     }
-/*    gupnp_service_proxy_send_action (sproxy, "GetVideoBaseUrl", &error,NULL,"VideoBaseUrl",G_TYPE_STRING, gwData->videobaseurl,NULL);
+/*    GError *error = NULL;
+      gupnp_service_proxy_send_action (sproxy, "GetVideoBaseUrl", &error,NULL,"VideoBaseUrl",G_TYPE_STRING, gwData->videobaseurl,NULL);
     if (error!=NULL)
     {
         g_message (" GetVideoBaseUrl process gw services Error: %s\n", error->message);
@@ -2623,17 +2630,17 @@ gboolean replace_hn_with_local(GwyDeviceData* gwyData)
     char * tempStr = NULL;
      
     //g_print("replace: %s with %s\n", gwyData->gwyip->str, localHostIP);
-    tempStr = replace_string(gwyData->playbackurl->str, gwyData->gwyip->str, localHostIP);
+    tempStr = replace_string(gwyData->playbackurl->str, gwyData->gwyip->str, (char *)localHostIP);
     g_string_assign(gwyData->playbackurl, tempStr);
     free(tempStr);
     
    
-    tempStr =  replace_string(gwyData->baseurl->str, gwyData->gwyip->str, localHostIP);  
+    tempStr =  replace_string(gwyData->baseurl->str, gwyData->gwyip->str, (char *)localHostIP);  
     g_string_assign(gwyData->baseurl,tempStr);
     free(tempStr);
     
   
-    tempStr = replace_string(gwyData->basetrmurl->str, gwyData->gwyip->str, localHostIP);
+    tempStr = replace_string(gwyData->basetrmurl->str, gwyData->gwyip->str, (char *)localHostIP);
     g_string_assign(gwyData->basetrmurl,tempStr);
     free(tempStr);
     
@@ -2808,6 +2815,8 @@ gboolean update_gwylist(GwyDeviceData* gwydata)
             
                 g_message("Clearing the default gateway %s from route list", gwydata->gwyip->str);
             }
+#else
+            (void)(result); // this variable is unused if ENABLE_ROUTE is not defined.
 #endif
             if (delete_gwyitem(sno) == FALSE)
             {
@@ -2880,6 +2889,8 @@ gboolean update_gwylist(GwyDeviceData* gwydata)
                 }
             }
         }
+#else
+	(void)(ret); //variable unused
 #endif
         sendDiscoveryResult(disConf->outputJsonFile);
         if(xdevlistitem)
@@ -2997,7 +3008,6 @@ gboolean sendDiscoveryResult(const char* outfilename)
     gboolean firstXG2GwData=TRUE;
     const gchar v4ModeValue[]="ipv4";
     const gchar v6ModeValue[]="ipv6";
-    gboolean ipModeStateChanged=FALSE;
     gboolean isMediaClientConnected=FALSE;
 
     if(!bSerialNum)
@@ -3131,7 +3141,6 @@ gboolean sendDiscoveryResult(const char* outfilename)
                     if( g_strcmp0(ipMode->str,v4ModeValue) != 0 )
                     {
                         g_message("v4 mode changed");
-                        ipModeStateChanged=TRUE;
                         g_string_assign(ipMode,v4ModeValue);
                     }
                 }
@@ -3140,7 +3149,6 @@ gboolean sendDiscoveryResult(const char* outfilename)
                     if( g_strcmp0(ipMode->str,v6ModeValue) != 0 )
                     {
                         g_message("v6 mode changed");
-                        ipModeStateChanged=TRUE;
                         g_string_assign(ipMode,v6ModeValue);
                     }
                 }
@@ -3219,6 +3227,9 @@ gboolean sendDiscoveryResult(const char* outfilename)
             g_message("Failure in executing command via v_secure_system. ret val : %d\n", ret);
         }
     }
+#else
+    // isMediaClientConnected is unused if BROADBAND is not defined.
+    (void)(isMediaClientConnected);
 #endif
 
     return TRUE;
@@ -3238,10 +3249,10 @@ gboolean sendDiscoveryResult(const char* outfilename)
  */
 void* verify_devices()
 {
+/*
     guint lenPrevDevList = 0;
     guint lenCurDevList = 0;
     guint lenXdevList = 0;
-    guint checkMainLoopCounter=0;
 //workaround to remove device in second attempt -Start
     guint removeDeviceNo=0;
     guint counter=0;
@@ -3249,10 +3260,16 @@ void* verify_devices()
     guint removeDeviceNo1=0;
     guint counter1=0;
     guint preCounter1=0;
+*/
+    guint checkMainLoopCounter=0;
     guint sleepCounter=0;
+#ifdef CLIENT_XCAL_SERVER
     guint browserDisableEnableCounter=0;
+#endif
+#if !defined(BROADBAND)
     guint selfDiscoveryFailCount=0;
-//workaround to remove device in second attempt -Start
+#endif
+   //workaround to remove device in second attempt -Start
     usleep(XUPNP_RESCAN_INTERVAL);
     while(1)
     {
@@ -3473,7 +3490,7 @@ void* verify_devices()
 	{
 	    g_list_free(xdevlistDup);
 	}
-/*
+
                   //Find out newly discovered devices and add to cleaned up list
                 lenXdevList = g_list_length(xdevlist);
                 if (lenCurDevList > 0)
@@ -3568,6 +3585,8 @@ void delOldItemsFromList(gboolean bDeleteAll)
                         }
                         g_message("Clearing the default gateway %s from route list", gwdata->gwyip->str);
                     }
+#else
+		    (void)(ret); //variable not used outside ENABLE_ROUTE flag.
 #endif
                     g_mutex_lock(mutex);
                     deletedDeviceNo++;
@@ -3595,7 +3614,6 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
 {
     GwyDeviceData *gwdata = NULL;
     const char* updated_value;
-    int updated_value_int;
     gboolean bUpdateDiscoveryResult=FALSE;
     const char* udn = gupnp_service_info_get_udn(GUPNP_SERVICE_INFO(sproxy));
     g_message("Variable name is %s udn is %s", variable_name, udn);
@@ -3611,11 +3629,11 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
                 gwdata = xdevlistitem->data;
                 g_message("Found device: %s - Receiver id %s in the list, Updating %s",
                           gwdata->serial_num->str,gwdata->receiverid->str, variable_name);
-                if (g_strcmp0(g_strstrip(variable_name),"PlaybackUrl") == 0)
+                if (g_strcmp0(g_strstrip((gchar *)variable_name),"PlaybackUrl") == 0)
                 {
                     updated_value = g_value_get_string(value);
                     g_message("Updated value is %s ", updated_value);
-                    if(g_strcmp0(g_strstrip(updated_value),gwdata->playbackurl->str) != 0)
+                    if(g_strcmp0(g_strstrip((gchar *)updated_value),gwdata->playbackurl->str) != 0)
                     {
                         bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->playbackurl, updated_value);
@@ -3632,41 +3650,41 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
 
                 }
 
-                if (g_strcmp0(g_strstrip(variable_name),"SystemIds") == 0)
+                if (g_strcmp0(g_strstrip((gchar *)variable_name),"SystemIds") == 0)
                 {
                     updated_value = g_value_get_string(value);
                     g_message("Updated value is %s ", updated_value);
-                    if(g_strcmp0(g_strstrip(updated_value),gwdata->systemids->str) != 0)
+                    if(g_strcmp0(g_strstrip((gchar *)updated_value),gwdata->systemids->str) != 0)
                     {
                         bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->systemids, updated_value);
                     }
                 }
-                if (g_strcmp0(g_strstrip(variable_name),"DataGatewayIPaddress") == 0)
+                if (g_strcmp0(g_strstrip((gchar *)variable_name),"DataGatewayIPaddress") == 0)
                 {
                     updated_value = g_value_get_string(value);
                     g_message("Updated value of DataGatewayIPaddressis %s ", updated_value);
-                    if(g_strcmp0(g_strstrip(updated_value),gwdata->dataGatewayIPaddress->str) != 0)
+                    if(g_strcmp0(g_strstrip((gchar *)updated_value),gwdata->dataGatewayIPaddress->str) != 0)
                     {
                         bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->dataGatewayIPaddress, updated_value);
                     }
                 }
-                if (g_strcmp0(g_strstrip(variable_name),"DnsConfig") == 0)
+                if (g_strcmp0(g_strstrip((gchar *)variable_name),"DnsConfig") == 0)
                 {
                     updated_value = g_value_get_string(value);
                     g_message("Updated value is %s ", updated_value);
-                    if(g_strcmp0(g_strstrip(updated_value),gwdata->dnsconfig->str) != 0)
+                    if(g_strcmp0(g_strstrip((gchar *)updated_value),gwdata->dnsconfig->str) != 0)
                     {
                         bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->dnsconfig, updated_value);
                     }
                 }
-                if (g_strcmp0(g_strstrip(variable_name),"TimeZone") == 0)
+                if (g_strcmp0(g_strstrip((gchar *)variable_name),"TimeZone") == 0)
                 {
                     updated_value = g_value_get_string(value);
                     g_message("Updated value is %s ", updated_value);
-                    if(g_strcmp0(g_strstrip(updated_value),gwdata->dsgtimezone->str) != 0)
+                    if(g_strcmp0(g_strstrip((gchar *)updated_value),gwdata->dsgtimezone->str) != 0)
                     {
                         bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->dsgtimezone, updated_value);
@@ -3676,16 +3694,16 @@ static void on_last_change (GUPnPServiceProxy *sproxy, const char  *variable_nam
 #endif
                     }
                 }
-                if (g_strcmp0(g_strstrip(variable_name),"IPSubNet") == 0)
+                if (g_strcmp0(g_strstrip((gchar*)variable_name),"IPSubNet") == 0)
                 {
                     updated_value = g_value_get_string(value);
                     g_message("Updated value is %s ", updated_value);
-                    if(g_strcmp0(g_strstrip(updated_value),gwdata->ipSubNet->str) != 0)
+                    if(g_strcmp0(g_strstrip((gchar*)updated_value),gwdata->ipSubNet->str) != 0)
                     {
                         bUpdateDiscoveryResult=TRUE;
                         g_string_assign(gwdata->ipSubNet, updated_value);
                         if(updated_value && strlen(updated_value))
-                            addRouteToMocaBridge(updated_value);
+                            addRouteToMocaBridge((char*)updated_value);
                     }
                 }
                 //update_gwylist(gwdata);
@@ -3715,8 +3733,7 @@ gboolean readconffile(const char* configfile)
     GKeyFile *keyfile = NULL;
     GKeyFileFlags flags;
     GError *error = NULL;
-    gsize length;
-
+    
     if(configfile)
     {
 
@@ -3748,7 +3765,6 @@ gboolean readconffile(const char* configfile)
         disConf->discIf = g_key_file_get_string(keyfile, "Network","discIf", NULL);
         disConf->gwIf = g_key_file_get_string(keyfile, "Network","GwIf", NULL);
         disConf->GwPriority = g_key_file_get_integer(keyfile, "Network","GwPriority", NULL);
-        /*
         /*
         # Paths and names of all input data files
         [DataFiles]
@@ -3812,7 +3828,7 @@ gboolean getserialnum(GString* ownSerialNo)
     GError                  *error=NULL;
     gboolean                result = FALSE;
     gchar* udhcpcvendorfile = NULL;
-
+    
     result = g_file_get_contents ("//etc//udhcpc.vendor_specific", &udhcpcvendorfile, NULL, &error);
     if (result == FALSE) {
         g_message("Problem in reading /etc/udhcpcvendorfile file %s", error->message);
@@ -3922,7 +3938,7 @@ char *replace_string(char *src_string, char *sub_string, char *replace_string) {
     lenRepStr = strlen(replace_string);
 
     insert_str = src_string;
-    for (numOccurences = 0; tmp_str = strstr(insert_str, sub_string); ++numOccurences) {
+    for (numOccurences = 0; (tmp_str = strstr(insert_str, sub_string)); ++numOccurences) {
         insert_str = tmp_str + lenSubStr;
     }
 

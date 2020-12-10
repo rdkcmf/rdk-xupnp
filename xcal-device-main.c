@@ -229,7 +229,7 @@ void notify_value_change(const char* varname, const char* strvalue)
         g_value_init(&value, G_TYPE_STRING);
         g_value_set_static_string(&value, strvalue);
         g_message("Sending value change notification Name %s - Value: %s", varname, strvalue);
-        gupnp_service_notify_value(upnpService, varname, &value);
+        gupnp_service_notify_value((GUPnPService *)upnpService, varname, &value);
         //g_value_unset(&value);
     }
     return;
@@ -625,7 +625,7 @@ get_dstsavings_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
 G_MODULE_EXPORT void
 get_usesdaylighttime_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
-    getUsesDayLightTime(&usedaylightsavings);
+    getUsesDayLightTime((unsigned char *)&usedaylightsavings);
     gupnp_service_action_set (action,"UsesDaylightTime", G_TYPE_BOOLEAN, usedaylightsavings, NULL); 
     gupnp_service_action_return (action);
 }
@@ -716,7 +716,7 @@ get_isgateway_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer us
         else
             g_warning("Device Protection Not supported legacy Device");
     }
-    getIsGateway(&allowgwy);
+    getIsGateway((unsigned char *)&allowgwy);
     gupnp_service_action_set (action, "IsGateway", G_TYPE_BOOLEAN, allowgwy,  NULL);
     gupnp_service_action_return (action);
 }
@@ -733,7 +733,7 @@ get_isgateway_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer us
 G_MODULE_EXPORT void
 get_requirestrm_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
-    getRequiresTRM(&requiresTrm);
+    getRequiresTRM((unsigned char *)&requiresTrm);
     gupnp_service_action_set (action, "RequiresTRM", G_TYPE_BOOLEAN, requiresTrm, NULL);
     gupnp_service_action_return (action);
 }
@@ -829,7 +829,6 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
     gchar *clientMacAddr=NULL;
     gchar *clientIpAddr=NULL;
 #ifdef BROADBAND
-    char buf[128];
     int ret = 0;
 #endif
     /* Get the client account Id value */ 
@@ -1613,7 +1612,7 @@ main (int argc, char **argv)
         {
 	    g_message("Failed to get the Account Id");
         }
-        if(bcastMacaddress)
+        if(strlen(bcastMacaddress) != 0)
         {
             /* Coverity Fix CID:46884 DC.STRING_BUFFER */ 
             snprintf(uuid_new,sizeof(uuid_new),"uuid:%s",bcastMacaddress);

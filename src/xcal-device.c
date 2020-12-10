@@ -3134,7 +3134,7 @@ gboolean readconffile(const char* configfile)
     {
         if(error)
         {
-            g_error (error->message);
+            g_error ("%s\n", error->message);
 
             /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
             g_clear_error(&error);

@@ -41,6 +41,10 @@
 #define  _IARM_XDEVICE_NAME   "XDEVICE" /*!< Method to Get the Xdevice Info */
 #define MAX_DEBUG_MESSAGE 50
 
+#ifndef BOOL
+#define BOOL  unsigned char
+#endif
+
 typedef struct
 {
     gchar *bcastIf, *streamIf, *trmIf, *gwIf, *cvpIf, *ruiPath, *uriOverride, *hostMacIf;
@@ -91,6 +95,60 @@ void notify_timezone(void);
 gboolean getFogStatus(void);
 void getRouteData(void);
 
+BOOL getBaseUrl(char *outValue);
+BOOL getTrmUrl(char *outValue);
+BOOL getTuneReady();
+BOOL getPlaybackUrl(char *outValue);
+BOOL getGatewayIp(char *outValue);
+BOOL getGatewayIpv6(char *outValue);
+BOOL getGatewayStbIp(char *outValue);
+BOOL getIpv6Prefix(char *outValue);
+BOOL getHostMacAddress(char *outValue);
+BOOL getRecvDevType(char *outValue);
+BOOL getDeviceType(char *outValue);
+BOOL getBuildVersion(char *outValue);
+BOOL getDnsConfig(char *outValue);
+BOOL getSystemsIds(char *outValue);
+BOOL getRouteDataGateway(char *outValue);
+BOOL getIpSubnet(char *outValue);
+BOOL getIsuseGliDiagEnabled();
+BOOL getTimeZone(char *outValue);
+BOOL getRawOffSet(int *outValue);
+BOOL getDstSavings(int *outValue);
+BOOL getUsesDayLightTime(BOOL *outValue);
+BOOL getDeviceName(char *outValue);
+BOOL getDstOffset(int *outValue);
+BOOL getHosts(char *outValue);
+BOOL getIsGateway(BOOL *outValue);
+BOOL getRequiresTRM(BOOL *outValue);
+BOOL getRUIUrl(char *outValue);
+BOOL getModelNumber(char *outValue);
+BOOL getMake(char *outValue);
+BOOL getDevXmlPath(char *outValue);
+BOOL getDevXmlFile(char *outValue, int refactor);
+BOOL getUUID(char *outValue);
+BOOL getBcastPort(int *outValue);
+BOOL getSerialNum(char *outValue);
+BOOL getBcastIf(char *outValue);
+BOOL getBcastMacAddress(char *outValue);
+BOOL  getAccountId(char *outValue);
+BOOL getDevCertFile(char *outValue);
+BOOL getDevCertPath(char *outValue);
+BOOL getDevKeyFile(char *outValue);
+BOOL getDevKeyPath(char *outValue);
+BOOL getReceiverId(char *outValue);
+typedef void (*xupnpEventCallback)(const char*,const char*);
+void xupnpEventCallback_register(xupnpEventCallback callback_proc);
+BOOL xdeviceInit(char *devConfFile, char *devLogFile);
+int check_rfc();
+
+#ifndef CLIENT_XCAL_SERVER
+BOOL getDisableTuneReadyStatus();
+BOOL checkCVP2Enabled();
+BOOL getCVPIf(char *outValue);
+BOOL getCVPXmlFile(char *outValue);
+BOOL getCVPPort(int *outValue);
+#endif
 
 //fog
 

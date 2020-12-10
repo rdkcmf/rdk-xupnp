@@ -54,8 +54,6 @@ void xupnpEventCallback_register(xupnpEventCallback callback_proc);
 
 #if defined(USE_XUPNP_IARM_BUS)
 #define  _IARM_XDEVICE_NAME   "XDEVICE" /*!< Method to Get the Xdevice Info */
-static void _fogEventHandler(const char *owner, IARM_EventId_t eventId,
-                             void *data, size_t len);
 static void _sysEventHandler(const char *owner, IARM_EventId_t eventId,
                              void *data, size_t len);
 IARM_Result_t _SysModeChange(void *arg);
@@ -101,7 +99,6 @@ typedef enum _NetworkManager_Route_EventId_t {
 //#####################
 BOOL check_empty(char *str);
 BOOL check_null(char *str);
-static char *getStrValueFromMap(char *pszKey, int nPairs, STRING_MAP map[]);
 //######################
 
 BOOL xdeviceInit(char *devConfFile, char *devLogFile);
@@ -110,9 +107,7 @@ GString *getID( const gchar *id );
 gboolean updatesystemids(void);
 gboolean parsedevicename(void);
 gboolean parseipv6prefix(void);
-static int isVidiPathEnabled();
 gboolean readconffile(const char *configfile);
-static GString *get_uri_value();
 gboolean getetchosts(void);
 gboolean parseserialnum(GString *serial_num);
 unsigned long getidfromdiagfile(const gchar *diagparam,

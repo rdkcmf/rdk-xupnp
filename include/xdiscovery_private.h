@@ -20,6 +20,9 @@
 #ifndef XDISCOVERY_PRIVATE_H_
 #define XDISCOVERY_PRIVATE_H_
 
+#ifdef G_LOG_DOMAIN
+#undef G_LOG_DOMAIN
+#endif
 #define G_LOG_DOMAIN "XUPNP"
 #define XUPNP_RESCAN_INTERVAL 22000000
 #define XDISC_SERVICE "urn:schemas-upnp-org:service:DiscoverFriendlies:1"
@@ -213,5 +216,14 @@ void broadcastIPModeChange(void);
 
 
 gchar *getmacaddress(const gchar *ifname);
+
+gboolean delete_gwyitem(const char* serial_num);
+gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData);
+gboolean free_gwydata(GwyDeviceData* gwydata);
+gboolean process_gw_services_identity(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData);
+gboolean process_gw_services_media_config(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData);
+gboolean process_gw_services_time_config(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData);
+gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData);
+gboolean process_gw_services_qam_config(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData);
 
 #endif /* XDISCOVERY_PRIVATE_H_ */

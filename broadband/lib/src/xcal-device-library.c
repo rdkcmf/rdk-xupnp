@@ -30,6 +30,9 @@
 #include <stdbool.h>
 #include "xdevice-library-private.h"
 #include "syscfg/syscfg.h"
+#include <glib/gprintf.h>
+#include <glib/gstdio.h>
+#include <arpa/inet.h>
 
 #include <platform_hal.h>
 #include "rdk_safeclib.h"
@@ -104,6 +107,7 @@ gboolean ipv6Enabled = FALSE;
 char ipAddressBuffer[INET6_ADDRSTRLEN] = {0};
 char stbipAddressBuffer[INET6_ADDRSTRLEN] = {0};
 
+#if 0
 static struct TZStruct {
     char *inputTZ;
     char *javaTZ;
@@ -123,12 +127,16 @@ static struct TZStruct {
     {"EST05", "US/Eastern", EST_RAWOFFSET, 1},
     {"EST05EDT,M3.2.0,M11.1.0", "US/Eastern", EST_RAWOFFSET, 1}
 };
+#endif
+
 #define COMCAST_PARTNET_KEY "comcast"
 #define COX_PARTNET_KEY     "cox"
 
 ConfSettings *devConf;
 
 #define ARRAY_COUNT(array)  (sizeof(array)/sizeof(array[0]))
+
+#if 0
 static STRING_MAP partnerNameMap[] = {
     {COMCAST_PARTNET_KEY, "comcast"},
     {COX_PARTNET_KEY    , "cox"},
@@ -153,6 +161,7 @@ static STRING_MAP gatewayNameMap[] = {
     {COMCAST_PARTNET_KEY, "Comcast Gateway"},
     {COX_PARTNET_KEY    , "Cox Gateway"},
 };
+#endif
 
 xupnpEventCallback eventCallback;
 
@@ -247,7 +256,7 @@ void xupnp_logger (const gchar *log_domain, GLogLevelFlags log_level,
     if (logoutfile == NULL)
     {
         // Fall back to console output if unable to open file
-        g_print ("%s: g_time_val_to_iso8601(&timeval): %s\n", message);
+        g_print (" g_time_val_to_iso8601(&timeval): %s\n", message);
         return;
     }
 
@@ -263,12 +272,16 @@ void xupnp_logger (const gchar *log_domain, GLogLevelFlags log_level,
  * @return Returns partner ID.
  * @ingroup XUPNP_XCALDEV_FUNC
  */
+
+#if 0
 static char *getPartnerID()
 {
     return partner_id->str;
 }
+#endif
 
 #ifndef BROADBAND_SUPPORT
+#if 0
 /**
  * @brief This function is used to get the IP address based on IPv6 or IPv4 is enabled.
  *
@@ -359,6 +372,7 @@ static char *getGatewayName()
     return getStrValueFromMap(getPartnerID(), ARRAY_COUNT(gatewayNameMap),
                               gatewayNameMap);
 }
+#endif
 #endif
 /**
  * @brief This function is used to retrieve the information from the device file.
@@ -557,7 +571,7 @@ BOOL check_null(char *str)
 BOOL getBaseUrl(char *outValue)
 {
     BOOL result = FALSE;
-    if ((!check_null(gwyip)) || (!check_null(outValue)) || (!check_null(recv_id))) {
+    if ((!check_null((char *)gwyip)) || (!check_null(outValue)) || (!check_null((char *)recv_id))) {
     g_message("getBaseUrl : NULL string !");
         return result;
     }
@@ -686,7 +700,7 @@ BOOL getDeviceType(char *outValue)
 {
     BOOL result = FALSE;
     errno_t rc = -1;
-    if ((!check_null(devicetype)) || (!check_null(outValue))) {
+    if ((!check_null((char *)devicetype)) || (!check_null(outValue))) {
         g_message("getDeviceType : NULL string !");
         return result;
     }
@@ -766,12 +780,12 @@ BOOL getBcastMacAddress(char *outValue)
 BOOL getGatewayStbIp(char *outValue)
 {
     BOOL result = FALSE;
-    errno_t rc = -1;
-    if ((!check_null(gwystbip)) || (!check_null(outValue))) {
+    if ((!check_null((char *)gwystbip)) || (!check_null(outValue))) {
         g_message("getGatewayStbIp : NULL string !");
         return result;
     }
 #ifndef CLIENT_XCAL_SERVER
+    errno_t rc = -1;
     if (check_empty(gwystbip->str)) {
          rc = strcpy_s(outValue,MAX_OUTVALUE,gwystbip->str);
          if(rc == EOK)
@@ -799,12 +813,12 @@ BOOL getGatewayStbIp(char *outValue)
 BOOL getGatewayIpv6(char *outValue)
 {
     BOOL result = FALSE;
-    if ((!check_null(gwyipv6)) || (!check_null(outValue))) {
+    if ((!check_null((char *)gwyipv6)) || (!check_null(outValue))) {
         g_message("getGatewayIpv6 : NULL string !");
         return result;
     }
-    errno_t rc = -1;
 #ifndef CLIENT_XCAL_SERVER
+    errno_t rc = -1;
     if (check_empty(gwyipv6->str)) {
          rc = strcpy_s(outValue,MAX_OUTVALUE,gwyipv6->str);
          if(rc == EOK)
@@ -833,7 +847,7 @@ BOOL getGatewayIp(char *outValue)
 {
     BOOL result = FALSE;
     errno_t rc = -1;
-    if ((!check_null(gwyip)) || (!check_null(outValue))) {
+    if ((!check_null((char *)gwyip)) || (!check_null(outValue))) {
         g_message("getGatewayIp : NULL string !");
         return result;
     }
@@ -868,7 +882,7 @@ BOOL getRecvDevType(char *outValue)
 {
     BOOL result = FALSE;
      errno_t rc = -1;
-    if ((!check_null(recvdevtype)) || (!check_null(outValue))) {
+    if ((!check_null((char *)recvdevtype)) || (!check_null(outValue))) {
         g_message("getRecvDevType : NULL string !");
         return result;
     }
@@ -893,7 +907,7 @@ BOOL getBuildVersion(char *outValue)
 {
     BOOL result = FALSE;
     errno_t rc = -1;
-    if ((!check_null(buildversion)) || (!check_null(outValue))) {
+    if ((!check_null((char *)buildversion)) || (!check_null(outValue))) {
         g_message("getBuildVersion : NULL string !");
         return result;
     }
@@ -917,12 +931,12 @@ BOOL getBuildVersion(char *outValue)
 BOOL getHostMacAddress(char *outValue)
 {
     BOOL result = FALSE;
-    errno_t rc = -1;
-    if (!(check_null(hostmacaddress)) || (!check_null(outValue))) {
+    if (!(check_null((char *)hostmacaddress)) || (!check_null(outValue))) {
         g_message("getHostMacAddress : NULL string !");
         return result;
     }
 #ifndef CLIENT_XCAL_SERVER
+    errno_t rc = -1;
     if (devConf->hostMacIf != NULL) {
         const gchar *hostmac = (gchar *)getmacaddress(devConf->hostMacIf);
         if (hostmac) {
@@ -973,7 +987,7 @@ BOOL getSystemsIds(char *outValue)
 {
     BOOL result = FALSE;
     errno_t rc = -1;
-    if ((!check_null(systemids)) || (!check_null(outValue))) {
+    if ((!check_null((char *)systemids)) || (!check_null(outValue))) {
         g_message("getSystemsIds : NULL string !");
         return result;
     }
@@ -1073,7 +1087,7 @@ BOOL getIpSubnet(char *outValue)
     ret = v_secure_pclose(fp);
     if(ret != 0)
     {
-        g_message("Error in closing pipe ! \n", ret);
+        g_message("Error in closing pipe ! : %d \n", ret);
     }
     else {
         result = TRUE;
@@ -1085,7 +1099,7 @@ BOOL getTimeZone(char *outValue)
 {
     BOOL result = FALSE;
     errno_t rc = -1;
-    if ((!check_null(dsgtimezone)) || (!check_null(outValue))) {
+    if ((!check_null((char *)dsgtimezone)) || (!check_null(outValue))) {
         g_message("getTimeZone : NULL string !");
         return result;
     }
@@ -1163,7 +1177,7 @@ BOOL getBcastIp(char *outValue)
 {
     BOOL result = FALSE;
     errno_t rc = -1;
-    if ((!check_null(gwyip)) || (!check_null(outValue))) {
+    if ((!check_null((char *)gwyip)) || (!check_null(outValue))) {
         g_message("getBcastIp : NULL string !");
         return result;
     }
@@ -1264,7 +1278,7 @@ BOOL getPartnerId(char *outValue)
         g_message("getPartnerId : NULL string !");
         return result;
     } else {
-        if (check_null(partner_id) && check_empty(partner_id->str)) {
+        if (check_null((char *)partner_id) && check_empty(partner_id->str)) {
             rc = strcpy_s(outValue,MAX_OUTVALUE,partner_id->str);
             if(rc == EOK)
             {
@@ -1393,7 +1407,7 @@ BOOL getReceiverId(char *outValue)
     }
     if(getUidfromRecvId())
     {
-        if (check_null(recv_id) && check_empty(recv_id->str)) {
+        if (check_null((char *)recv_id) && check_empty(recv_id->str)) {
              rc = strcpy_s(outValue,MAX_OUTVALUE,recv_id->str);
              if(rc == EOK)
              {
@@ -1645,8 +1659,8 @@ BOOL getLogFile(char *outValue)
 BOOL getEstbMacAddr(char *outValue)
 {
     BOOL result = FALSE;
-    errno_t rc = -1;
 #ifndef CLIENT_XCAL_SERVER
+    errno_t rc = -1;
     if ((!check_null(devConf->hostMacIf)) || (!check_null(outValue))) {
         g_message("getEstbMacAddr : NULL string !");
         return result;
@@ -1776,8 +1790,6 @@ BOOL getMake(char *outValue)
 
 BOOL xdeviceInit(char *devConfFile, char *devLogFile)
 {
-    GError *error = NULL;
-
     syscfg_init();     // to get values from syscfg.db
     url = g_string_new(NULL);
     trmurl = g_string_new(NULL);
@@ -2082,6 +2094,7 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
         g_string_assign(gwystbip, stbipAddressBuffer);
     }
 #endif
+return TRUE;
 }
 
 /**
@@ -2339,12 +2352,16 @@ gboolean parseipv6prefix(void)
 * If /opt/vidiPathEnabled exists, VidiPath is enabled.
 */
 #define VIDIPATH_FLAG "/opt/vidiPathEnabled"
+
+#ifndef CLIENT_XCAL_SERVER
 static int isVidiPathEnabled()
 {
     if (access(VIDIPATH_FLAG, F_OK) == 0)
         return 1; //vidipath enabled
     return 0;     //vidipath not enabled
 }
+#endif
+
 /**
  * @brief This function is used to retrieve the data from the device configuration file
  *
@@ -2358,14 +2375,13 @@ gboolean readconffile(const char *configfile)
     GKeyFile *keyfile = NULL;
     GKeyFileFlags flags;
     GError *error = NULL;
-    gsize length;
     /* Create a new GKeyFile object and a bitwise list of flags. */
     keyfile = g_key_file_new ();
     flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
     /* Load the GKeyFile from keyfile.conf or return. */
     if (!g_key_file_load_from_file (keyfile, configfile, flags, &error)) {
         if (error) {
-            g_error (error->message);
+            g_error ("%s\n", error->message);
             /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
             g_clear_error(&error);
         }
@@ -2519,6 +2535,7 @@ gboolean readconffile(const char *configfile)
 /*-----------------------------
 * Initialize ipAddressBufferCVP2 with ip address at devConf->cvp2If
 */
+#if 0
 static void initIpAddressBufferCVP2( char *ipAddressBufferCVP2)
 {
     int result = getipaddress(devConf->cvpIf, ipAddressBufferCVP2, FALSE);
@@ -2531,7 +2548,7 @@ static void initIpAddressBufferCVP2( char *ipAddressBufferCVP2)
     g_message("ipaddress of the CVP2 interface %s\n", ipAddressBufferCVP2);
     g_string_assign(gwyipCVP2, ipAddressBufferCVP2);
 }
-
+#endif
 
 /*-----------------------------
 * Returns pointer to string of eSTBMAC without ':' chars
@@ -2565,7 +2582,7 @@ GString* get_eSTBMAC(void)
     return NULL;
 }
 
-
+#if 0
 /*-----------------------------
 * Creates a XML escaped string from input
 */
@@ -2737,6 +2754,7 @@ static GString *get_uri_value()
     //g_print("uri string after XML escape = %s\n",xmlescapedstr->str);
     return xmlescapedstr;
 }
+#endif
 
 /**
  * @brief This function is used to get the hosts IP information from hosts configuration file "/etc/hosts".
@@ -2838,8 +2856,8 @@ gboolean parseserialnum(GString *serial_num)
     }
     return result;
 #else
-    bool bRet;
-/*    IARM_Bus_MFRLib_GetSerializedData_Param_t param;
+/*    bool bRet;
+    IARM_Bus_MFRLib_GetSerializedData_Param_t param;
     IARM_Result_t iarmRet = IARM_RESULT_IPCCORE_FAIL;
     memset(&param, 0, sizeof(param));
     param.type = mfrSERIALIZED_TYPE_SERIALNUMBER;
@@ -2860,6 +2878,7 @@ gboolean parseserialnum(GString *serial_num)
     }
     return bRet;*/
 #endif
+    return TRUE;
 }
 
 /**
@@ -2999,8 +3018,8 @@ int getipaddress(const char *ifname, char *ipAddressBuffer,
                 tmpAddrPtr = &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
                 inet_ntop(AF_INET6, tmpAddrPtr, ipAddressBuffer, INET6_ADDRSTRLEN);
                 //if (strcmp(ifa->ifa_name,"eth0")==0trcmp0(g_strstrip(devConf->mocaMacIf),ifname) == 0)
-                if ((g_strcmp0(g_strstrip(devConf->bcastIf), ifname) == 0)
-                        && (IN6_IS_ADDR_LINKLOCAL(tmpAddrPtr))
+                if (((g_strcmp0(g_strstrip(devConf->bcastIf), ifname) == 0)
+                        && (IN6_IS_ADDR_LINKLOCAL(tmpAddrPtr)))
                         || ((!(IN6_IS_ADDR_LINKLOCAL(tmpAddrPtr)))
                             && (g_strcmp0(g_strstrip(devConf->hostMacIf), ifname) == 0))) {
                     found = 1;

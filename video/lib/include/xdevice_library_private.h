@@ -63,8 +63,6 @@ typedef struct _STRING_MAP {
 
 #if defined(USE_XUPNP_IARM_BUS)
 #define  _IARM_XDEVICE_NAME   "XDEVICE" /*!< Method to Get the Xdevice Info */
-static void _fogEventHandler(const char *owner, IARM_EventId_t eventId,
-                             void *data, size_t len);
 static void _sysEventHandler(const char *owner, IARM_EventId_t eventId,
                              void *data, size_t len);
 IARM_Result_t _SysModeChange(void *arg);
@@ -113,9 +111,7 @@ GString *getID( const gchar *id );
 BOOL updatesystemids(void);
 BOOL parsedevicename(void);
 BOOL parseipv6prefix(void);
-static int isVidiPathEnabled();
 BOOL readconffile(const char *configfile);
-static GString *get_uri_value();
 BOOL getetchosts(void);
 BOOL parseserialnum(GString *serial_num);
 unsigned long getidfromdiagfile(const gchar *diagparam,
@@ -126,9 +122,12 @@ int getipaddress(const char *ifname, char *ipAddressBuffer,gboolean ipv6Enabled)
 BOOL check_empty(char *str);
 BOOL check_null(char *str);
 void mapTimeZoneToJavaFormat(char *payload);
-static char *getStrValueFromMap(char *pszKey, int nPairs, STRING_MAP map[]);
 static char * getPartnerName();
+
+#if 0
 static char * getFriendlyName();
+#endif
+
 static char * getProductName();
 static char * getServiceName();
 static char * getServiceDescription();
