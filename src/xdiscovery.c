@@ -2044,7 +2044,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 	g_free(temp);
     }
 
-    if ( processStringRequest(sproxy, "GetBuildVersion", "GetBuildVersion" , &temp, FALSE))
+    if ( processStringRequest(sproxy, "GetBuildVersion", "BuildVersion" , &temp, FALSE))
     {
 	g_string_assign(gwData->buildversion,temp);
 	g_free(temp);
