@@ -27,7 +27,7 @@ EnvironmentFile=/etc/device.properties
 ExecStartPre=/bin/sh -c "/lib/rdk/start_upnp.sh "
 ExecStartPre=-/bin/sh -c 'if [ -f /etc/xupnp/dpcg-s.sh ];then /bin/sh /etc/xupnp/dpcg-s.sh;else exit 1; fi'
 ExecStart=/bin/sh -c "/usr/bin/xcal-device "
-ExecStop=/bin/sh -c 'echo "`date`: Stopping/Restarting Xcal-Device Service" >> ${PROCESS_RESTART_LOG}'
+ExecStopPost=/bin/sh -c 'echo "`date`: Stopping/Restarting Xcal-Device Service" >> ${PROCESS_RESTART_LOG}'
 Restart=always
 
 [Install]
