@@ -1851,7 +1851,7 @@ int main(int argc, char *argv[])
  */
 
 gboolean processBooleanRequest(const GUPnPServiceProxy *sproxy ,const char * requestFn, 
-		const char * responseFn,gboolean ** result, gboolean isInCriticalPath)
+		const char * responseFn,gboolean * result, gboolean isInCriticalPath)
 {
     GError *error = NULL;
     GUPnPServiceProxyAction *action;
@@ -1942,7 +1942,7 @@ gboolean processStringRequest(const GUPnPServiceProxy *sproxy ,const char * requ
  * @ingroup XUPNP_XDISCOVERY_FUNC
  */
 gboolean processIntRequest(const GUPnPServiceProxy *sproxy ,const char * requestFn, 
-		const char * responseFn,guint ** result, gboolean isInCriticalPath)
+		const char * responseFn,guint * result, gboolean isInCriticalPath)
 {
     GError *error = NULL;
     GUPnPServiceProxyAction *action;
@@ -2004,8 +2004,8 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     */
     GError *error = NULL;
     gchar *temp=NULL;
-    guint *temp_i=NULL;
-    gboolean *temp_b=NULL;
+    guint temp_i=0;
+    gboolean temp_b=FALSE;
     
   /* Coverity Fix CID: 21875 REVERSE_INULL */
     if(gwData == NULL)
@@ -2016,7 +2016,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 #ifdef GUPNP_1_2    
     GUPnPServiceProxyAction * action = gupnp_service_proxy_action_new ("GetIsGateway", "deviceProtection", G_TYPE_BOOLEAN, FALSE, "macAddr", G_TYPE_STRING, bcastmac, "ipAddr",G_TYPE_STRING, ipaddress,NULL);
     gupnp_service_proxy_call_action (sproxy, action, NULL, &error);
-    if (error!=NULL)
+    if (error == NULL)
     {
         gupnp_service_proxy_action_get_result (action,
                                                &error, "IsGateway", G_TYPE_BOOLEAN, &temp_b, NULL);
@@ -2248,9 +2248,9 @@ gboolean process_gw_services_identity(GUPnPServiceProxy *sproxy, GwyDeviceData* 
   DELIA-47613 : Need to use direct calls whenever there is an input parameter(s) to the service proxy call
 */
 #ifdef GUPNP_1_2
-    GUPnPServiceProxyAction * action = gupnp_service_proxy_action_new ("GetAccountId", &error,"SAccountId", G_TYPE_STRING, accountId, "macAddr", G_TYPE_STRING, bcastmac, "ipAddr",G_TYPE_STRING, ipaddress, NULL);
+    GUPnPServiceProxyAction * action = gupnp_service_proxy_action_new ("GetAccountId", "SAccountId", G_TYPE_STRING, accountId, "macAddr", G_TYPE_STRING, bcastmac, "ipAddr",G_TYPE_STRING, ipaddress, NULL);
     gupnp_service_proxy_call_action (sproxy, action, NULL, &error);
-    if (error!=NULL)
+    if (error == NULL)
     {
         gupnp_service_proxy_action_get_result (action,
                                                &error, "GAccountId", G_TYPE_STRING, &temp, NULL);
@@ -2378,7 +2378,7 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
     */
     GError *error = NULL;
     gchar *temp=NULL;
-    gboolean *temp_b=NULL;
+    gboolean temp_b=FALSE;
 
     g_message("Entering into process_gw_services_gateway_config ");
     if ( processStringRequest(sproxy, "GetDataGatewayIPaddress", "DataGatewayIPaddress" , &temp, FALSE))
@@ -2435,7 +2435,7 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
 #ifdef GUPNP_1_2    
     GUPnPServiceProxyAction * action = gupnp_service_proxy_action_new ("GetIsGateway", "deviceProtection", G_TYPE_BOOLEAN,TRUE, NULL);
     gupnp_service_proxy_call_action (sproxy, action, NULL, &error);
-    if (error!=NULL)
+    if (error == NULL)
     {
         gupnp_service_proxy_action_get_result (action,
                                                &error, "IsGateway", G_TYPE_BOOLEAN, &temp_b, NULL);
@@ -2483,8 +2483,8 @@ gboolean process_gw_services_time_config(GUPnPServiceProxy *sproxy, GwyDeviceDat
     */
     GError *error = NULL;
     gchar *temp=NULL;
-    guint *temp_i=NULL;
-    gboolean *temp_b=NULL;
+    guint temp_i=0;
+    gboolean temp_b=FALSE;
 
     g_message("Entering into process_gw_services_time_config ");
     if ( processStringRequest(sproxy, "GetTimeZone", "TimeZone" , &temp, FALSE))
@@ -2519,7 +2519,7 @@ gboolean process_gw_services_qam_config(GUPnPServiceProxy *sproxy, GwyDeviceData
     */
     GError *error = NULL;
     gchar *temp=NULL;
-    gboolean *temp_b=NULL;
+    gboolean temp_b=FALSE;
 
     g_message("Entering into process_gw_services_qam_config ");
 
