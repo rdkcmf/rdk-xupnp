@@ -2491,20 +2491,14 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
     {
         gwData->isgateway = temp_b;
     }
-     gupnp_service_proxy_send_action (sproxy, "GetIPSubNet",&error,NULL,"IPSubNet",G_TYPE_STRING, &temp ,NULL);
-     if (error!=NULL)
-     {
-        g_message ("GetIPSubNet process gw services Error: %s", error->message);
-        g_clear_error(&error);
-        //return FALSE;
-     }
-     else
-     {
-        g_string_assign(gwData->ipSubNet,temp);
+
+    if ( processStringRequest(sproxy, "GetIPSubNet", "IPSubNet" , &temp, FALSE))
+    {
+        g_string_assign(gwData->ipSubNet, temp);
         if(temp && strlen(temp))
             addRouteToMocaBridge(temp);
         g_free(temp);
-     }
+    }
 
     g_message("Exiting from process_gw_services_gateway_config ");
     return TRUE;

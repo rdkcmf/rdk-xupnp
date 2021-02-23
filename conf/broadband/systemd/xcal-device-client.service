@@ -18,7 +18,7 @@
 ##########################################################################
 [Unit]
 Description=A daemon that creates a device
-After=network-online.target
+After=CcspPandMSsp.service network-online.target
 
 [Service]
 SyslogIdentifier="xcal-device"
