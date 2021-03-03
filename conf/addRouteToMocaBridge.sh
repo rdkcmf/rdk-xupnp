@@ -11,7 +11,10 @@ getESTBInterfaceName()
    if [ -f /tmp/wifi-on ]; then
       interface=`getWiFiInterface`
    else
-      interface=`getMoCAInterface`
+      interface=$MOCA_INTERFACE
+      if [ ! "$interface" ]; then
+                interface=eth1
+      fi
    fi
    echo ${interface}
 }
