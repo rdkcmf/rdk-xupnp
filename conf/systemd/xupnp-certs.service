@@ -23,7 +23,7 @@ After=rfc-config.service
 [Service]
 Type=oneshot
 SyslogIdentifier="xupnp-cert"
-ExecStart=/bin/sh -c "/etc/xupnp/dpcg-s.sh"
+ExecStart=/bin/sh -c "/etc/Xupnp/dpcg-s.sh"
 RemainAfterExit=yes
 
 [Install]

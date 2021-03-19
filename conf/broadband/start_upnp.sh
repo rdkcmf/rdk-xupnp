@@ -194,8 +194,8 @@ else
         fi
 fi
 
-if [ -f /etc/xupnp/dpcg-s.sh ]; then
-    sh /etc/xupnp/dpcg-s.sh
+if [ -f /etc/Xupnp/dpcg-s.sh ]; then
+    sh /etc/Xupnp/dpcg-s.sh
 fi
 start_upnp=`syscfg get start_upnp_service`
 if [ "$start_upnp" == "true" ]; then
