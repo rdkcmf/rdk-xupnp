@@ -88,4 +88,6 @@ endif
 endif
 xdiscovery_SOURCES = xdiscovery.c
 
-
+if WITH_GTEST_SUPPORT
+SUBDIRS += test
+endif
