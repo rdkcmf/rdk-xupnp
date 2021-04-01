@@ -75,6 +75,19 @@ AC_ARG_ENABLE([version0.2],
                 esac
               ],
               [echo "version 0.2 is disabled"])
+AC_ARG_ENABLE([version0.2-dfl],
+              AS_HELP_STRING([--enable-version0.2-dfl],[enable 0.2 versions of   gupnp and gssdp version for dunfell build (default is no)]),
+              [
+                case "${enableval}" in
+                 yes) GSSDP_VER="gssdp-1.2"
+		      GUPNP_VERSION=GUPNP_0_19
+		      PKG_CHECK_MODULES([LIBGSSDP], [gssdp-1.2 >= 1.2.2])
+                      PKG_CHECK_MODULES([GUPNP], [gupnp-1.0 >= 0.19.4]);;
+                 no)  echo "0.2 version dfl not enabled";;
+                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-version0.2-dfl]) ;;
+                esac
+              ],
+              [echo "version 0.2 dfl is disabled"])
 AC_ARG_ENABLE([legacy],
               AS_HELP_STRING([--enable-legacy],[enable 0.14 versions of   gupnp and gssdp version (default is no)]),
               [
