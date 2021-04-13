@@ -3805,9 +3805,11 @@ gboolean getserialnum(GString* ownSerialNo)
     return result;
 #elif BROADBAND
     gboolean result = FALSE;
-    if ( platform_hal_GetSerialNumber(ownSerialNo->str) == 0)
+    char serialNumber[50] = {0};
+    if ( platform_hal_GetSerialNumber(serialNumber) == 0)
     {
-        g_message("serialNumber returned from hal:%s", ownSerialNo->str);
+        g_message("serialNumber returned from hal:%s", serialNumber);
+        g_string_assign(ownSerialNo, serialNumber);
         result = TRUE;
         bSerialNum=TRUE;
     }
