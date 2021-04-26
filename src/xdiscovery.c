@@ -74,6 +74,10 @@ static int rfc_enabled ;
 #define RESTART_XDISCOVERY_FILE      "/tmp/restartedXdiscovery"
 #endif
 
+#ifdef BROADBAND
+#define WEBGUI_VIDEO_ANAL_FILE       "/tmp/videoanalytic_started"
+#endif
+
 static GMainLoop *main_loop;
 gboolean checkDevAddInProgress=FALSE;
 #define WAIT_TIME_SEC 5
@@ -2981,6 +2985,7 @@ gboolean sendDiscoveryResult(const char* outfilename)
     const gchar v4ModeValue[]="ipv4";
     const gchar v6ModeValue[]="ipv6";
     gboolean ipModeStateChanged=FALSE;
+    gboolean isMediaClientConnected=FALSE;
 
     if(!bSerialNum)
     {
@@ -3181,6 +3186,7 @@ gboolean sendDiscoveryResult(const char* outfilename)
 #endif
     //End - IARM Update
 
+
     if (g_file_set_contents(outfilename, localOutputContents->str, -1, NULL)==FALSE)
     {
         g_string_free(localOutputContents,TRUE);
@@ -3188,8 +3194,21 @@ gboolean sendDiscoveryResult(const char* outfilename)
         g_critical("Problem in updating the file contents");
         return FALSE;
     } else {
+        /* Flag to set if media client is discovered */
+        if (strstr(localOutputContents->str, "mediaclient") != NULL)
+          isMediaClientConnected = TRUE;
         g_string_free(localOutputContents,TRUE);
     }
+
+#ifdef BROADBAND
+    // Restart webgui.sh to listen on video analytics port if not listesting and
+    // mediaclient is connected after webgui process up
+    if ((access(WEBGUI_VIDEO_ANAL_FILE, F_OK) == -1) && (isMediaClientConnected == TRUE))
+    {
+        g_message("Open Video Analytic port if mediaclient is connected\n");
+        system ("sh /etc/webgui.sh &");
+    }
+#endif
 
     return TRUE;
 }
