@@ -33,6 +33,7 @@
 
 #include <platform_hal.h>
 #include "rdk_safeclib.h"
+#include "secure_wrapper.h"
 
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 46
@@ -1049,39 +1050,34 @@ gboolean gettimezone(void)
 BOOL getIpSubnet(char *outValue)
 {
     BOOL result = FALSE;
-    errno_t rc = -1;
+    int ret = 0;
     if (!check_null(outValue)) {
         g_message("getIpSubnet : NULL string !");
         return result;
     }
     FILE *fp = NULL;
-    char buf[256] = {0};
-    char subnetOutput[64] = {0};
-
-
-    snprintf(buf, sizeof(buf), "ip -4 route show dev %s | grep -v \"%s\" | grep src | awk '{print $1}'",PRIVATE_LAN_BRIDGE,LINK_LOCAL_ADDR);
-
-    if(!(fp = popen(buf, "r")))
+  
+    if(!(fp = v_secure_popen("r", "ip -4 route show dev "PRIVATE_LAN_BRIDGE " | grep -v "LINK_LOCAL_ADDR " | grep src | awk '{print $1}'")))
     {
            return result;
     }
 
-    while(fgets(subnetOutput, sizeof(subnetOutput), fp)!=NULL)
+    while(fgets(outValue, sizeof(MAX_OUTVALUE), fp)!=NULL)
     {
-        subnetOutput[strlen(subnetOutput) - 1] = '\0';
+        size_t len = strlen(outValue);
+        if (len > 0 && outValue[len-1] == '\n') {
+            outValue[len-1] = '\0';
+        }
     }
 
-    rc = strcpy_s(outValue,MAX_OUTVALUE, subnetOutput);
-    if(rc == EOK)
+    ret = v_secure_pclose(fp);
+    if(ret != 0)
     {
+        g_message("Error in closing pipe ! \n", ret);
+    }
+    else {
         result = TRUE;
     }
-    else
-    {
-        ERR_CHK(rc);
-    }
-    pclose(fp);
-    fp = NULL;
     return result;
 }
 

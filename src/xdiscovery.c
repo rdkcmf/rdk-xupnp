@@ -35,6 +35,7 @@
 #include <signal.h>
 #include "xdiscovery.h"
 #include "xdiscovery_private.h"
+#include "secure_wrapper.h"
 #ifdef INCLUDE_BREAKPAD
 #include "breakpad_wrapper.h"
 #endif
@@ -426,9 +427,11 @@ void dpnode_delete(long ipaddr, char *macaddr)
 
 static void addRouteToMocaBridge(char *subnetip)
 {
-    char sysCmd[100];
-    snprintf (sysCmd, 100, "sh /etc/Xupnp/addRouteToMocaBridge.sh %s &",subnetip );
-    system(sysCmd);
+    int ret = 0;
+    ret = v_secure_system("/etc/Xupnp/addRouteToMocaBridge.sh %s &",subnetip );
+    if(ret != 0) {
+        g_message("Failure in executing command via v_secure_system. ret val : %d \n", ret);
+    } 
 }
 
 static void
@@ -2779,8 +2782,8 @@ gboolean update_gwylist(GwyDeviceData* gwydata)
 {
     char* sno = gwydata->serial_num->str;
     gchar* gwipaddr = gwydata->gwyip->str;
-#ifdef BROADBAND
     int ret=0;
+#ifdef BROADBAND
     dp_wlist_ss_t wstatus;
     struct in_addr x_r;
 #endif
@@ -2797,10 +2800,12 @@ gboolean update_gwylist(GwyDeviceData* gwydata)
             if ((disConf->enableGwSetup == TRUE) && (gwydata->isRouteSet) && (result != 0))
             {
                 g_message("***** stored device gwip = %s new device gwip = %s result = %d sno = %s *****",(((GwyDeviceData *)xdevlistitem->data)->gwyip->str),g_strstrip(gwipaddr),result,sno);
-                char command[128];
-                //sprintf(command, "route del default gw %s", gwdata->gwyip->str);
-                sprintf(command, "route del default gw %s", gwydata->gwyip->str);
-                system(command);
+                
+                ret = v_secure_system("route del default gw %s", gwydata->gwyip->str);
+                if(ret != 0) {
+                    g_message("Failure in executing v_secure_system. ret val: %d \n", ret);
+                }
+            
                 g_message("Clearing the default gateway %s from route list", gwydata->gwyip->str);
             }
 #endif
@@ -3205,10 +3210,14 @@ gboolean sendDiscoveryResult(const char* outfilename)
 #ifdef BROADBAND
     // Restart webgui.sh to listen on video analytics port if not listesting and
     // mediaclient is connected after webgui process up
+    int ret = 0;
     if ((access(WEBGUI_VIDEO_ANAL_FILE, F_OK) == -1) && (isMediaClientConnected == TRUE))
     {
         g_message("Open Video Analytic port if mediaclient is connected\n");
-        system ("sh /etc/webgui.sh &");
+        ret = v_secure_system ("/etc/webgui.sh &");
+        if(ret != 0) {
+            g_message("Failure in executing command via v_secure_system. ret val : %d\n", ret);
+        }
     }
 #endif
 
@@ -3531,6 +3540,7 @@ void delOldItemsFromList(gboolean bDeleteAll)
     guint lenXDevList = 0;
     guint deletedDeviceNo=0;
     lenXDevList = g_list_length(xdevlist);
+    int ret = 0;
     //g_message("Length of the list before deletion is %u", lenXDevList);
     if (lenXDevList > 0)
     {
@@ -3552,9 +3562,10 @@ void delOldItemsFromList(gboolean bDeleteAll)
 #ifdef ENABLE_ROUTE
                     if ((disConf->enableGwSetup == TRUE) && (gwdata->isRouteSet) && checkvalidip(gwdata->gwyip->str))
                     {
-                        char command[128];
-                        sprintf(command, "route del default gw %s", gwdata->gwyip->str);
-                        system(command);
+                        ret = v_secure_system("route del default gw %s", gwdata->gwyip->str);
+                        if(ret != 0) {
+                            g_message("Failure in executing command via v_secure_system. ret val : %d \n", ret);
+                        }
                         g_message("Clearing the default gateway %s from route list", gwdata->gwyip->str);
                     }
 #endif

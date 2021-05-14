@@ -27,7 +27,7 @@
 #include <libxml/parser.h>
 
 #include <string.h>
-
+#include "secure_wrapper.h"
 #include "xdevice.h"
 #ifdef INCLUDE_BREAKPAD
 #include "breakpad_wrapper.h"
@@ -830,6 +830,7 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
     gchar *clientIpAddr=NULL;
 #ifdef BROADBAND
     char buf[128];
+    int ret = 0;
 #endif
     /* Get the client account Id value */ 
     gupnp_service_action_get (action, "SAccountId", G_TYPE_STRING, &clientAccountId, NULL);
@@ -841,7 +842,11 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
        g_warning("Client connection account ID same : %s,%s,%s,%s" , accountId,clientAccountId,clientMacAddr,clientIpAddr);
 #ifdef BROADBAND
         // add whitelist
-       snprintf(buf, sizeof(buf), "/usr/ccsp/moca/moca_whitelist_ctl.sh add %s", clientIpAddr);
+       g_warning("/usr/ccsp/moca/moca_whitelist_ctl.sh add %s",clientIpAddr);
+       ret = v_secure_system("/usr/ccsp/moca/moca_whitelist_ctl.sh add %s", clientIpAddr);
+       if(ret != 0) {
+           g_warning("Failure in executing command via v_secure_system. ret:[%d] ;\n", ret);
+       }
 #endif
        gupnp_service_action_return (action);
     }
@@ -852,7 +857,11 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
        // Disconnect soup session TBD.
        g_warning("Client connection account ID mismatch found : %s,%s,%s,%s" , accountId,clientAccountId,clientMacAddr,clientIpAddr);
 #ifdef BROADBAND
-       snprintf(buf, sizeof(buf), "/usr/ccsp/moca/moca_whitelist_ctl.sh del %s", clientIpAddr);
+       g_warning("/usr/ccsp/moca/moca_whitelist_ctl.sh del %s", clientIpAddr);
+       ret = v_secure_system("/usr/ccsp/moca/moca_whitelist_ctl.sh del %s", clientIpAddr);
+       if(ret != 0) {
+           g_warning("Failure in executing command via v_secure_system. ret:[%d] ;\n", ret);
+       }
 #endif
        //msg = gupnp_service_action_get_message(action);
        gupnp_service_action_return (action);
@@ -861,10 +870,6 @@ get_account_id_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
        //g_warning("service action aborting session "); 
        //gupnp_service_action_abort_session(service);
     }
-#ifdef BROADBAND
-    g_warning("system(%s)", buf);
-    system(buf);
-#endif
     //g_warning("get_account_id_cb exit "); 
 }
 
