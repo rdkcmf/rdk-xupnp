@@ -1766,7 +1766,6 @@ int main(int argc, char *argv[])
 	//g_print("IARM init failure");
 	g_critical("XUPNP IARM init failed");
     }
-    broadcastIPModeChange();
 #endif
     //context = gupnp_context_new (main_context, host_ip, host_port, NULL);
     gupnp_context_set_subscription_timeout(context, 0);
@@ -3141,12 +3140,6 @@ gboolean sendDiscoveryResult(const char* outfilename)
                     }
                 }
 
-                if (ipModeStateChanged == TRUE)
-                {
-#if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
-                    broadcastIPModeChange();
-#endif
-                }
 
 #ifdef USE_XUPNP_TZ_UPDATE
                 if (g_strcmp0(g_strstrip(gwdata->dsgtimezone->str),"null") != 0)
