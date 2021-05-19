@@ -1696,10 +1696,26 @@ int main(int argc, char *argv[])
 	    }
 	    else
 	    {
-		g_message("Could not locate the ipaddress of the broadcast interface %s continue with next ", g_strstrip(tokens[loopvar]));
-		bInterfaceReady=FALSE;
+		guint retries=3;
+		int ipaddr = 0;
+		for (retries=3; retries>0; retries--) {
+		    sleep(1); //sleep for every retries
+		    ipaddr = getipaddress(g_strstrip(tokens[loopvar]),ipaddress,ipv6Enabled);
+		    if (ipaddr) {
+			g_message("\n **Got Ip address for interface = %s with retries = %d ipaddr = %s **",g_strstrip(tokens[loopvar]),retries,ipaddress);
+			g_stpcpy(disConf->discIf,g_strstrip(tokens[loopvar]));
+			g_stpcpy(disConf->gwIf,g_strstrip(tokens[loopvar]));
+			bInterfaceReady=TRUE;
+			break; //Exiting Inner for loop
+		    }
+		}
+		if (!ipaddr) {
+		    g_message("Could not locate the ipaddress of the broadcast interface %s continue with next ", g_strstrip(tokens[loopvar]));
+		    bInterfaceReady=FALSE;
+		}
+		else
+		    break; //Exiting outer for loop
 	    }
-
 	}
     }
     g_strfreev(tokens);
