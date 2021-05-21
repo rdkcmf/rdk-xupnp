@@ -427,7 +427,7 @@ void dpnode_delete(long ipaddr, char *macaddr)
 static void addRouteToMocaBridge(char *subnetip)
 {
     char sysCmd[100];
-    snprintf (sysCmd, 100, "sh /etc/xupnp/addRouteToMocaBridge.sh %s &",subnetip );
+    snprintf (sysCmd, 100, "sh /etc/Xupnp/addRouteToMocaBridge.sh %s &",subnetip );
     system(sysCmd);
 }
 
