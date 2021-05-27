@@ -692,6 +692,9 @@ void getSystemValues(void)
 static void _sysEventHandler(const char *owner, IARM_EventId_t eventId,
                              void *data, size_t len)
 {
+    if (data == NULL)
+	return ;
+   
     /* Only handle state events */
     errno_t rc       = -1;
     int     ind      = -1;
@@ -710,131 +713,155 @@ static void _sysEventHandler(const char *owner, IARM_EventId_t eventId,
         sysEventData->data.systemStates.stateId;
     switch (stateId) {
     case IARM_BUS_SYSMGR_SYSSTATE_TUNEREADY:
-        if (tune_ready != sysEventData->data.systemStates.state) {
-            tune_ready = sysEventData->data.systemStates.state;
-            if (devConf->rmfCrshSupp == TRUE) {
-                if (tune_ready == TRUE) {
+	if ( sysEventData != NULL)
+	{
+        	if (tune_ready != sysEventData->data.systemStates.state) {
+            	tune_ready = sysEventData->data.systemStates.state;
+            	if (devConf->rmfCrshSupp == TRUE) {
+                	if (tune_ready == TRUE) {
 //                    gupnp_root_device_set_available (dev, TRUE);
-                    g_message(" Start publishing %d ", tune_ready);
-                    if (devConf->useGliDiag == FALSE) {
-                        updatesystemids();
-			(*eventCallback)("SystemIds", systemids->str);
-                    }
+                    	g_message(" Start publishing %d ", tune_ready);
+                    	if (devConf->useGliDiag == FALSE) {
+                        	updatesystemids();
+				(*eventCallback)("SystemIds", systemids->str);
+                   	}
 		      (*eventCallback)("PlaybackUrl", playbackurl->str);
                 } else {
 //                    gupnp_root_device_set_available (dev, FALSE);
                     g_message(" Stop publishing %d ", tune_ready);
                 }
-            } else {
-                if (devConf->useGliDiag == FALSE) {
-                    updatesystemids();
-			(*eventCallback)("SystemIds", systemids->str);
-                }
-		(*eventCallback)("PlaybackUrl", playbackurl->str);
-            }
-            g_message("Tune Ready Update Received: %d", tune_ready);
-        }
+            	} else {
+                	if (devConf->useGliDiag == FALSE) {
+                    		updatesystemids();
+				(*eventCallback)("SystemIds", systemids->str);
+                	}
+			(*eventCallback)("PlaybackUrl", playbackurl->str);
+            	}
+            	g_message("Tune Ready Update Received: %d", tune_ready);
+        	}
+	}
         break;
     case IARM_BUS_SYSMGR_SYSSTATE_STB_SERIAL_NO:
-        g_string_assign(serial_num, sysEventData->data.systemStates.payload);
-        g_message("Serial Number Update Received: %s", serial_num->str);
+	if(sysEventData != NULL)
+	{
+        	g_string_assign(serial_num, sysEventData->data.systemStates.payload);
+        	g_message("Serial Number Update Received: %s", serial_num->str);
+	}
         break;
     case IARM_BUS_SYSMGR_SYSSTATE_CHANNELMAP:
-        g_message("Received channel map update");
-        if (sysEventData->data.systemStates.error) {
-            channelmap_id = 0;
+	if(sysEventData != NULL)
+	{
+        	g_message("Received channel map update");
+	        if (sysEventData->data.systemStates.error) {
+        	    channelmap_id = 0;
             //g_string_assign(channelmap_id, NULL);
-        } else if (sysEventData->data.systemStates.state == 2) {
-            if ((strlen(sysEventData->data.systemStates.payload) > 0) &&
-                    is_num(sysEventData->data.systemStates.payload) == TRUE) {
-                channelmap_id = strtoul(sysEventData->data.systemStates.payload, NULL, 10);
+        	} else if (sysEventData->data.systemStates.state == 2) {
+            	if ((strlen(sysEventData->data.systemStates.payload) > 0) &&
+                	is_num(sysEventData->data.systemStates.payload) == TRUE) {
+                	channelmap_id = strtoul(sysEventData->data.systemStates.payload, NULL, 10);
                 //g_string_assign(channelmap_id, sysEventData->data.systemStates.payload);
                 //g_message("Received channel map id: %s", channelmap_id->str);
-                g_message("Received channel map id: %lu", channelmap_id);
-                updatesystemids();
-		(*eventCallback)("SystemIds", systemids->str);
-            }
-        }
+                	g_message("Received channel map id: %lu", channelmap_id);
+                	updatesystemids();
+			(*eventCallback)("SystemIds", systemids->str);
+            	}
+        	}
+	}
         break;
     case IARM_BUS_SYSMGR_SYSSTATE_DAC_ID:
         g_message("Received controller id update");
-        if (sysEventData->data.systemStates.error) {
-            dac_id = 0;
+	if(sysEventData != NULL)
+	{
+        	if (sysEventData->data.systemStates.error) {
+            	dac_id = 0;
             //g_string_assign(dac_id, NULL);
-        } else if (sysEventData->data.systemStates.state == 2) {
-            if ((strlen(sysEventData->data.systemStates.payload) > 0) &&
+        	} else if (sysEventData->data.systemStates.state == 2) {
+            	if ((strlen(sysEventData->data.systemStates.payload) > 0) &&
                     (is_num(sysEventData->data.systemStates.payload) == TRUE)) {
-                dac_id = strtoul(sysEventData->data.systemStates.payload, NULL, 10);
+                	dac_id = strtoul(sysEventData->data.systemStates.payload, NULL, 10);
                 //g_string_assign(dac_id, sysEventData->data.systemStates.payload);
                 //g_message("Received controller id: %s", dac_id->str);
-                g_message("Received controller id: %lu", dac_id);
-                updatesystemids();
-		(*eventCallback)("SystemIds", systemids->str);
-            }
-        }
+                	g_message("Received controller id: %lu", dac_id);
+                	updatesystemids();
+			(*eventCallback)("SystemIds", systemids->str);
+            	}
+        	}
+	}
         break;
     case IARM_BUS_SYSMGR_SYSSTATE_PLANT_ID:
-        g_message("Received plant id update");
-        if (sysEventData->data.systemStates.error) {
-            plant_id = 0;
+	if( sysEventData != NULL)
+	{
+        	g_message("Received plant id update");
+        	if (sysEventData->data.systemStates.error) {
+            	plant_id = 0;
             //g_string_assign(plant_id, NULL);
-        } else if (sysEventData->data.systemStates.state == 2) {
-            if ((strlen(sysEventData->data.systemStates.payload) > 0) &&
+        	} else if (sysEventData->data.systemStates.state == 2) {
+            	if ((strlen(sysEventData->data.systemStates.payload) > 0) &&
                     is_num(sysEventData->data.systemStates.payload) == TRUE) {
-                plant_id = strtoul(sysEventData->data.systemStates.payload, NULL, 10);
+                	plant_id = strtoul(sysEventData->data.systemStates.payload, NULL, 10);
                 //g_string_assign(plant_id, sysEventData->data.systemStates.payload);
                 //g_message("Received plant id: %s", plant_id->str);
-                g_message("Received plant id: %lu", plant_id);
-                updatesystemids();
-		(*eventCallback)("SystemIds", systemids->str);
-            }
-        }
+                	g_message("Received plant id: %lu", plant_id);
+                	updatesystemids();
+			(*eventCallback)("SystemIds", systemids->str);
+            	}
+        	}
+	}
         break;
     case IARM_BUS_SYSMGR_SYSSTATE_VOD_AD:
-        g_message("Received vod server id update");
-        if (sysEventData->data.systemStates.error) {
-            vodserver_id = 0;
+        if(sysEventData != NULL)
+	{
+		g_message("Received vod server id update");
+        	if (sysEventData->data.systemStates.error) {
+            		vodserver_id = 0;
             //g_string_assign(vodserver_id, NULL);
-        } else if (sysEventData->data.systemStates.state == 2) {
-            if ((strlen(sysEventData->data.systemStates.payload) > 0) &&
+        	} else if (sysEventData->data.systemStates.state == 2) {
+            	if ((strlen(sysEventData->data.systemStates.payload) > 0) &&
                     is_num(sysEventData->data.systemStates.payload) == TRUE) {
-                vodserver_id = strtoul(sysEventData->data.systemStates.payload, NULL, 10);
+                	vodserver_id = strtoul(sysEventData->data.systemStates.payload, NULL, 10);
                 //g_string_assign(vodserver_id, sysEventData->data.systemStates.payload);
                 //g_message("Received vod server id: %s", vodserver_id->str);
-                g_message("Received vod server id: %lu", vodserver_id);
-                updatesystemids();
-		(*eventCallback)("SystemIds", systemids->str);
-            }
-        }
+                	g_message("Received vod server id: %lu", vodserver_id);
+                	updatesystemids();
+			(*eventCallback)("SystemIds", systemids->str);
+            	}
+        	}
+	}
         break;
     case IARM_BUS_SYSMGR_SYSSTATE_TIME_ZONE:
-        g_message("Received timezone update");
-        if (sysEventData->data.systemStates.error) {
+	if(sysEventData != NULL)
+	{
+        	g_message("Received timezone update");
+        	if (sysEventData->data.systemStates.error) {
 //          g_string_assign(dsgtimezone, NULL);
-            g_message("Time zone error");
-        } else if (sysEventData->data.systemStates.state == 2) {
-            if ((strlen(sysEventData->data.systemStates.payload) > 1)) /*&&
+            	g_message("Time zone error");
+        	} else if (sysEventData->data.systemStates.state == 2) {
+            	if ((strlen(sysEventData->data.systemStates.payload) > 1)) /*&&
                                       is_alphanum(sysEventData->data.systemStates.payload) == TRUE)*/
-            {
+            	{
                 //If in DST then the TZ string will contain , and . so is alpha num checking will fail
-                mapTimeZoneToJavaFormat ((char *)sysEventData->data.systemStates.payload);
+                	mapTimeZoneToJavaFormat ((char *)sysEventData->data.systemStates.payload);
                 //g_string_assign(dsgtimezone, sysEventData->data.systemStates.payload);
-                g_message("Received dsgtimezone: %s", dsgtimezone->str);
-                g_message("Received rawOffset: %d", rawOffset);
-            }
-        }
+                	g_message("Received dsgtimezone: %s", dsgtimezone->str);
+                	g_message("Received rawOffset: %d", rawOffset);
+            	}
+        	}
+	}
         break;
     case   IARM_BUS_SYSMGR_SYSSTATE_DST_OFFSET :
-        if (sysEventData->data.systemStates.error) {
-            g_message("dst offset error ");
-        } else if (sysEventData->data.systemStates.state == 2) {
-            dstOffset = atoi(sysEventData->data.systemStates.payload);
-            dstSavings = (dstOffset * 60000);
-            g_message("Received dstSavings: %d", dstSavings);
-            if (g_strcmp0(g_strstrip(dsgtimezone->str), NULL) != 0) {
-                notify_timezone();
-            }
-        }
+	if( sysEventData != NULL)
+	{
+        	if (sysEventData->data.systemStates.error) {
+            		g_message("dst offset error ");
+        	} else if (sysEventData->data.systemStates.state == 2) {
+            		dstOffset = atoi(sysEventData->data.systemStates.payload);
+            		dstSavings = (dstOffset * 60000);
+            		g_message("Received dstSavings: %d", dstSavings);
+            	if (g_strcmp0(g_strstrip(dsgtimezone->str), NULL) != 0) {
+                	notify_timezone();
+            	}
+        	}
+	}
         break;
         /*    case IARM_BUS_SYSMGR_SYSSTATE_LAN_IP:
                 if (sysEventData->data.systemStates.error)
