@@ -2593,6 +2593,15 @@ gboolean process_gw_services_qam_config(GUPnPServiceProxy *sproxy, GwyDeviceData
         g_message (" GetVideoBaseUrl process gw services Error: %s\n", error->message);
         g_clear_error(&error);
     }*/
+#ifndef CLIENT_XCAL_SERVER
+    if (gwData->isOwnGateway == FALSE)
+    {
+        if (replace_local_device_ip(gwData) == TRUE)
+        {
+            g_message("Replaced MocaIP for %s with localhost", gwData->serial_num->str);
+        }
+    }
+#endif
     g_message("Exiting from process_gw_services_qam_config ");
     return TRUE;
 }
