@@ -208,7 +208,7 @@ gboolean getserialnum(GString* serial_num)
     gchar* udhcpcvendorfile = NULL;
     
     result = g_file_get_contents ("//etc//udhcpc.vendor_specific", &udhcpcvendorfile, NULL, &error);
-    if (result == FALSE) {
+    if (result == FALSE && error != NULL) {
         g_warning("Problem in reading /etc/udhcpcvendorfile file %s", error->message);
     }
     else
@@ -1473,7 +1473,7 @@ gboolean gettimezone(void)
         return result;
     }
     result = g_file_get_contents (devConf->dsgFile, &dsgproxyfile, NULL, &error);
-    if (result == FALSE) {
+    if (result == FALSE && error != NULL) {
         g_warning("Problem in reading dsgproxyfile file %s", error->message);
     }
     else
@@ -2228,7 +2228,7 @@ gboolean getipv6prefix(void)
         return result;
     }
     result = g_file_get_contents (devConf->ipv6PrefixFile, &prefixfile, NULL, &error);
-    if (result == FALSE) {
+    if (result == FALSE && error != NULL) {
         g_warning("Problem in reading /prefix/prefix file %s", error->message);
     }
     else
@@ -2710,7 +2710,7 @@ BOOL updatesystemids(void)
                         channelmap_id, dac_id, plant_id, vodserver_id);
         return TRUE;
     } else {
-        gchar *diagfile;
+        gchar *diagfile = NULL;  //CID:124887 - uninit
         unsigned long diagid = 0;
         BOOL  result = FALSE;
         GError *error = NULL;
@@ -2760,7 +2760,7 @@ BOOL parsedevicename(void)
 
     result = g_file_get_contents (devConf->deviceNameFile, &devicenamefile, NULL,
                                   &error);
-    if (result == FALSE) {
+    if (result == FALSE && error != NULL) {
         g_warning("Problem in reading /devicename/devicename file %s", error->message);
     } else {
         gchar **tokens = g_strsplit_set(devicenamefile, "'=''\n''\0'", -1);
@@ -2824,7 +2824,7 @@ BOOL parseipv6prefix(void)
     }
     result = g_file_get_contents (devConf->ipv6PrefixFile, &prefixfile, NULL,
                                   &error);
-    if (result == FALSE) {
+    if (result == FALSE && error != NULL) {
         g_warning("Problem in reading /prefix/prefix file %s", error->message);
     } else {
         gchar **tokens = g_strsplit_set(prefixfile, "'\n''\0'", -1);
@@ -3286,7 +3286,7 @@ BOOL getetchosts(void)
     else
         hostsFile = g_strdup("//etc//hosts");
     result = g_file_get_contents (hostsFile, &etchostsfile, NULL, &error);
-    if (result == FALSE) {
+    if (result == FALSE && error != NULL) {
         g_warning("Problem in reading %s file %s", hostsFile, error->message);
     } else {
         gchar **tokens = g_strsplit_set(etchostsfile, "\n\0", -1);
@@ -3340,7 +3340,7 @@ BOOL parseserialnum(GString *serial_num)
     gchar *udhcpcvendorfile = NULL;
     result = g_file_get_contents ("//etc//udhcpc.vendor_specific",
                                   &udhcpcvendorfile, NULL, &error);
-    if (result == FALSE) {
+    if (result == FALSE && error != NULL) {
         g_warning("Problem in reading /etc/udhcpcvendorfile file %s", error->message);
     } else {
         /* reset result = FALSE to identify serial number from udhcpcvendorfile contents */

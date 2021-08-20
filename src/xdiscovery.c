@@ -4237,17 +4237,18 @@ gchar *getmacaddress(const gchar *ifname)
     unsigned char *mac;
     GString *data = g_string_new(NULL);
     fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        g_message("socket failed\n");
+        return data->str;
+    }
     ifr.ifr_addr.sa_family = AF_INET;
     strncpy(ifr.ifr_name , ifname , IFNAMSIZ - 1);
     /* Coverity Fix CID:18403 CHECKED_RETURN */
     if(ioctl(fd, SIOCGIFHWADDR, &ifr) < 0 )
     {
        g_message(" ioctl is failed\n");
-       close(fd);
-       
     }
-
-    close(fd);
+    close(fd);   //CID:18597 , 158830- negative returns
     mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
     //display mac address
     //g_print("Mac : %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n" , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
