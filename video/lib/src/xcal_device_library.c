@@ -442,6 +442,37 @@ gboolean readDevFile(const char *deviceFile)
     return result;
 }
 
+int xPKI_check_rfc()
+{
+#ifdef ENABLE_RFC
+    RFC_ParamData_t param = {0};
+    errno_t rc       = -1;
+    int     ind      = -1;
+    WDMP_STATUS status = getRFCParameter("XUPNP","Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.UPnPxPKI.Enable",&param);
+
+    if (status == WDMP_SUCCESS)
+    {
+       rc = strcmp_s(param.value,sizeof(param.value),"true",&ind);
+       if ((ind == 0) && (rc == EOK))
+       {
+           g_message("New Device xPKI rfc_enabled and xcal is running with new certs");
+           return 1;
+       }
+       else
+       {
+           g_message("Running xcal-device with old certs");
+       }
+    }
+    else
+    {
+       g_message("getRFCParameter Failed : %s\n", getRFCErrorString(status));
+    }
+#else
+    g_message("Not built with RFC support.");
+#endif
+    return 0;
+}
+
 int check_rfc()
 {
 #ifdef ENABLE_RFC

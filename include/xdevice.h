@@ -141,7 +141,7 @@ typedef void (*xupnpEventCallback)(const char*,const char*);
 void xupnpEventCallback_register(xupnpEventCallback callback_proc);
 BOOL xdeviceInit(char *devConfFile, char *devLogFile);
 int check_rfc();
-
+int xPKI_check_rfc();
 #ifndef CLIENT_XCAL_SERVER
 BOOL getDisableTuneReadyStatus();
 BOOL checkCVP2Enabled();

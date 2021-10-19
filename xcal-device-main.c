@@ -63,7 +63,7 @@ char buildVersion[MAXSIZE],dnsConfig[MAXSIZE],systemIds[MAXSIZE],dataGatewayIPAd
 char devPXmlFile[MAXSIZE], devCertFile[MAXSIZE], devCertPath[MAXSIZE], devKeyFile[MAXSIZE], devKeyPath[MAXSIZE];
 gint rawoffset, dstoffset, dstsavings, devBcastPort, cvpPort;
 gboolean usedaylightsavings,allowgwy,requiresTrm;
-char *caFile="/tmp/icebergwedge";
+char *caFile="/tmp/UPnP_CA";
 
 static int rfc_enabled;
 #ifdef SAFEC_DUMMY_API
@@ -1619,29 +1619,46 @@ main (int argc, char **argv)
                g_message("truncation while copying bcastMacaddress to uuid_new \n");
              }
         }
-
-	if ((getDevCertFile(devCertFile)) && (getDevCertPath(devCertPath)) && (getDevKeyFile(devKeyFile)) && (getDevKeyPath(devKeyPath)))
+        if(xPKI_check_rfc() == 1)
         {
-           if (g_path_is_absolute (devCertFile)) 
-           {
-               certFile = g_strdup (devCertFile);
-           }
-           else 
-           {
-               certFile  = g_build_filename (devCertPath, devCertFile, NULL);
-           }
-           g_message("certFile loaded");
+            char XpkiCert[24] = "/tmp/xpki_cert";
+            char XpkiKey[24] = "/tmp/xpki_key";
+                      
+            certFile= g_strdup(XpkiCert);
+            keyFile= g_strdup(XpkiKey);
+            g_message("Using xPKI certs for handshaking");
+        }
+        else
+        {
+            g_message("Using icebergwedge certs for handshaking");
+            if ((getDevCertFile(devCertFile)) && (getDevCertPath(devCertPath)) && (getDevKeyFile(devKeyFile)) && (getDevKeyPath(devKeyPath)))
+            {
+               if (g_path_is_absolute (devCertFile)) 
+               {
+                   certFile = g_strdup (devCertFile);
+               }
+               else 
+               {
+                   certFile  = g_build_filename (devCertPath, devCertFile, NULL);
+               }
+               g_message("certFile loaded");
 
-           if (g_path_is_absolute (devKeyFile))
-           {
-              keyFile = g_strdup (devKeyFile);
-           }
-           else
-           {
-              keyFile  = g_build_filename (devKeyPath, devKeyFile, NULL);
-           }
-           g_message("keytFile loaded ");
-
+               if (g_path_is_absolute (devKeyFile))
+               {
+                   keyFile = g_strdup (devKeyFile);
+               }
+               else
+               {
+                   keyFile  = g_build_filename (devKeyPath, devKeyFile, NULL);
+               }
+               g_message("keytFile loaded ");
+            }
+            else
+            {
+                g_message("Certificate or Key file unavailable, continuing with older xcal");
+                rfc_enabled=0;
+            }
+        }
            if ((g_file_test(certFile, G_FILE_TEST_EXISTS)) && (g_file_test(keyFile, G_FILE_TEST_EXISTS))
                         && (g_file_test(caFile, G_FILE_TEST_EXISTS))) 
            {
@@ -1767,12 +1784,7 @@ main (int argc, char **argv)
            }
            g_free(keyFile);
            g_free(certFile);
-        } // certficate and key file available
-        else
-        {
-            g_message("Certificate or Key file unavailable, continuing with older xcal");
-            rfc_enabled=0;
-        }
+        
     } //rfc_enabled
 
 #ifdef ENABLE_SD_NOTIFY

@@ -170,6 +170,31 @@ void xupnpEventCallback_register(xupnpEventCallback callback_func)
     eventCallback=callback_func;
 }
 
+int xPKI_check_rfc()
+{
+    errno_t rc       = -1;
+    int     ind      = -1;
+    char temp[24] = {0};
+    if (!syscfg_get(NULL, "UPnPxPKI", temp, sizeof(temp)) )
+    {
+        if(temp != NULL)
+        {
+            rc = strcmp_s(temp,sizeof(temp),"true",&ind);
+            ERR_CHK(rc);
+            if((!ind) && (rc == EOK))
+            {
+                g_message("New Device xPKI rfc_enabled");
+                return 1;
+            }
+        }
+    }
+    else
+    {
+        g_message("xPKI_check_rfc: Failed Unable to find the RFC parameter");
+    }
+    return 0;
+}
+
 int check_rfc()
 {
     errno_t rc       = -1;

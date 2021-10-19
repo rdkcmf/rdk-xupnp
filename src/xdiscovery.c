@@ -109,7 +109,7 @@ errno_t strcmp_s(const char * d,int max ,const char * src,int *r)
 #endif
 char *cert_File=NULL;
 char *key_File=NULL;
-char *ca_File="/tmp/icebergwedge";
+char *ca_File="/tmp/UPnP_CA";
 char accountId[ACCOUNTID_SIZE]={'\0',};
 
 #ifdef BROADBAND
@@ -763,6 +763,53 @@ IARM_Result_t _GetXUPNPDeviceInfo(void *arg)
 
 
 #endif //#if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
+
+int xPKI_check_rfc()
+{
+    errno_t rc       = -1;
+    int     ind      = -1;
+#ifndef BROADBAND
+#ifdef ENABLE_RFC
+    RFC_ParamData_t param = {0};
+
+    WDMP_STATUS status = getRFCParameter("XUPNP","Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.UPnPxPKI.Enable",&param);
+
+    if (status == WDMP_SUCCESS)
+    {
+        rc = strcmp_s(param.value,sizeof(param.value),"true",&ind);
+        if ((ind == 0) && (rc == EOK))
+        {
+            g_message("New Device xPKI rfc_enabled and xdiscovery is running with new certs");
+            return 1;
+        }
+        else
+        {
+            g_message("Running device protection with old certs");
+        }
+    }
+    else
+    {
+        g_message("getRFCParameter Failed : %s", getRFCErrorString(status));
+    }
+#else
+    g_message("Not built with RFC support.");
+#endif
+#else
+    syscfg_init();
+    char temp[24] = {0};
+    
+    if (!syscfg_get(NULL, "UPnPxPKI", temp, sizeof(temp)) )
+    {
+        rc = strcmp_s(temp,sizeof(temp),"true",&ind);
+        ERR_CHK(rc);
+        if((ind == 0) && (rc == EOK))
+        {
+            return 1;
+        }
+    }
+#endif
+    return 0;
+}
 
 int check_rfc()
 {
@@ -1788,19 +1835,31 @@ int main(int argc, char *argv[])
         if (!getAccountId(accountId)) {
               g_message("Failed to retrieve AccountId of the control point");
         }
-        if (g_path_is_absolute (disConf->disCertFile)) {
-	   cert_File= g_strdup (disConf->disCertFile);
-	}
-	else {
-	   cert_File = g_build_filename (disConf->disCertPath, disConf->disCertFile, NULL);
-	}
+        if(xPKI_check_rfc() == 1)
+        {
+            gchar XpkiCert[24] = "/tmp/xpki_cert";
+            gchar XpkiKey[24] = "/tmp/xpki_key";
+            cert_File= g_strdup (XpkiCert);
+            key_File= g_strdup (XpkiKey);
+            g_message("Using xPKI certs for handshaking");
+        }
+        else
+        {
+            if (g_path_is_absolute (disConf->disCertFile)) {
+                cert_File= g_strdup (disConf->disCertFile);
+            }
+            else {
+                cert_File = g_build_filename (disConf->disCertPath, disConf->disCertFile, NULL);
+            }
 
-	if (g_path_is_absolute (disConf->disKeyFile)) {
-	   key_File= g_strdup (disConf->disKeyFile);
-	}
-	else {
-	   key_File = g_build_filename (disConf->disKeyPath, disConf->disKeyFile, NULL);
-	}
+            if (g_path_is_absolute (disConf->disKeyFile)) {
+                key_File= g_strdup (disConf->disKeyFile);
+            }
+            else {
+                key_File = g_build_filename (disConf->disKeyPath, disConf->disKeyFile, NULL);
+            }
+            g_message("Using icebergwedge certs for handshaking");
+        }
 	if (((cert_File != NULL) && (key_File !=NULL)) && ((g_file_test(cert_File, G_FILE_TEST_EXISTS)) && (g_file_test(key_File, G_FILE_TEST_EXISTS)) 
                         && (g_file_test(ca_File, G_FILE_TEST_EXISTS)))) { 
 	    

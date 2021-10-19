@@ -18,7 +18,7 @@
 ##########################################################################
 [Unit]
 Description=Updating the certificates before upnp start.
-After=rfc-config.service
+After=rfc-config.service rdkssainit.service
 
 [Service]
 Type=oneshot
