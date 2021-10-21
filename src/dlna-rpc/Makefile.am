@@ -2,7 +2,7 @@
 # If not stated otherwise in this file or this component's Licenses.txt
 # file the following copyright and licenses apply:
 #
-# Copyright 2016 RDK Management
+# Copyright 2021 RDK Management
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,15 +16,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##########################################################################
-SUBDIRS = 
-EXTRA_DIST = xdiscovery.h
 
-libxupnp_la_includedir = $(includedir)
-libxupnp_la_include_HEADERS = xdiscovery.h
-if GUPNP_GENERIC_MEDIA_RENDERER
-   $(info GUPNP_GENERIC_MEDIA_RENDERER is defined)
-   EXTRA_DIST += mediabrowser.h
-   libxupnp_la_include_HEADERS += mediabrowser.h
-else
-   $(info GUPNP_GENERIC_MEDIA_RENDERER is not defined)
-endif
+SUBDIRS =
+AM_CFLAGS = -I${PKG_CONFIG_SYSROOT_DIR}/$(includedir) \
+-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rbus \
+-I$(top_srcdir)/include
+
+lib_LTLIBRARIES = libmediabrowser.la
+libmediabrowser_la_SOURCES = mbwsr_rpc_cli.c
+libmediabrowser_la_LDFLAGS = -version-info 0:0:0 -lrbus

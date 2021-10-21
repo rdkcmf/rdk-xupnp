@@ -88,6 +88,13 @@ endif
 endif
 xdiscovery_SOURCES = xdiscovery.c
 
+if GUPNP_GENERIC_MEDIA_RENDERER
+xdiscovery_SOURCES += mediabrowser.c dlna-rpc/mbwsr_rpc_srv.c
+AM_CFLAGS+=-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/rbus
+AM_LDFLAGS+=-lrbus
+SUBDIRS += dlna-rpc
+endif
+
 if WITH_GTEST_SUPPORT
 SUBDIRS += test
 endif

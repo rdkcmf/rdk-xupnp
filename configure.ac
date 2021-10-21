@@ -28,7 +28,7 @@ AM_INIT_AUTOMAKE([foreign no-dist-gzip dist-bzip2 1.9 subdir-objects])
 LT_INIT
 
 GTEST_ENABLE_FLAG = ""
-
+GUPNP_GENERIC_MEDIA_RENDERER=""
 AC_ARG_ENABLE([gtestapp],
              AS_HELP_STRING([--enable-gtestapp],[enable Gtest support (default is no)]),
              [
@@ -223,6 +223,19 @@ AC_ARG_ENABLE([breakpad],
         	 ],
     	    [echo "breakpad is disabled"])
 
+AC_ARG_ENABLE([media-renderer],
+              AS_HELP_STRING([--enable-media-renderer],[enable gupnp generic media renderer (default is no)]),
+              [
+                case "${enableval}" in
+                 yes) GUPNP_GENERIC_MEDIA_RENDERER=true
+                      CFLAGS+=" -DGUPNP_GENERIC_MEDIA_RENDERER";;
+                 no)  echo "Generic media renderer is disabled"
+                      UPNP_GENERIC_MEDIA_RENDERER=false;;
+                 *) AC_MSG_ERROR([bad value ${enableval} for --enable-media-renderer]) ;;
+                esac
+              ],
+              [echo "upnp generic renderer is disabled"])
+AM_CONDITIONAL([GUPNP_GENERIC_MEDIA_RENDERER], [test x$GUPNP_GENERIC_MEDIA_RENDERER = xtrue])
 
 AM_CONDITIONAL([BROADBAND_SUPPORT], [test x$BROADBAND_SUPPORT = xtrue])
 PKG_CHECK_MODULES([LIBXML], [libxml-2.0 >= 2.7.8])
@@ -246,6 +259,7 @@ video/lib/Makefile
 video/lib/src/Makefile
 broadband/Makefile
 broadband/lib/Makefile])
+AM_COND_IF([GUPNP_GENERIC_MEDIA_RENDERER], [AC_CONFIG_FILES(src/dlna-rpc/Makefile)])
 AC_SUBST(IARM_CFLAGS)
 AC_SUBST(GUPNP_VERSION)
 AC_SUBST(VIDEO_SUPPORT)
@@ -253,4 +267,6 @@ AC_SUBST(BROADBAND_SUPPORT)
 AC_SUBST(BREAKPAD_CFLAGS)
 AC_SUBST(BREAKPAD_LFLAGS)
 AC_SUBST(GTEST_ENABLE_FLAG)
+AC_SUBST(GUPNP_GENERIC_MEDIA_RENDERER)
+
 AC_OUTPUT

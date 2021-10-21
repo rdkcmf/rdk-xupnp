@@ -68,6 +68,10 @@ gboolean partialDiscovery=FALSE;
 #endif
 #include <libsoup/soup.h>
 
+#ifdef GUPNP_GENERIC_MEDIA_RENDERER
+#include "mediabrowser_private.h"
+#endif //GUPNP_GENERIC_MEDIA_RENDERER
+
 #define OUTPLAYURL_SIZE 180 //current max size of playbackurl with ocap locator is 145 adding few more just to accomdate future increase in receiver id or ipv6.
 
 #define DEVICE_PROTECTION_CONTEXT_PORT  50760
@@ -1677,6 +1681,8 @@ int main(int argc, char *argv[])
 #ifdef INCLUDE_BREAKPAD
     breakpad_ExceptionHandler();
 #endif
+
+
     outputcontents = g_string_new(NULL);
     ipMode = g_string_new("ipv4");
 
@@ -1827,6 +1833,11 @@ int main(int argc, char *argv[])
 	g_critical("XUPNP IARM init failed");
     }
 #endif
+
+#ifdef GUPNP_GENERIC_MEDIA_RENDERER
+    init_media_browser();
+#endif //GUPNP_GENERIC_MEDIA_RENDERER
+
     //context = gupnp_context_new (main_context, host_ip, host_port, NULL);
     gupnp_context_set_subscription_timeout(context, 0);
     if(rfc_enabled)
@@ -1923,6 +1934,10 @@ int main(int argc, char *argv[])
     g_signal_connect (cp,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb), NULL);
     gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp), TRUE);
 
+#ifdef GUPNP_GENERIC_MEDIA_RENDERER
+    registerBrowserConfig(context);
+#endif //GUPNP_GENERIC_MEDIA_RENDERER
+
 #ifdef LOGMILESTONE
     logMilestone("UPNP_START_DISCOVERY");
 #else
@@ -1951,6 +1966,10 @@ int main(int argc, char *argv[])
 	g_object_unref (xupnp_tlsinteraction);
 
     }
+#ifdef GUPNP_GENERIC_MEDIA_RENDERER
+    close_media_browser();
+#endif //GUPNP_GENERIC_MEDIA_RENDERER
+
     if (cert_File != NULL) {
        g_free(cert_File);
     }
