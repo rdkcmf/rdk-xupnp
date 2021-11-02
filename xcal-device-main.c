@@ -1615,7 +1615,9 @@ main (int argc, char **argv)
         if(strlen(bcastMacaddress) != 0)
         {
             /* Coverity Fix CID:46884 DC.STRING_BUFFER */ 
-            snprintf(uuid_new,sizeof(uuid_new),"uuid:%s",bcastMacaddress);
+             if (snprintf(uuid_new,sizeof(uuid_new),"uuid:%s",bcastMacaddress) > (int)sizeof(uuid_new)) {
+               g_message("truncation while copying bcastMacaddress to uuid_new \n");
+             }
         }
 
 	if ((getDevCertFile(devCertFile)) && (getDevCertPath(devCertPath)) && (getDevKeyFile(devKeyFile)) && (getDevKeyPath(devKeyPath)))
