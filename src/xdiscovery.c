@@ -2254,18 +2254,12 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 	    g_free(temp);
 	}
 
-        if ( processStringRequest(sproxy, "GetDnsConfig", "DnsConfig" , &temp, FALSE))
-        {
-	    g_string_assign(gwData->dnsconfig,temp);
-	    g_free(temp);
-	}
-
         if ( processStringRequest(sproxy, "GetGatewayStbIP", "GatewayStbIP" , &temp, FALSE))
         {
 	    g_string_assign(gwData->gatewaystbip,temp);
 	    g_free(temp);
 	}
-
+#ifndef BROADBAND
         if ( processStringRequest(sproxy, "GetIpv6Prefix", "Ipv6Prefix" , &temp, FALSE))
         {
 	    g_string_assign(gwData->ipv6prefix,temp);
@@ -2279,6 +2273,13 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 	    g_message("UPNP_RECV_IPV6_PREFIX");
 #endif
 	}
+
+        if ( processStringRequest(sproxy, "GetDnsConfig", "DnsConfig" , &temp, FALSE))
+        {
+	    g_string_assign(gwData->dnsconfig,temp);
+	    g_free(temp);
+	}
+#endif
 	if ( processStringRequest(sproxy,"GetPlaybackUrl","PlaybackUrl", &temp, TRUE))
         {
 	    g_string_assign(gwData->playbackurl,temp);
@@ -2535,11 +2536,18 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
         g_string_assign(gwData->gatewaystbip, temp);
         g_free(temp);
     }
+#ifndef BROADBAND
     if ( processStringRequest(sproxy, "GetIpv6Prefix", "Ipv6Prefix" , &temp, FALSE ))
     {
         g_string_assign(gwData->ipv6prefix, temp);
         g_free(temp);
     }
+    if ( processStringRequest(sproxy, "GetDnsConfig", "DnsConfig" , &temp, FALSE))
+    {
+        g_string_assign(gwData->dnsconfig, temp);
+        g_free(temp);
+    }
+#endif
     if ( processStringRequest(sproxy, "GetDeviceName", "DeviceName" , &temp, FALSE))
     {
         g_string_assign(gwData->devicename, temp);
@@ -2563,11 +2571,6 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
     if ( processStringRequest(sproxy, "GetHostMacAddress", "HostMacAddress" , &temp, FALSE))
     {
         g_string_assign(gwData->hostmacaddress, temp);
-        g_free(temp);
-    }
-    if ( processStringRequest(sproxy, "GetDnsConfig", "DnsConfig" , &temp, FALSE))
-    {
-        g_string_assign(gwData->dnsconfig, temp);
         g_free(temp);
     }
     if ( processStringRequest(sproxy, "GetHosts", "Hosts" , &temp, FALSE))
