@@ -70,6 +70,8 @@ endif
 AM_CFLAGS+=$(BREAKPAD_CFLAGS)
 AM_LDFLAGS+=$(BREAKPAD_LFLAGS)
 AM_CFLAGS+=  -g3
+lib_LTLIBRARIES = libupnpidm.la
+libupnpidm_la_SOURCES = idm_server.c idm_client.c idm_library.c 
 if BROADBAND_SUPPORT
 xcal_device_LDADD = $(top_builddir)/broadband/lib/libxdevice.la
 endif
