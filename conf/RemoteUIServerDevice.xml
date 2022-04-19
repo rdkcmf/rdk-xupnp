@@ -29,6 +29,7 @@
     <modelName>XG-1</modelName>
 	<modelNumber>PX001AN</modelNumber>
 	<serialNumber>sno</serialNumber>
+    <UPC></UPC>
     <UDN></UDN>
     <dlna:X_DLNADOC xmlns:dlna="urn:schemas-dlna-org:device-1-0">+RUIHSRC+/DMS-1.50</dlna:X_DLNADOC>
     <serviceList>
