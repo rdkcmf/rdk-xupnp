@@ -2429,53 +2429,73 @@ BOOL xdeviceInit(char *devConfFile, char *devLogFile)
                       wifiIface->str);
         }
     }
+    int loop,result,assigned=0;
+    for(loop=0;loop<10;loop++)
+    {
 #ifndef CLIENT_XCAL_SERVER
-    int result;
-    if ( access(devConf->ipv6FileLocation, F_OK ) != -1 ) {
-        ipv6Enabled=TRUE;
-    }
-    result = getipaddress(devConf->bcastIf, ipAddressBuffer, TRUE);
-    if (!result) {
-        fprintf(stderr,
-                "In Ipv6 Could not locate the link  local ipv6 address of the broadcast interface %s\n",
-                devConf->bcastIf);
-        g_critical("In Ipv6 Could not locate the link local ipv6 address of the broadcast interface %s\n",
-                   devConf->bcastIf);
-        exit(1);
-    }
-    g_string_assign(gwyipv6, ipAddressBuffer);
-    ipAddressBuffer[0] = '\0';
-    result = getipaddress(devConf->bcastIf, ipAddressBuffer, FALSE);
-    if (!result) {
-        fprintf(stderr,
-                "Could not locate the link local v4 ipaddress of the broadcast interface %s\n",
-                devConf->bcastIf);
-        g_critical("Could not locate the link local v4 ipaddress of the broadcast interface %s\n",
-                   devConf->bcastIf);
-        exit(1);
-    } else
-        g_message("ipaddress of the interface %s\n", ipAddressBuffer);
-#else
-    ipAddressBuffer[0] = '\0';
-    int result = getipaddress(mocaIface->str, ipAddressBuffer, FALSE);
-    if (!result) {
-        g_message("Could not locate the ipaddress of the broadcast interface %s",
-                  mocaIface->str);
-        result = getipaddress(wifiIface->str, ipAddressBuffer, FALSE);
-        if (!result) {
-            g_message("Could not locate the ipaddress of the wifi broadcast interface %s",
-                      wifiIface->str);
-            g_critical("Could not locate the link local v4 ipaddress of the broadcast interface %s\n",
-                       devConf->bcastIf);
-            exit(1);
-        } else {
-            devConf->bcastIf = g_strdup(wifiIface->str);
+        if ( access(devConf->ipv6FileLocation, F_OK ) != -1 ){
+            ipv6Enabled=TRUE;
         }
-    } else {
-        devConf->bcastIf = g_strdup(mocaIface->str);
-    }
-    g_message("Starting xdevice service on interface %s", devConf->bcastIf);
+        result = getipaddress(devConf->bcastIf, ipAddressBuffer, TRUE);
+        if (!result) {
+            fprintf(stderr,
+                    "In Ipv6 Could not locate the link  local ipv6 address of the broadcast interface %s\n",
+                    devConf->bcastIf);
+            g_critical("In Ipv6 Could not locate the link local ipv6 address of the broadcast interface %s\n",
+                    devConf->bcastIf);
+        }
+        else {
+            assigned=1;
+            g_message("ipaddress of the interface %s", ipAddressBuffer);
+        }
+        g_string_assign(gwyipv6, ipAddressBuffer);
+        ipAddressBuffer[0] = '\0';
+        result = getipaddress(devConf->bcastIf, ipAddressBuffer, FALSE);
+        if (!result) {
+            fprintf(stderr,
+                    "Could not locate the link local v4 ipaddress of the broadcast interface %s\n",
+                    devConf->bcastIf);
+            g_critical("Could not locate the link local v4 ipaddress of the broadcast interface %s\n",
+                    devConf->bcastIf);
+        } else {
+            assigned=1;
+            g_message("ipaddress of the interface %s", ipAddressBuffer);
+            break;
+        }
+#else
+        ipAddressBuffer[0] = '\0';
+        result = getipaddress(mocaIface->str, ipAddressBuffer, FALSE);
+        if (!result) {
+            g_message("Could not locate the ipaddress of the broadcast moca isolation interface %s",
+                    mocaIface->str);
+            result = getipaddress(wifiIface->str, ipAddressBuffer, FALSE);
+            if (!result) {
+                g_message("Could not locate the ipaddress of the wifi broadcast interface %s",
+                        wifiIface->str);
+                g_critical("Could not locate the link local v4 ipaddress of the broadcast interface %s\n",
+                        devConf->bcastIf);
+            } else {
+                devConf->bcastIf = g_strdup(wifiIface->str);
+                g_message("ipaddress of the interface %s", ipAddressBuffer);
+                assigned=1;
+                break;
+            }
+        } else {
+            devConf->bcastIf = g_strdup(mocaIface->str);
+            g_message("ipaddress of the interface %s", ipAddressBuffer);
+            assigned=1;
+            break;
+        }
 #endif
+        sleep(1);
+    }
+    if(assigned != 0){
+        g_message("Starting xdevice service on interface %s ipAddressBuffer= %s", devConf->bcastIf,ipAddressBuffer);
+    }
+    else{
+        g_message("waited 10 seconds for interface to come up so giving up");
+        exit(1);
+    }
     g_message("Broadcast Network interface: %s\n", devConf->bcastIf);
     g_message("Dev XML File Name: %s\n", devConf->devXmlFile);
     g_message("Use IARM value is: %u\n", devConf->useIARM);
