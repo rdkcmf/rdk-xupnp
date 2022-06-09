@@ -55,7 +55,7 @@ do
         if [ $status == "0" ];
         then
                 echo "Moca Isolation disabled creating new interface brlan0:0"
-		busybox zcip brlan0 /lib/rdk/zcip.script
+		ifconfig brlan0:0 169.254.100.1 netmask 255.255.0.0 up
 		MOCA_INTERFACE="brlan0:0"
                 XCAL_DEF_INTERFACE="brlan0:0"
         else
