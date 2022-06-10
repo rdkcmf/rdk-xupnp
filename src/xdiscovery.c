@@ -97,7 +97,7 @@ static int rfc_enabled ;
 static GMainLoop *main_loop;
 gboolean checkDevAddInProgress=FALSE;
 #define WAIT_TIME_SEC 5
-#define PNAME "/tmp/icebergwedge_t"
+#define PNAME "/tmp/xpki_cert"
 #define PID 21699
 #define SHM_EXISTS 17
 guint deviceAddNo=0;
@@ -763,16 +763,13 @@ IARM_Result_t _GetXUPNPDeviceInfo(void *arg)
     return IARM_RESULT_SUCCESS;
 
 }
-
-
-
 #endif //#if defined(USE_XUPNP_IARM) || defined(USE_XUPNP_IARM_BUS)
 
+#ifndef BROADBAND
 int xPKI_check_rfc()
 {
     errno_t rc       = -1;
     int     ind      = -1;
-#ifndef BROADBAND
 #ifdef ENABLE_RFC
     RFC_ParamData_t param = {0};
 
@@ -798,22 +795,9 @@ int xPKI_check_rfc()
 #else
     g_message("Not built with RFC support.");
 #endif
-#else
-    syscfg_init();
-    char temp[24] = {0};
-    
-    if (!syscfg_get(NULL, "UPnPxPKI", temp, sizeof(temp)) )
-    {
-        rc = strcmp_s(temp,sizeof(temp),"true",&ind);
-        ERR_CHK(rc);
-        if((ind == 0) && (rc == EOK))
-        {
-            return 1;
-        }
-    }
-#endif
     return 0;
 }
+#endif
 
 int check_rfc()
 {
@@ -1873,89 +1857,86 @@ int main(int argc, char *argv[])
     {
         //Get account Id of the control point.
         if (!getAccountId(accountId)) {
-              g_message("Failed to retrieve AccountId of the control point");
+            g_message("Failed to retrieve AccountId of the control point");
         }
+#ifndef BROADBAND
         if(xPKI_check_rfc() == 1)
         {
-            gchar XpkiCert[24] = "/tmp/xpki_cert";
-            gchar XpkiKey[24] = "/tmp/xpki_key";
-            cert_File= g_strdup (XpkiCert);
-            key_File= g_strdup (XpkiKey);
+            cert_File= g_strdup ("/tmp/xpki_cert");
+            key_File= g_strdup ("/tmp/xpki_key");
             g_message("Using xPKI certs for handshaking");
         }
-        else
-        {
+#endif
+        if ( ( cert_File == NULL ) && (key_File == NULL )){
             if (g_path_is_absolute (disConf->disCertFile)) {
                 cert_File= g_strdup (disConf->disCertFile);
             }
             else {
-                cert_File = g_build_filename (disConf->disCertPath, disConf->disCertFile, NULL);
+                 cert_File = g_build_filename (disConf->disCertPath, disConf->disCertFile, NULL);
             }
-
             if (g_path_is_absolute (disConf->disKeyFile)) {
                 key_File= g_strdup (disConf->disKeyFile);
             }
             else {
                 key_File = g_build_filename (disConf->disKeyPath, disConf->disKeyFile, NULL);
             }
-            g_message("Using icebergwedge certs for handshaking");
         }
-	if (((cert_File != NULL) && (key_File !=NULL)) && ((g_file_test(cert_File, G_FILE_TEST_EXISTS)) && (g_file_test(key_File, G_FILE_TEST_EXISTS)) 
-                        && (g_file_test(ca_File, G_FILE_TEST_EXISTS)))) { 
-	    
+        if (((cert_File != NULL) && (key_File !=NULL)) && ((g_file_test(cert_File, G_FILE_TEST_EXISTS)) && (g_file_test(key_File, G_FILE_TEST_EXISTS)) 
+                    && (g_file_test(ca_File, G_FILE_TEST_EXISTS)))) { 
+
 #ifndef GUPNP_1_2
             upnpContextDeviceProtect = gupnp_context_new_s ( NULL,  disConf->discIf, DEVICE_PROTECTION_CONTEXT_PORT, cert_File, key_File, &error);
 #else
             upnpContextDeviceProtect = gupnp_context_new_s ( disConf->discIf, DEVICE_PROTECTION_CONTEXT_PORT, cert_File, key_File, &error);
 #endif
-	    if (error) {
-	       g_printerr ("Error creating the Device Protection Broadcast context: %s\n",
-			error->message);
-	       /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
-	       g_clear_error(&error);
-	       rfc_enabled = 0;
-	    }
-	    else {
+            if (error) {
+                g_printerr ("Error creating the Device Protection Broadcast context: %s\n",
+                        error->message);
+                /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
+                g_clear_error(&error);
+                rfc_enabled = 0;
+            }
+            else {
 
 #ifdef BROADBAND
-                 int ret = 0;
-                 //initialize the device protection white list
-                 g_message("calling dp whitelistInit ");
-                 ret = dp_wlistInit();
-                 if (!ret) {
-                   g_message("initialization of dp whitelist successful ");
-                 }
+                int ret = 0;
+                //initialize the device protection white list
+                g_message("calling dp whitelistInit ");
+                ret = dp_wlistInit();
+                if (!ret) {
+                    g_message("initialization of dp whitelist successful ");
+                }
 #endif
 
-	         gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
-		 xupnp_tlsinteraction = g_object_new (xupnp_tls_interaction_get_type (), NULL);
-		 g_message("tls interaction object created");
-		 // Set TLS config params here.
-		 gupnp_context_set_tls_params(upnpContextDeviceProtect,ca_File,key_File, xupnp_tlsinteraction);
+                gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
+                xupnp_tlsinteraction = g_object_new (xupnp_tls_interaction_get_type (), NULL);
+                g_message("tls interaction object created");
+                // Set TLS config params here.
+                gupnp_context_set_tls_params(upnpContextDeviceProtect,ca_File,key_File, xupnp_tlsinteraction);
 
-		 cp_client = gupnp_control_point_new(upnpContextDeviceProtect, "urn:schemas-upnp-org:device:X1Renderer:1");
-		 g_signal_connect (cp_client,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_client), NULL);
-		 g_signal_connect (cp_client,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_client), NULL);
-		 gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_client), TRUE);
-		 g_message("X1Renderer controlpoint created");
+                cp_client = gupnp_control_point_new(upnpContextDeviceProtect, "urn:schemas-upnp-org:device:X1Renderer:1");
+                g_signal_connect (cp_client,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_client), NULL);
+                g_signal_connect (cp_client,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_client), NULL);
+                gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_client), TRUE);
+                g_message("X1Renderer controlpoint created");
 
-		 cp_gw = gupnp_control_point_new(upnpContextDeviceProtect, "urn:schemas-upnp-org:device:X1VideoGateway:1");
-		 g_signal_connect (cp_gw,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_gw), NULL);
-		 g_signal_connect (cp_gw,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_gw), NULL);
-		 gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_gw), TRUE);
-		 g_message("X1VideoGateway controlpoint created");
+                cp_gw = gupnp_control_point_new(upnpContextDeviceProtect, "urn:schemas-upnp-org:device:X1VideoGateway:1");
+                g_signal_connect (cp_gw,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_gw), NULL);
+                g_signal_connect (cp_gw,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_gw), NULL);
+                gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_gw), TRUE);
+                g_message("X1VideoGateway controlpoint created");
 
-		 cp_bgw = gupnp_control_point_new(upnpContextDeviceProtect, "urn:schemas-upnp-org:device:X1BroadbandGateway:1");
-		 g_signal_connect (cp_bgw,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_bgw), NULL);
-		 g_signal_connect (cp_bgw,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_bgw), NULL);
-		 gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_bgw), TRUE);
-		 g_message("X1BroadbandGateway controlpoint created");
-          }
-       }
-       else {
-          g_message("DeviceProtection Error: check Cert File or Key  File or  CA file not existing");
-          rfc_enabled = 0;
-       }
+                cp_bgw = gupnp_control_point_new(upnpContextDeviceProtect, "urn:schemas-upnp-org:device:X1BroadbandGateway:1");
+                g_signal_connect (cp_bgw,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_bgw), NULL);
+                g_signal_connect (cp_bgw,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_bgw), NULL);
+                gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_bgw), TRUE);
+                g_message("X1BroadbandGateway controlpoint created");
+            }
+        }
+        else {
+            g_message("DeviceProtection Error: check Cert File or Key  File or  CA file not existing");
+            rfc_enabled = 0;
+        }
     }
 
     cp = gupnp_control_point_new(context, "urn:schemas-upnp-org:device:BasicDevice:1");
@@ -3882,8 +3863,8 @@ gboolean readconffile(const char* configfile)
 	outputJsonFile=/opt/output.json
 	certPath=/tmp/
 	keyPath=/tmp/
-	certFile=icebergwedge_t
-	keyFile=icebergwedge_y
+	certFile=xpki_cert
+	keyFile=xpki_key
         */
         /* Read in data from the key file from the group "DataFiles". */
         disConf->gwSetupFile = g_key_file_get_string(keyfile, "DataFiles","gwSetupFile", NULL);

@@ -74,9 +74,9 @@ IARM_Bus_Daemon_SysMode_t sysModeParam;
 #define MAX_OUTVALUE 256
 #define URLSIZE 512
 #define DEVICE_KEY_PATH     "/tmp/"
-#define DEVICE_KEY_FILE     "icebergwedge_y"
+#define DEVICE_KEY_FILE     "xpki_key"
 #define DEVICE_CERT_PATH     "/tmp/"
-#define DEVICE_CERT_FILE     "icebergwedge_t"
+#define DEVICE_CERT_FILE     "xpki_cert"
 #define MAX_FILE_LENGTH      250
 BOOL ipv6Enabled = FALSE;
 char ipAddressBuffer[INET6_ADDRSTRLEN] = {0};
