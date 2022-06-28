@@ -1228,6 +1228,7 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     }
     else if(g_strrstr(g_strstrip(gwydata->devicetype->str),"XI") == NULL )
     {
+       g_message("Discovered a XG device");
        if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy, "PlaybackUrl", G_TYPE_STRING, on_last_change, NULL) == FALSE)
            g_message("Failed to add url notifications for %s", sno);
        if (gupnp_service_proxy_add_notify ((GUPnPServiceProxy *)gwydata->sproxy, "SystemIds", G_TYPE_STRING, on_last_change, NULL) == FALSE)
@@ -1351,7 +1352,7 @@ device_proxy_available_cb_client (GUPnPControlPoint *cp, GUPnPDeviceProxy *dprox
             g_message("Client UDN is NULL");
 	}
     }
-
+    g_message("Discovered a Xi device");
     g_free(sno);
     deviceAddNo--;
     g_message("Exting from Device_proxy_available_cb client deviceAddNo = %u",deviceAddNo);
@@ -1520,6 +1521,7 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     }
     g_free(sno);
     deviceAddNo--;
+    g_message("Discovered a XG device");
     g_message("Exting from device_proxy_available_cb_gateway deviceAddNo = %u",deviceAddNo);
 }
 
@@ -1659,6 +1661,7 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     }
     g_free(sno);
     deviceAddNo--;
+    g_message("Discovered a XB device");
     g_message("Exting from device_proxy_available_cb_broadband deviceAddNo = %u",deviceAddNo);
 }
 
@@ -2215,7 +2218,6 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 
     if(!strcasestr(g_strstrip(gwData->devicetype->str),"XI") )
     {
-        g_message("Discovered Device is XG or RNG Device ");
 	if (! processStringRequest(sproxy, "GetBaseUrl", "BaseUrl" , &temp, TRUE))
 	{
 	    return FALSE;
@@ -2346,7 +2348,7 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
     } // If discovered device is XG1 or RNG device 
     else
     {
-        g_message("Discovered Device is Xi Device ");
+        g_message("Discovered a Xi device ");
 
         if ( processStringRequest(sproxy, "GetDataGatewayIPaddress", "DataGatewayIPaddress" , &temp, FALSE))
         {
