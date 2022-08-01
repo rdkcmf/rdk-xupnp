@@ -38,6 +38,7 @@
 #include <signal.h>
 #include "xdiscovery.h"
 #include "secure_wrapper.h"
+#include <sysevent/sysevent.h>
 #include <glib/gprintf.h>
 #include <string.h>
 #include <glib/gstdio.h>
@@ -63,10 +64,13 @@
 #define IDM_CERT_FILE "/tmp/idm_xpki_cert"
 #define IDM_KEY_FILE "/tmp/idm_xpki_key"
 #define IDM_CA_FILE "/tmp/idm_UPnP_CA"
+static int fd = -1;
 typedef GTlsInteraction XupnpTlsInteraction;
 typedef GTlsInteractionClass XupnpTlsInteractionClass;
 static void xupnp_tls_interaction_init (XupnpTlsInteraction *interaction);
 static void xupnp_tls_interaction_class_init (XupnpTlsInteractionClass *xupnpClass);
+int s_sysevent_connect (token_t *out_se_token);
+int SE_msg_receive(int fd, char *replymsg, unsigned int *replymsg_size, token_t *who);
 GType xupnp_tls_interaction_get_type (void);
 
 G_DEFINE_TYPE (XupnpTlsInteraction, xupnp_tls_interaction, G_TYPE_TLS_INTERACTION);
@@ -85,6 +89,138 @@ g_list_find_sno(GwyDeviceData* gwData, gconstpointer* sno )
         return 0;
     else
         return 1;
+}
+int s_sysevent_connect (token_t *out_se_token)
+{
+    static token_t sysevent_token = 0;
+    if (0 > fd )
+    {
+        unsigned short sysevent_port = SE_SERVER_WELL_KNOWN_PORT;
+        char          *sysevent_ip = "127.0.0.1";
+        char          *sysevent_name = "idm_client";
+        fd = sysevent_open(sysevent_ip, sysevent_port, SE_VERSION, sysevent_name, &sysevent_token);
+        g_message("%s: open new sysevent fd %d", __FUNCTION__,fd);
+    }
+    else
+    {
+        g_message("Inside %s:%d",__FUNCTION__,__LINE__);
+    }
+    *out_se_token = sysevent_token;
+    return fd;
+}
+int EventListen(void)
+{
+    fd_set  rfds;
+    FD_ZERO(&rfds);
+    FD_SET(fd, &rfds);
+    int     retval,ret=-2;
+    FD_ZERO(&rfds);
+    FD_SET(fd, &rfds);
+    retval=select(fd+1, &rfds, NULL, NULL, NULL);
+
+    if(retval)
+    {
+        se_buffer            msg_buffer;
+        se_notification_msg *msg_body = (se_notification_msg *)msg_buffer;
+        unsigned int         msg_size;
+        token_t              from;
+        int                  msg_type;
+
+        msg_size  = sizeof(msg_buffer);
+        msg_type = SE_msg_receive(fd, msg_buffer, &msg_size, &from);
+        // if not a notification message then ignore it
+        if (SE_MSG_NOTIFICATION == msg_type)
+        {
+            // extract the name and value from the return message data
+            int   name_bytes;
+            int   value_bytes;
+            char *name_str;
+            char *value_str;
+            char *data_ptr;
+
+            data_ptr   = (char *)&(msg_body->data);
+            name_str   = (char *)SE_msg_get_string(data_ptr, &name_bytes);
+            data_ptr  += name_bytes;
+            value_str =  (char *)SE_msg_get_string(data_ptr, &value_bytes);
+            if(!strcmp(name_str, "wan-status"))
+            {
+                if (!strncmp(value_str, "started", 7))
+                {
+                    g_message("wan-status returned started");
+                    ret = 0;
+                }
+                else if (!strncmp(value_str, "stopped", 7))
+                {
+                    g_message("wan-status returned stopped");
+                    ret = -1;
+                }
+            }
+        }
+        else
+        {
+            g_message("Received msg that is not a SE_MSG_NOTIFICATION (%d)\n", msg_type);
+        }
+    }
+    else
+    {
+        g_message("%s: Received no event retval=%d\n", __FUNCTION__, retval);
+    }
+    return ret;
+}
+void* EventHandler(void* args)
+{
+    char wan_status[8]={'\0'};
+    token_t  token;
+    async_id_t wan_status_id;
+    int ret,rc;
+start:
+    fd = s_sysevent_connect(&token);
+    sysevent_set_options(fd, token, "wan-status", TUPLE_FLAG_EVENT);
+    rc = sysevent_setnotification(fd, token, "wan-status", &wan_status_id);
+    if(rc)
+    {
+        g_message("goto start");
+        goto start;
+    }
+    if ( 0 == sysevent_get(fd, token, "wan-status", wan_status,sizeof(wan_status)) && '\0' != wan_status)
+    {
+        if (0 == strncmp(wan_status,"stopped",strlen("stopped")))
+        {
+            g_message("present wan-status stopped");
+            gupnp_set_cert_flags(0x0010);
+        }
+        else
+        {
+            g_message("present wan-status started");
+            sysevent_rmnotification(fd, token, wan_status_id);
+            sysevent_close(fd, token);
+            pthread_exit(NULL);
+        }
+        while(1)
+        {
+            ret = EventListen();
+            if(ret == 0)
+            {
+                g_message("EventListen returned zero");
+                gupnp_set_cert_flags(0x001C);
+                v_secure_system("/etc/Xupnp/idm_certs.sh");
+                break;
+            }
+            else if(ret == -1)
+            {
+                g_message("EventListen returned minus 1");
+                gupnp_set_cert_flags(0x0010);
+            }
+            else
+            {
+                g_message("EventListen returned neither 1 or -1");
+            }
+        }
+        sysevent_rmnotification(fd, token, wan_status_id);
+        sysevent_close(fd, token);
+        pthread_exit(NULL);
+    }
+    return NULL;
 }
 
 static void
@@ -201,7 +337,7 @@ void* verify_devices()
             g_message("Forced rescan failed for broadband");
             usleep(sleep_seconds);
         }
-#endif   
+#endif
         usleep(sleep_seconds);
     }
 }
@@ -502,7 +638,7 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     getAccountId(accountId);
     g_message("%s:AccountId=%s",__FUNCTION__,accountId);
     mutex = g_mutex_new ();
-#ifndef IDM_DEBUG    
+#ifndef IDM_DEBUG
     GTlsInteraction *xupnp_tlsinteraction= NULL;
     char caFile[24]=IDM_CA_FILE;
     strcpy(certFile,IDM_CERT_FILE);
@@ -510,7 +646,6 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     g_message("cert file=%s  key file = %s",certFile,keyFile);
     if((access(certFile,F_OK ) == 0) && (access(keyFile,F_OK ) == 0) && (access(caFile,F_OK ) == 0))
     {
-
 #ifndef GUPNP_1_2
         upnpContextDeviceProtect = gupnp_context_new_s ( NULL,  dc_obj->interface, dc_obj->port,certFile,keyFile, &error);
 #else
@@ -530,9 +665,15 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
             g_message("tls interaction object created");
             // Set TLS config params here.
             gupnp_context_set_tls_params(upnpContextDeviceProtect,caFile,keyFile, xupnp_tlsinteraction);
+            pthread_t event_handle_thread;
+            int err = pthread_create(&event_handle_thread, NULL,&EventHandler,NULL);
+            if(0 != err)
+            {
+                g_message("%s: create the event handle thread error!\n", __FUNCTION__);
+            }
             cp_bgw = gupnp_control_point_new(upnpContextDeviceProtect, IDM_DP_CLIENT_DEVICE);
             g_signal_connect (cp_bgw,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_bgw), NULL);
-            g_signal_connect (cp_bgw,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_bgw), NULL);                
+            g_signal_connect (cp_bgw,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_bgw), NULL);
             gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_bgw), TRUE);
             g_message("X1BroadbandGateway controlpoint created for idm");
         }

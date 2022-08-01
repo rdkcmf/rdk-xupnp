@@ -337,7 +337,7 @@ int idm_server_start(char* Interface)
     getserialnum(serial_num);
     getipaddress((const char *)interface,gwyIpv6,TRUE);
     getBcastMacAddress_idm(bcastMacaddress);
-#ifndef IDM_DEBUG    
+#ifndef IDM_DEBUG
     char certFile[24],keyFile[24],caFile[24]=IDM_CA_FILE;
     strcpy(certFile,IDM_CERT_FILE);
     strcpy(keyFile,IDM_KEY_FILE);

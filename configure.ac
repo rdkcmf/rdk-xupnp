@@ -208,6 +208,20 @@ AC_ARG_ENABLE([broadband-support],
            esac
            ],
          [echo "broadband-support is enable"])
+
+RDKB_INTER_DEVICE_MANAGER_SUPPORT=" "
+AC_ARG_ENABLE([rdkb-inter-device-manager-support],
+        AS_HELP_STRING([--enable-rdkb-inter-device-manager-support],[This will enable/disable upnp idm library support.]),
+        [
+          case "${enableval}" in
+           yes) RDKB_INTER_DEVICE_MANAGER_SUPPORT=true
+                CFLAGS+=" -DFEATURE_RDKB_INTER_DEVICE_MANAGER";;
+           no) RDKB_INTER_DEVICE_MANAGER_SUPPORT=false ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-rdkb-inter-device-manager-support ]) ;;
+           esac
+           ],
+         [echo "rdkb-inter-device-manager-support is enable"])
+AM_CONDITIONAL([RDKB_INTER_DEVICE_MANAGER_SUPPORT], [test x$RDKB_INTER_DEVICE_MANAGER_SUPPORT = xtrue])
 # Check for breakpad
 BREAKPAD_CFLAGS=" "
 BREAKPAD_LFLAGS=" "
@@ -264,6 +278,7 @@ AC_SUBST(IARM_CFLAGS)
 AC_SUBST(GUPNP_VERSION)
 AC_SUBST(VIDEO_SUPPORT)
 AC_SUBST(BROADBAND_SUPPORT)
+AC_SUBST(RDKB_INTER_DEVICE_MANAGER_SUPPORT)
 AC_SUBST(BREAKPAD_CFLAGS)
 AC_SUBST(BREAKPAD_LFLAGS)
 AC_SUBST(GTEST_ENABLE_FLAG)
