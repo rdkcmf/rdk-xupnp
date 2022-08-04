@@ -365,6 +365,10 @@ gboolean delete_gwyitem(const char* serial_num)
             g_string_free(gwydata->gwyipv6,TRUE);
             g_string_free(gwydata->clientip,TRUE);
             g_string_free(gwydata->receiverid,TRUE);
+            if(gwydata->sproxy)
+            {
+                g_clear_object(&(gwydata->sproxy));
+            }
             if(gwydata->sproxy_i)
             {
                 g_clear_object(&(gwydata->sproxy_i));
@@ -517,7 +521,7 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     }
     g_free(sno);
     deviceAddNo--;
-    g_message("Exting from device_proxy_available_cb_broadband deviceAddNo = %u",deviceAddNo);
+    g_message("Exiting from device_proxy_available_cb_broadband deviceAddNo = %u",deviceAddNo);
 }
 #else
 static void device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
@@ -610,7 +614,7 @@ static void device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *
     }
     g_free(sno);
     deviceAddNo--;
-    g_message("Exting from device_proxy_available_cb deviceAddNo = %u",deviceAddNo);
+    g_message("Exiting from device_proxy_available_cb deviceAddNo = %u",deviceAddNo);
 }
 #endif
 void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info_t*,uint,uint))
