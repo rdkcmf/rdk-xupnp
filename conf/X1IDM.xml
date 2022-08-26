@@ -6,16 +6,6 @@
     </specVersion>
     <actionList>
         <action>
-            <name>GetUPC</name>
-            <argumentList>
-                <argument>
-                    <name>UPC</name>
-                    <relatedStateVariable>UPC</relatedStateVariable>
-                    <direction>out</direction>
-                </argument>
-            </argumentList>
-        </action>
-        <action>
             <name>GetClientIP</name>
             <argumentList>
                 <argument>
@@ -47,11 +37,6 @@
         </action>
 </actionList>
 <serviceStateTable>
-        <stateVariable sendEvents="yes">
-            <name>UPC</name>
-            <dataType>string</dataType>
-            <defaultValue>NoData</defaultValue>
-        </stateVariable>
         <stateVariable sendEvents="yes">
             <name>ClientIP</name>
             <dataType>string</dataType>

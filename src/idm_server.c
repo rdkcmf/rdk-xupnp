@@ -51,12 +51,10 @@
 #define IPv4_ADDR_SIZE 16
 #define IPv6_ADDR_SIZE 128
 #define ACCOUNTID_SIZE 30
-#define UPC_SIZE 6
-#define UPC_CODE "10000"
-char upc_value[UPC_SIZE],clientIp[IPv4_ADDR_SIZE],bcastMacaddress[MAC_ADDR_SIZE],gwyIpv6[IPv6_ADDR_SIZE],interface[IPv4_ADDR_SIZE],accountId[ACCOUNTID_SIZE],uUid[256];
-static int rfc_enabled;
+char clientIp[IPv4_ADDR_SIZE],bcastMacaddress[MAC_ADDR_SIZE],gwyIpv6[IPv6_ADDR_SIZE],interface[IPv4_ADDR_SIZE],accountId[ACCOUNTID_SIZE],uUid[256];
 GString* bcastmacaddress,*serial_num,*recv_id;
 void free_server_memory();
+int check_file_presence();
 BOOL check_empty_idm(char *str)
 {
     if (str[0]) {
@@ -188,21 +186,6 @@ query_account_id_cb (GUPnPService *service, char *variable, GValue *value, gpoin
     g_value_set_string (value, accountId);
 }
 
-G_MODULE_EXPORT void
-get_upc_cb(GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
-{
-    g_message("%s:upc_value=%s",__FUNCTION__,upc_value);
-    gupnp_service_action_set(action, "UPC", G_TYPE_STRING, upc_value ,NULL);
-    gupnp_service_action_return (action);
-}
-
-G_MODULE_EXPORT void
-query_upc_cb (GUPnPService *service, char *variable, GValue *value, gpointer user_data)
-{
-    g_value_init (value, G_TYPE_STRING);
-    g_value_set_string (value, upc_value);
-}
-
 xmlDoc * open_document(const char * file_name)
 {
     xmlDoc * ret;
@@ -293,15 +276,15 @@ BOOL updatexmldata(const char* xmlfilename, const char* struuid,const char* seri
 void free_server_memory()
 {
     g_message("Inside %s",__FUNCTION__);
+#ifdef IDM_DEBUG
     g_object_unref (upnpService);
     g_object_unref (baseDev);
     g_object_unref (upnpContext);
-    if(rfc_enabled)
-    {
-        g_object_unref (upnpIdService);
-        g_object_unref (dev);
-        g_object_unref (upnpContextDeviceProtect);
-    }
+#else
+    g_object_unref (upnpIdService);
+    g_object_unref (dev);
+    g_object_unref (upnpContextDeviceProtect);
+#endif
 }
 BOOL getUidfromRecvId()
 {
@@ -350,12 +333,71 @@ int idm_server_start(char* Interface)
     strcpy(interface,Interface);
     g_message("%s %d interface=%s",__FUNCTION__,__LINE__,interface);
     getipaddress((const char *)interface,clientIp,FALSE);
-    char certFile[24],keyFile[24],caFile[24]=IDM_CA_FILE;
     serial_num = g_string_new(NULL);
     getserialnum(serial_num);
     getipaddress((const char *)interface,gwyIpv6,TRUE);
     getBcastMacAddress_idm(bcastMacaddress);
-    rfc_enabled = check_rfc();
+#ifndef IDM_DEBUG    
+    char certFile[24],keyFile[24],caFile[24]=IDM_CA_FILE;
+    strcpy(certFile,IDM_CERT_FILE);
+    strcpy(keyFile,IDM_KEY_FILE);
+    g_message("cert file=%s  key file = %s",certFile,keyFile);
+    if((access(certFile,F_OK ) == 0) && (access(keyFile,F_OK ) == 0) && (access(caFile,F_OK ) == 0))
+    {
+        const char* struuid_dp=g_strconcat("uuid:", g_strstrip(bcastMacaddress),NULL);
+        int result = updatexmldata("/etc/xupnp/IDM_DP.xml",struuid_dp,serial_num->str);
+        if (!result)
+        {
+            fprintf(stderr,"Failed to open the device xml file /etc/xupnp/IDM_DP.xml\n");
+        }
+#ifndef GUPNP_1_2
+        upnpContextDeviceProtect = gupnp_context_new_s ( NULL,interface,DEVICE_PROTECTION_CONTEXT_PORT,certFile,keyFile, &error);
+#else
+        upnpContextDeviceProtect = gupnp_context_new_s ( interface,DEVICE_PROTECTION_CONTEXT_PORT,certFile,keyFile, &error);
+#endif
+        g_message("created new upnpContext");
+        if (error)
+        {
+            g_message("%s:Error creating the Device Protection Broadcast context: %s",
+                    __FUNCTION__,error->message);
+            /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
+            g_clear_error(&error);
+        }
+        else
+        {
+            gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
+            // Set TLS config params here.
+            gupnp_context_set_tls_params(upnpContextDeviceProtect,caFile,keyFile, NULL);
+#ifndef GUPNP_1_2
+            dev = gupnp_root_device_new (upnpContextDeviceProtect, "/etc/xupnp/IDM_DP.xml", "/etc/xupnp/");
+#else
+            dev = gupnp_root_device_new (upnpContextDeviceProtect, "/etc/xupnp/IDM_DP.xml", "/etc/xupnp/", &error);
+#endif
+            gupnp_root_device_set_available (dev, TRUE);
+            upnpIdService = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dev), IDM_DP_SERVICE);
+            if (!upnpIdService)
+            {
+                g_message("Cannot get X1Identity service\n");
+            }
+            else
+            {
+                g_message("XUPNP Identity service successfully created");
+            }
+            g_signal_connect (upnpIdService, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
+            g_signal_connect (upnpIdService, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
+            g_signal_connect (upnpIdService, "action-invoked::GetClientIP", G_CALLBACK (get_client_ip_cb), NULL);
+            g_signal_connect (upnpIdService, "query-variable::ClientIP", G_CALLBACK (query_client_ip_cb), NULL);
+            g_signal_connect (upnpIdService, "action-invoked::GetAccountId", G_CALLBACK (get_account_id_cb), NULL);
+            g_signal_connect (upnpIdService, "query-variable::AccountId", G_CALLBACK (query_account_id_cb), NULL);
+            g_signal_connect (upnpIdService, "action-invoked::GetGatewayIPv6", G_CALLBACK (get_gwyipv6_cb), NULL);
+            g_signal_connect (upnpIdService, "query-variable::GatewayIPv6", G_CALLBACK (query_gwyipv6_cb), NULL);
+        }
+    }
+    else
+    {
+        g_message("%s:mandatory files doesn't present",__FUNCTION__);
+    }
+#else
     recv_id=g_string_new(NULL);
     getUUID(uUid);
     const char* struuid = uUid;
@@ -394,83 +436,13 @@ int idm_server_start(char* Interface)
         g_printerr ("Cannot get DiscoverFriendlies service\n");
         return 1;
     }
-    if(rfc_enabled)
-    {
-        strcpy(certFile,IDM_CERT_FILE);
-        strcpy(keyFile,IDM_KEY_FILE);
-        g_message("cert file=%s  key file = %s",certFile,keyFile);
-        if((access(certFile,F_OK ) == 0) && (access(keyFile,F_OK ) == 0) && (access(caFile,F_OK ) == 0))
-        {
-            const char* struuid_dp=g_strconcat("uuid:", g_strstrip(bcastMacaddress),NULL);
-            int result = updatexmldata("/etc/xupnp/IDM_DP.xml",struuid_dp,serial_num->str);
-            if (!result)
-            {
-                fprintf(stderr,"Failed to open the device xml file /etc/xupnp/IDM_DP.xml\n");
-            }
-            else
-            {
-                g_message("Updated the device xml file:IDM.XML uuid: %s",struuid);
-            }
-#ifndef GUPNP_1_2
-            upnpContextDeviceProtect = gupnp_context_new_s ( NULL,interface,DEVICE_PROTECTION_CONTEXT_PORT,certFile,keyFile, &error);
-#else
-            upnpContextDeviceProtect = gupnp_context_new_s ( interface,DEVICE_PROTECTION_CONTEXT_PORT,certFile,keyFile, &error);
-#endif
-            g_message("created new upnpContext");
-            if (error)
-            {
-                g_message("%s:Error creating the Device Protection Broadcast context: %s",
-                        __FUNCTION__,error->message);
-                /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
-                g_clear_error(&error);
-            }
-            else
-            {
-                gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
-                // Set TLS config params here.
-                gupnp_context_set_tls_params(upnpContextDeviceProtect,caFile,keyFile, NULL);
-#ifndef GUPNP_1_2
-                dev = gupnp_root_device_new (upnpContextDeviceProtect, "/etc/xupnp/IDM_DP.xml", "/etc/xupnp/");
-#else
-                dev = gupnp_root_device_new (upnpContextDeviceProtect, "/etc/xupnp/IDM_DP.xml", "/etc/xupnp/", &error);
-#endif
-                gupnp_root_device_set_available (dev, TRUE);
-                upnpIdService = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dev), IDM_DP_SERVICE);
-                if (!upnpIdService)
-                {
-                    g_message("Cannot get X1Identity service\n");
-                }
-                else
-                {
-                    g_message("XUPNP Identity service successfully created");
-                }
-                g_signal_connect (upnpIdService, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
-                g_signal_connect (upnpIdService, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
-                g_signal_connect (upnpIdService, "action-invoked::GetClientIP", G_CALLBACK (get_client_ip_cb), NULL);
-                g_signal_connect (upnpIdService, "query-variable::ClientIP", G_CALLBACK (query_client_ip_cb), NULL);
-                g_signal_connect (upnpIdService, "action-invoked::GetAccountId", G_CALLBACK (get_account_id_cb), NULL);
-                g_signal_connect (upnpIdService, "query-variable::AccountId", G_CALLBACK (query_account_id_cb), NULL);
-                g_signal_connect (upnpIdService, "action-invoked::GetGatewayIPv6", G_CALLBACK (get_gwyipv6_cb), NULL);
-                g_signal_connect (upnpIdService, "query-variable::GatewayIPv6", G_CALLBACK (query_gwyipv6_cb), NULL);
-            }
-        }
-        else
-        {
-            g_message("%s:mandatory files doesn't present so making rfc_enabled to false",__FUNCTION__);
-            rfc_enabled=0;
-        }
-    }
-    memset(upc_value,0,UPC_SIZE);
-    strcpy(upc_value,(rfc_enabled?UPC_CODE:"0"));
-    g_message("upc_value=%s",upc_value);
     g_signal_connect (upnpService, "action-invoked::GetBcastMacAddress", G_CALLBACK (get_bcastmacaddress_cb), NULL);
     g_signal_connect (upnpService, "query-variable::BcastMacAddress", G_CALLBACK (query_bcastmacaddress_cb), NULL);
-    g_signal_connect (upnpService, "action-invoked::GetUPC", G_CALLBACK (get_upc_cb), NULL);
-    g_signal_connect (upnpService, "query-variable::UPC", G_CALLBACK (query_upc_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetClientIP", G_CALLBACK (get_client_ip_cb), NULL);
     g_signal_connect (upnpService, "query-variable::ClientIP", G_CALLBACK (query_client_ip_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetGatewayIPv6", G_CALLBACK (get_gwyipv6_cb), NULL);
     g_signal_connect (upnpService, "query-variable::GatewayIPv6", G_CALLBACK (query_gwyipv6_cb), NULL);
+#endif
     g_message("completed %s\n",__FUNCTION__);
     return 0;
 }

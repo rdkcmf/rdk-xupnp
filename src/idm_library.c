@@ -128,48 +128,6 @@ gboolean getserialnum(GString* ownSerialNo)
     return bRet;
 #endif
 }
-int check_rfc()
-{
-#ifndef BROADBAND
-#ifdef ENABLE_RFC
-    RFC_ParamData_t param = {0};
-    WDMP_STATUS status = getRFCParameter("XUPNP","Device.DeviceInfo.X_RDKCENTRAL-COM_RFC.Feature.UPnP.Refactor.Enable",&param);
-    if (status == WDMP_SUCCESS)
-    {
-        if (!strncmp(param.value, "true", strlen("true")))
-        {
-            g_message("New Device Refactoring rfc_enabled");
-            return 1;
-        }
-        else
-        {
-            g_message("Running older xdiscovery");
-        }
-    }
-    else
-    {
-        g_message("getRFCParameter Failed : %s", getRFCErrorString(status));
-    }
-#else
-    g_message("Not built with RFC support.");
-#endif
-#else
-    syscfg_init();
-    char temp[24] = {0};
-    errno_t rc       = -1;
-    int     ind      = -1;
-    if (!syscfg_get(NULL, "Refactor", temp, sizeof(temp)) )
-    {
-        rc = strcmp_s("true", strlen("true"), temp, &ind);
-        ERR_CHK(rc);
-        if((ind == 0) && (rc == EOK))
-        {
-            return 1;
-        }
-    }
-#endif
-    return 0;
-}
 int getipaddress(const char *ifname, char *ipAddressBuffer,gboolean ipv6Enabled)
 {
     struct ifaddrs *ifAddrStruct = NULL;

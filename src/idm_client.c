@@ -63,8 +63,6 @@
 #define IDM_CERT_FILE "/tmp/idm_xpki_cert"
 #define IDM_KEY_FILE "/tmp/idm_xpki_key"
 #define IDM_CA_FILE "/tmp/idm_UPnP_CA"
-#define UPC_CODE "10000"
-static int rfc_enabled;
 typedef GTlsInteraction XupnpTlsInteraction;
 typedef GTlsInteractionClass XupnpTlsInteractionClass;
 static void xupnp_tls_interaction_init (XupnpTlsInteraction *interaction);
@@ -190,19 +188,20 @@ void* verify_devices()
             continue;
         }
         sleepCounter=0;
-        if(rfc_enabled)
-        {
-            if (gssdp_resource_browser_rescan(GSSDP_RESOURCE_BROWSER(cp_bgw))==FALSE)
-            {
-                g_message("Forced rescan failed for broadband");
-                usleep(sleep_seconds);
-            }
-        }
+
+#ifdef IDM_DEBUG
         if (gssdp_resource_browser_rescan(GSSDP_RESOURCE_BROWSER(cp))==FALSE)
         {
             g_message("Forced rescan failed");
             usleep(sleep_seconds);
         }
+#else
+        if (gssdp_resource_browser_rescan(GSSDP_RESOURCE_BROWSER(cp_bgw))==FALSE)
+        {
+            g_message("Forced rescan failed for broadband");
+            usleep(sleep_seconds);
+        }
+#endif   
         usleep(sleep_seconds);
     }
 }
@@ -270,7 +269,7 @@ device_proxy_unavailable_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy
     }
     g_free((gpointer)sno);
 }
-
+#ifndef IDM_DEBUG
 static void
 device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 {
@@ -384,10 +383,9 @@ device_proxy_available_cb_bgw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     deviceAddNo--;
     g_message("Exting from device_proxy_available_cb_broadband deviceAddNo = %u",deviceAddNo);
 }
+#else
 static void device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
 {
-    errno_t rc       = -1;
-    int     ind      = -1;
     g_message("Found a new device. deviceAddNo = %u ",deviceAddNo);
     deviceAddNo++;
     if ((NULL==cp) || (NULL==dproxy))
@@ -438,26 +436,6 @@ static void device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *
                     g_string_assign(gwydata->receiverid, receiverid);
                     g_free(receiverid);
                     gchar *temp=NULL;
-                    if(rfc_enabled)
-                    {
-                        if ( processStringRequest((GUPnPServiceProxy *)gwydata->sproxy, "GetUPC", "UPC" , &temp, FALSE))
-                        {
-                            g_message("UPC value of the client=%s",temp);
-                            rc =strcmp_s(UPC_CODE, strlen(UPC_CODE), temp, &ind);
-                            ERR_CHK(rc);
-                            if((!ind) && (rc == EOK))
-                            {
-                                g_message("Exiting the device addition as UPC value matched %s",temp);
-                                deviceAddNo--;
-                                return;
-                            }
-                            else
-                            {
-                                g_message("%s: upc returned %s",__FUNCTION__,temp);
-                            }
-                            g_free(temp);
-                        }
-                    }
                     device_info_t di;
                     memset(&di,0,sizeof(di));
                     if ( processStringRequest((GUPnPServiceProxy *)gwydata->sproxy, "GetClientIP", "ClientIP" , &temp, FALSE))
@@ -498,7 +476,7 @@ static void device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *
     deviceAddNo--;
     g_message("Exting from device_proxy_available_cb deviceAddNo = %u",deviceAddNo);
 }
-
+#endif
 void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info_t*,uint,uint))
 {
     int rvalue;
@@ -511,7 +489,6 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     g_thread_init (NULL);
     g_type_init();
     GError* error = 0;
-    GTlsInteraction *xupnp_tlsinteraction= NULL;
     ownSerialNo=g_string_new(NULL);
     getserialnum(ownSerialNo);
     callback=func_callback;
@@ -525,7 +502,52 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     getAccountId(accountId);
     g_message("%s:AccountId=%s",__FUNCTION__,accountId);
     mutex = g_mutex_new ();
-    rfc_enabled = check_rfc();
+#ifndef IDM_DEBUG    
+    GTlsInteraction *xupnp_tlsinteraction= NULL;
+    char caFile[24]=IDM_CA_FILE;
+    strcpy(certFile,IDM_CERT_FILE);
+    strcpy(keyFile,IDM_KEY_FILE);
+    g_message("cert file=%s  key file = %s",certFile,keyFile);
+    if((access(certFile,F_OK ) == 0) && (access(keyFile,F_OK ) == 0) && (access(caFile,F_OK ) == 0))
+    {
+
+#ifndef GUPNP_1_2
+        upnpContextDeviceProtect = gupnp_context_new_s ( NULL,  dc_obj->interface, dc_obj->port,certFile,keyFile, &error);
+#else
+        upnpContextDeviceProtect = gupnp_context_new_s (dc_obj->interface, dc_obj->port,certFile,keyFile, &error);
+#endif
+        if (error) {
+            g_printerr ("%s:%d Error creating the Device Protection Broadcast context: %s\n",
+                    __FUNCTION__,__LINE__,error->message);
+            /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
+            g_clear_error(&error);
+        }
+        else
+        {
+            g_message("IDM UPnP is running in secure mode");
+            gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
+            xupnp_tlsinteraction = g_object_new (xupnp_tls_interaction_get_type (), NULL);
+            g_message("tls interaction object created");
+            // Set TLS config params here.
+            gupnp_context_set_tls_params(upnpContextDeviceProtect,caFile,keyFile, xupnp_tlsinteraction);
+            cp_bgw = gupnp_control_point_new(upnpContextDeviceProtect, IDM_DP_CLIENT_DEVICE);
+            g_signal_connect (cp_bgw,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_bgw), NULL);
+            g_signal_connect (cp_bgw,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_bgw), NULL);                
+            gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_bgw), TRUE);
+            g_message("X1BroadbandGateway controlpoint created for idm");
+        }
+    }
+    else
+    {
+        g_message("%s:mandatory files doesn't present",__FUNCTION__);
+    }
+#ifdef GUPNP_0_19
+    main_loop = g_main_loop_new (NULL, FALSE);
+#else
+    main_loop = g_main_loop_new (upnpContextDeviceProtect, FALSE);
+#endif
+#else
+    g_message("IDM is running in non secure mode");
 #ifndef GUPNP_1_2
 #ifdef GUPNP_0_14
     main_context = g_main_context_new();
@@ -543,47 +565,6 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
         return;
     }
     gupnp_context_set_subscription_timeout(context, 0);
-    if(rfc_enabled)
-    {
-        g_message("IDM UPnP is running in refactor mode");
-        char caFile[24]=IDM_CA_FILE;
-        strcpy(certFile,IDM_CERT_FILE);
-        strcpy(keyFile,IDM_KEY_FILE);
-        g_message("cert file=%s  key file = %s",certFile,keyFile);
-        if((access(certFile,F_OK ) == 0) && (access(keyFile,F_OK ) == 0) && (access(caFile,F_OK ) == 0))
-        {
-
-#ifndef GUPNP_1_2
-            upnpContextDeviceProtect = gupnp_context_new_s ( NULL,  dc_obj->interface, dc_obj->port,certFile,keyFile, &error);
-#else
-            upnpContextDeviceProtect = gupnp_context_new_s (dc_obj->interface, dc_obj->port,certFile,keyFile, &error);
-#endif
-            if (error) {
-                g_printerr ("%s:%d Error creating the Device Protection Broadcast context: %s\n",
-                        __FUNCTION__,__LINE__,error->message);
-                /* g_clear_error() frees the GError *error memory and reset pointer if set in above operation */
-                g_clear_error(&error);
-            }
-            else
-            {
-                gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
-                xupnp_tlsinteraction = g_object_new (xupnp_tls_interaction_get_type (), NULL);
-                g_message("tls interaction object created");
-                // Set TLS config params here.
-                gupnp_context_set_tls_params(upnpContextDeviceProtect,caFile,keyFile, xupnp_tlsinteraction);
-                cp_bgw = gupnp_control_point_new(upnpContextDeviceProtect, IDM_DP_CLIENT_DEVICE);
-                g_signal_connect (cp_bgw,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_bgw), NULL);
-                g_signal_connect (cp_bgw,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_bgw), NULL);                
-                gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_bgw), TRUE);
-                g_message("X1BroadbandGateway controlpoint created for idm");
-            }
-        }
-        else
-        {
-            g_message("%s:mandatory files doesn't present",__FUNCTION__);
-            rfc_enabled=0;
-        }
-    }
     cp = gupnp_control_point_new(context, IDM_CLIENT_DEVICE);
     g_signal_connect (cp,"device-proxy-available", G_CALLBACK (device_proxy_available_cb), NULL);
     g_signal_connect (cp,"device-proxy-unavailable", G_CALLBACK (device_proxy_unavailable_cb_bgw), NULL);
@@ -592,6 +573,7 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     main_loop = g_main_loop_new (NULL, FALSE);
 #else
     main_loop = g_main_loop_new (main_context, FALSE);
+#endif
 #endif
     sleep_seconds=((dc_obj->loss_detection_window+8)*1000000);
     g_message("%s %d calling discovery_interval_configuration function %u loss_detection_window=%u",__FUNCTION__,__LINE__,dc_obj->discovery_interval,dc_obj->loss_detection_window);
@@ -603,12 +585,12 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     g_message("invoke free_server_memory");
     free_server_memory();
     g_main_loop_unref (main_loop);
+#ifdef IDM_DEBUG
     g_object_unref (cp);
-    if(rfc_enabled)
-    {
-        g_object_unref (cp_bgw);
-        g_object_unref (upnpContextDeviceProtect);
-        g_object_unref (xupnp_tlsinteraction);
-    }
     g_object_unref (context);
+#else
+    g_object_unref (cp_bgw);
+    g_object_unref (upnpContextDeviceProtect);
+    g_object_unref (xupnp_tlsinteraction);
+#endif
 }

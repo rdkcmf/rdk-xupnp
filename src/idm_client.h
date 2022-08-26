@@ -63,5 +63,4 @@ typedef struct _discovery_config_t{
 GMutex *mutex;
 int (*callback)(device_info_t*,uint,uint);
 int idm_server_start(char*interface);
-int check_rfc();
 void free_server_memory();
