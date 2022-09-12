@@ -58,9 +58,11 @@ typedef struct _discovery_config_t{
     unsigned int port;
     unsigned int discovery_interval;
     unsigned int loss_detection_window;
+    gchar base_mac[32];
 }discovery_config_t;
 
 GMutex *mutex;
 int (*callback)(device_info_t*,uint,uint);
-int idm_server_start(char*interface);
+int idm_server_start(char*interface, char * mac);
+
 void free_server_memory();

@@ -52,7 +52,7 @@
 #define IPv6_ADDR_SIZE 128
 #define ACCOUNTID_SIZE 30
 char clientIp[IPv4_ADDR_SIZE],bcastMacaddress[MAC_ADDR_SIZE],gwyIpv6[IPv6_ADDR_SIZE],interface[IPv4_ADDR_SIZE],accountId[ACCOUNTID_SIZE],uUid[256];
-GString* bcastmacaddress,*serial_num,*recv_id;
+GString *bcastmacaddress,*serial_num,*recv_id;
 void free_server_memory();
 int check_file_presence();
 BOOL check_empty_idm(char *str)
@@ -70,68 +70,9 @@ bool check_null_idm(char *str)
     return false;
 }
 
-gchar *getmacaddress_idm(const gchar *ifname)
-{
-    errno_t rc = -1;
-    int fd;
-    struct ifreq ifr;
-    unsigned char *mac;
-    GString *data = g_string_new(NULL);
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
-    ifr.ifr_addr.sa_family = AF_INET;
-    rc = strcpy_s(ifr.ifr_name,IFNAMSIZ - 1,ifname);
-    ERR_CHK(rc);
-    ioctl(fd, SIOCGIFHWADDR, &ifr);
-    close(fd);
-    mac = (unsigned char *)ifr.ifr_hwaddr.sa_data;
-    //display mac address
-    g_string_printf(data, "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", mac[0], mac[1], mac[2],
-                    mac[3], mac[4], mac[5]);
-    return data->str;
-}
-
-BOOL getBcastMacAddress_idm(char *outValue)
-{
-    BOOL result = FALSE;
-    errno_t rc = -1;
-    if (!check_null_idm(outValue)) {
-        g_message("getBcastMacAddress_idm : NULL string !");
-        return result;
-    }
-    if ( interface != NULL ) {
-        const gchar *bcastmac = (gchar *)getmacaddress_idm(interface);
-        if (bcastmac) {
-            g_message("Broadcast MAC address in  interface: %s  %s ",interface,bcastmac);
-        }
-        else
-        {
-            g_message("failed to retrieve macaddress on interface %s ", interface);
-            return result;
-        }
-        bcastmacaddress = g_string_new(NULL);
-        g_string_assign(bcastmacaddress, bcastmac);
-        g_message("bcast mac address is %s", bcastmacaddress->str);
-        rc = strcpy_s(outValue,MAC_ADDR_SIZE,bcastmacaddress->str);
-        if(rc == EOK)
-        {
-            result = TRUE;
-        }
-        else
-        {
-            ERR_CHK(rc);
-        }
-    }
-    else
-    {
-        g_message("getBcastMacAddress_idm : Empty broadcast interface");
-    }
-    return result;
-}
-
 G_MODULE_EXPORT void
 get_bcastmacaddress_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer user_data)
 {
-    getBcastMacAddress_idm(bcastMacaddress);
     gupnp_service_action_set (action, "BcastMacAddress", G_TYPE_STRING, bcastMacaddress, NULL);
     gupnp_service_action_return (action);
 }
@@ -290,7 +231,7 @@ BOOL getUidfromRecvId()
 {
     BOOL result = FALSE;
     guint loopvar = 0;
-    gchar **tokens = g_strsplit_set(bcastmacaddress->str, "':''\n'", -1);
+    gchar **tokens = g_strsplit_set(bcastMacaddress, "':''\n'", -1);
     guint toklength = g_strv_length(tokens);
     while (loopvar < toklength)
     {
@@ -325,7 +266,8 @@ BOOL getUUID(char *outValue)
     }
     return result;
 }
-int idm_server_start(char* Interface)
+
+int idm_server_start(char* Interface, char * base_mac)
 {
     g_thread_init (NULL);
     g_type_init();
@@ -336,8 +278,8 @@ int idm_server_start(char* Interface)
     serial_num = g_string_new(NULL);
     getserialnum(serial_num);
     getipaddress((const char *)interface,gwyIpv6,TRUE);
-    getBcastMacAddress_idm(bcastMacaddress);
-#ifndef IDM_DEBUG
+    strcpy_s(bcastMacaddress, MAC_ADDR_SIZE, base_mac);
+#ifndef IDM_DEBUG    
     char certFile[24],keyFile[24],caFile[24]=IDM_CA_FILE;
     strcpy(certFile,IDM_CERT_FILE);
     strcpy(keyFile,IDM_KEY_FILE);

@@ -619,6 +619,7 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     if(!(dc_obj->interface)||(dc_obj->port)==0||(dc_obj->discovery_interval)==0||(dc_obj->loss_detection_window)==0)
     {
         g_message("some of mandatory values are missing");
+        g_message("interface=%s port=%d discovery_interval=%d loss_detection_window=%d\n", dc_obj->interface, dc_obj->port, dc_obj->discovery_interval, dc_obj->loss_detection_window);
         return;
     }
     g_message("interface=%s port=%d",dc_obj->interface,dc_obj->port);
@@ -628,7 +629,7 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     ownSerialNo=g_string_new(NULL);
     getserialnum(ownSerialNo);
     callback=func_callback;
-    rvalue=idm_server_start(dc_obj->interface);
+    rvalue=idm_server_start(dc_obj->interface, dc_obj->base_mac);
     if(rvalue==1)
     {
         g_message("id_server_start has facing some issue");
