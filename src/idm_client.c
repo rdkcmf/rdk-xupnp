@@ -619,7 +619,7 @@ static void device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *
 #endif
 void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info_t*,uint,uint))
 {
-    int rvalue;
+    int rvalue=0;
     if(!(dc_obj->interface)||(dc_obj->port)==0||(dc_obj->discovery_interval)==0||(dc_obj->loss_detection_window)==0)
     {
         g_message("some of mandatory values are missing");
@@ -633,15 +633,29 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     ownSerialNo=g_string_new(NULL);
     getserialnum(ownSerialNo);
     callback=func_callback;
+#ifndef IDM_DEBUG
+    int ind=-1;
+    errno_t rc = -1;
+    memset(accountId,0,ACCOUNTID_SIZE);
+    while(1)
+    {
+        getAccountId(accountId);
+        g_message("%s:AccountId=%s",__FUNCTION__,accountId);
+        rc = strcasecmp_s("unknown",strlen("unknown"),accountId,&ind);
+        ERR_CHK(rc);
+        if(ind || rc != EOK)
+        {
+            break;
+        }
+        sleep(30);
+    }
+#endif
     rvalue=idm_server_start(dc_obj->interface, dc_obj->base_mac);
     if(rvalue==1)
     {
         g_message("id_server_start has facing some issue");
         return;
     }
-    memset(accountId,0,ACCOUNTID_SIZE);
-    getAccountId(accountId);
-    g_message("%s:AccountId=%s",__FUNCTION__,accountId);
     mutex = g_mutex_new ();
 #ifndef IDM_DEBUG
     GTlsInteraction *xupnp_tlsinteraction= NULL;
