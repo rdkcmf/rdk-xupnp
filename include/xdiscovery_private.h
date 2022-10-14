@@ -225,5 +225,5 @@ gboolean process_gw_services_media_config(GUPnPServiceProxy *sproxy, GwyDeviceDa
 gboolean process_gw_services_time_config(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData);
 gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData);
 gboolean process_gw_services_qam_config(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData);
-
+gboolean processStringRequest(const GUPnPServiceProxy *sproxy ,const char * requestFn, const char * responseFn, gchar ** result, gboolean isInCriticalPath);
 #endif /* XDISCOVERY_PRIVATE_H_ */

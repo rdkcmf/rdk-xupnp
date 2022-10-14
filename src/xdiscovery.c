@@ -1163,6 +1163,19 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     GList* xdevlistitem = g_list_find_custom(xdevlist,sno,(GCompareFunc)g_list_find_sno);
     if(xdevlistitem!=NULL)
     {
+#ifndef BROADBAND
+        GwyDeviceData *gwdata = xdevlistitem->data;
+        gchar *temp=NULL;
+        if ( processStringRequest((GUPnPServiceProxy *)gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE), "GetIpv6Prefix", "Ipv6Prefix" , &temp, FALSE ))
+        {
+            if(g_strcmp0(g_strstrip(temp),gwdata->ipv6prefix->str) != 0)
+            {
+                g_string_assign(gwdata->ipv6prefix, temp);
+                sendDiscoveryResult(disConf->outputJsonFile);
+            }
+            g_free(temp);
+        }
+#endif
         deviceAddNo--;
         g_message("Existing as SNO is present in list so no update of devices %s device no %u",sno,deviceAddNo);
         g_free(sno);
@@ -1370,17 +1383,30 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
         g_message("WARNING - Received a null pointer for gateway device device no %u",deviceAddNo);
         return;
     }
-    GwyDeviceData *gwydata = g_new(GwyDeviceData,1);
-    init_gwydata(gwydata);
     gchar* sno = gupnp_device_info_get_serial_number (GUPNP_DEVICE_INFO (dproxy));
     GList* xdevlistitem = g_list_find_custom(xdevlist,sno,(GCompareFunc)g_list_find_sno);
     if(xdevlistitem!=NULL)
     {
+#ifndef BROADBAND
+        GwyDeviceData *gwdata = xdevlistitem->data;
+        gchar *temp=NULL;
+        if ( processStringRequest((GUPnPServiceProxy *)gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_GW_CFG), "GetIpv6Prefix", "Ipv6Prefix" , &temp, FALSE ))
+        {
+            if(g_strcmp0(g_strstrip(temp),gwdata->ipv6prefix->str) != 0)
+            {
+                g_string_assign(gwdata->ipv6prefix, temp);
+                sendDiscoveryResult(disConf->outputJsonFile);
+            }
+            g_free(temp);
+        }
+#endif
         deviceAddNo--;
         g_message("Existing available_cb_gw as SNO is present in list so no update of devices %s device no %u",sno,deviceAddNo);
-	g_free(sno);
+        g_free(sno);
         return;
     }
+    GwyDeviceData *gwydata = g_new(GwyDeviceData,1);
+    init_gwydata(gwydata);
     gwydata->sproxy_i = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_IDENTITY);
     gwydata->sproxy_m = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_MEDIA);
     gwydata->sproxy_t = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_TIME);
