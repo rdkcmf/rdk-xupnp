@@ -28,7 +28,7 @@ AM_CFLAGS = $(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBXML_CFLAGS) $(LIBSOUP_CFLAGS) 
 	-I$(top_srcdir)/video/lib/include
 AM_CFLAGS+=  -g3
 AM_CFLAGS += $(IARM_CFLAGS)
-AM_LDFLAGS=$(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(LIBXML_LIBS) $(LIBSOUP_LIBS) -lrfcapi
+AM_LDFLAGS=$(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(LIBXML_LIBS) $(LIBSOUP_LIBS) -lrfcapi -lsecure_wrapper
 
 noinst_LTLIBRARIES = libxdevice.la
 libxdevice_la_SOURCES = src/xcal_device_library.c

@@ -70,7 +70,7 @@
 
 #define BCAST_PORT  50755
 #define DEVICE_PROPERTY_FILE   "/etc/device.properties"
-#define AUTH_SERVER_URL     "http://localhost:50050/authService/getDeviceId"
+#define GET_DEVICEID_SCRIPT     "/lib/rdk/getDeviceId.sh"
 #define DEVICE_NAME_FILE    "/opt/hn_service_settings.conf"
 #define LOG_FILE    "/opt/logs/xdevice.log"
 #define DEVICE_XML_PATH     "/etc/xupnp/"
@@ -1694,8 +1694,6 @@ main (int argc, char **argv)
         devConf->bcastPort=BCAST_PORT;
     if(! (devConf->devPropertyFile))
         devConf->devPropertyFile=g_strdup(DEVICE_PROPERTY_FILE);
-    if(! (devConf->authServerUrl))
-        devConf->authServerUrl=g_strdup(AUTH_SERVER_URL);
     if(! (devConf->deviceNameFile))
         devConf->deviceNameFile=g_strdup(DEVICE_NAME_FILE);
     if(! (devConf->logFile))
@@ -1859,15 +1857,8 @@ main (int argc, char **argv)
     }
     //status = FALSE;
     //g_string_assign(recv_id, argv[2]);
-    if(devConf->authServerUrl != NULL)
-    {
-        g_message("getting the receiver id from %s",devConf->authServerUrl);
-        recv_id=getID(RECEIVER_ID);
-    }
-    else
-    {
-        g_message("ERROR in getting Receiver Id as authserver url is NULL..!!!");
-    }
+    g_message("getting the receiver id from %s", GET_DEVICEID_SCRIPT);
+    recv_id=getID(RECEIVER_ID);
 
     g_string_printf(url, "http://%s:8080/videoStreamInit?recorderId=%s", ipAddressBuffer, recv_id->str);
     g_print ("The url is now %s.\n", url->str);
@@ -3205,7 +3196,6 @@ gboolean readconffile(const char* configfile)
     devConf->enableCVP2 = isVidiPathEnabled();
 #endif
     devConf->deviceNameFile = g_key_file_get_string          (keyfile, "DataFiles","DeviceNameFile", NULL);
-    devConf->authServerUrl = g_key_file_get_string             (keyfile, "DataFiles","AuthServerUrl", NULL);
     devConf->devPropertyFile = g_key_file_get_string          (keyfile, "DataFiles","DevPropertyFile", NULL);
     /*
     # Enable/Disable feature flags
@@ -3436,7 +3426,7 @@ GString* getID( const gchar *id )
 {
     gboolean isDevIdPresent=FALSE;
     gshort counter=0;   // to limit the logging if the user doesnt activate for long time
-    SoupSession *session = soup_session_sync_new();
+
     GString* jsonData=g_string_new(NULL);
     GString* value=g_string_new(NULL);
     while(TRUE)
@@ -3451,88 +3441,77 @@ GString* getID( const gchar *id )
             break;
         }
 #endif //#if defined(USE_XUPNP_IARM_BUS)
-        SoupMessage *msg = soup_message_new ("GET", devConf->authServerUrl);
-        if(msg != NULL)
+
+        FILE *fp = NULL;
+        if((fp = v_secure_popen("r", GET_DEVICEID_SCRIPT)))
         {
-            soup_session_send_message (session, msg);
-            if (SOUP_STATUS_IS_SUCCESSFUL(msg->status_code))
+            char response[1024] = {0};
+            fread(response, 1, sizeof(response)-1, fp);
+            int ret = v_secure_pclose(fp);
+            if(ret != 0)
+                g_message("Error in closing pipe ! : %d \n", ret);
+
+            if ((response[0] == '\0') && (counter < MAX_DEBUG_MESSAGE))
             {
-                if ((msg->response_body->data[0] == '\0') && (counter < MAX_DEBUG_MESSAGE))
-                {
-                    counter ++;
-                    g_message("No Json string found in Auth url  %s \n" ,msg->response_body->data);
-                }
-                else
-                {
-                    g_string_assign(jsonData,msg->response_body->data);
-                    gchar **tokens = g_strsplit_set(jsonData->str,"{}:,\"", -1);
-                    guint tokLength = g_strv_length(tokens);
-                    guint loopvar=0;
-                    for (loopvar=0; loopvar<tokLength; loopvar++)
-                    {
-                        if (g_strrstr(g_strstrip(tokens[loopvar]), id))
-                        {
-                            //"deviceId": "T00xxxxxxx" so omit 3 tokens ":" fromDeviceId
-                            if ((loopvar+3) < tokLength )
-                            {
-                                g_string_assign(value, g_strstrip(tokens[loopvar+3]));
-                                if(value->str[0] != '\0')
-                                {
-                                    isDevIdPresent=TRUE;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    if(!isDevIdPresent)
-                    {
-                        if (g_strrstr(id,PARTNER_ID))
-                        {
-                            g_message("%s not found in Json string in Auth url %s \n ",id,jsonData->str);
-                            return value;
-                        }
-                        if (counter < MAX_DEBUG_MESSAGE )
-                        {
-                            counter++;
-                            g_message("%s not found in Json string in Auth url %s \n ",id,jsonData->str);
-
-                        }
-                    }
-                    else
-                    {
-                        g_message("Successfully fetched %s %s \n ",id,value->str);
-                        //g_free(tokens);
-                        break;
-                    }
-                    g_strfreev(tokens);
-                }
-
+                counter ++;
+                g_message("No Json string found in Auth url  %s \n" ,response);
             }
             else
             {
-                if (g_strrstr(id,PARTNER_ID))
+                g_string_assign(jsonData,response);
+                gchar **tokens = g_strsplit_set(jsonData->str,"{}:,\"", -1);
+                guint tokLength = g_strv_length(tokens);
+                guint loopvar=0;
+                for (loopvar=0; loopvar<tokLength; loopvar++)
                 {
-                    g_message("Partner ID lib soup error %d  while fetching the Auth url %s \n ", msg->status_code,devConf->authServerUrl);
-                    return value;
+                    if (g_strrstr(g_strstrip(tokens[loopvar]), id))
+                    {
+                        //"deviceId": "T00xxxxxxx" so omit 3 tokens ":" fromDeviceId
+                        if ((loopvar+3) < tokLength )
+                        {
+                            g_string_assign(value, g_strstrip(tokens[loopvar+3]));
+                            if(value->str[0] != '\0')
+                            {
+                                isDevIdPresent=TRUE;
+                                break;
+                            }
+                        }
+                    }
                 }
-                if (counter < MAX_DEBUG_MESSAGE)
+                if(!isDevIdPresent)
                 {
-                    g_message("lib soup error %d  while fetching the Auth url %s \n ", msg->status_code,devConf->authServerUrl);
-                    counter ++;
+                    if (g_strrstr(id,PARTNER_ID))
+                    {
+                        g_message("%s not found in Json string in Auth url %s \n ",id,jsonData->str);
+                        return value;
+                    }
+                    if (counter < MAX_DEBUG_MESSAGE )
+                    {
+                        counter++;
+                        g_message("%s not found in Json string in Auth url %s \n ",id,jsonData->str);
+
+                    }
                 }
+                else
+                {
+                    g_message("Successfully fetched %s %s \n ",id,value->str);
+                    //g_free(tokens);
+                    break;
+                }
+                g_strfreev(tokens);
             }
-            g_object_unref(msg);
         }
         else
         {
-            g_message("The Auth url %s can't be processed",devConf->authServerUrl);
+            g_message("The deviceId script %s can't be executed\n", GET_DEVICEID_SCRIPT);
         }
+
         sleep(5);
     }
     g_string_free(jsonData,TRUE);
-    soup_session_abort (session);
     return value;
 }
+
 
 /**
  * @brief This function is used to retrieve the information from the device file.

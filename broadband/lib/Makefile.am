@@ -27,7 +27,7 @@ AM_CFLAGS=$(DBUS_CFLAGS) $(GTHREAD_CFLAGS) $(LIBSOUP_CFLAGS) \
 	-I${PKG_CONFIG_SYSROOT_DIR}/$(includedir)/ccsp
 
 AM_CFLAGS+=  -g3
-AM_LDFLAGS=$(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(LIBSOUP_LIBS) -lccsp_common -lhal_platform -lhal_moca -lhal_msomgmt -lcm_mgnt -llmapi -lsyscfg 
+AM_LDFLAGS=$(IARMBUSLIB) $(IARMLIB) $(DBUS_LIBS) $(GTHREAD_LIBS) $(LIBSOUP_LIBS) -lccsp_common -lhal_platform -lhal_moca -lhal_msomgmt -lcm_mgnt -llmapi -lsyscfg -lsecure_wrapper
 AM_LDFLAGS+=-lhal_ethsw
 
 noinst_LTLIBRARIES = libxdevice.la
