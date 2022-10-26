@@ -159,7 +159,16 @@ BOOL updatexmldata(const char* xmlfilename, const char* struuid, const char* ser
             g_printerr ("Error setting the upc in conf xml\n");
             return FALSE;
         }
-	g_message("Added UPC value to Device.xml");
+	g_message("Added UPC value to %s",xmlfilename);
+    }
+    else
+    {
+        if (set_content(doc, "UPC", "")!=0)
+        {
+            g_printerr ("Error setting the upc in conf xml\n");
+            return FALSE;
+        }
+        g_message("Updated UPC value as empty string in %s",xmlfilename);
     }
     if (set_content(doc, "UDN", struuid)!=0)
     {
@@ -1657,6 +1666,16 @@ main (int argc, char **argv)
             {
                 g_message("Certificate or Key file unavailable, continuing with older xcal");
                 rfc_enabled=0;
+                result = updatexmldata(xmlfilename, struuid, serial_Num, "XFINITY"); // BasicDevice.xml currently does not need multi-tenancy support per RDK-8190. (May come in as part of some other ticket, in which case replace "XFINITY" with getFriendlyName().)
+                if (!result)
+                {
+                    fprintf(stderr,"Failed to open the device xml file %s\n", xmlfilename);
+                    exit(1);
+                }
+                else
+                {
+                    g_message("Updated the device xml file:%s uuid: %s", xmlfilename,struuid);
+                }
             }
         }
            if ((g_file_test(certFile, G_FILE_TEST_EXISTS)) && (g_file_test(keyFile, G_FILE_TEST_EXISTS))
@@ -1779,8 +1798,18 @@ main (int argc, char **argv)
            }
            else
            {
-              g_message("DeviceProtection Error: Cert file, Key file not available, continuing with older xcal");
-              rfc_enabled=0;
+               g_message("DeviceProtection Error: Cert file, Key file not available, continuing with older xcal");
+               rfc_enabled=0;
+               result = updatexmldata(xmlfilename, struuid, serial_Num, "XFINITY"); // BasicDevice.xml currently does not need multi-tenancy support per RDK-8190. (May come in as part of some other ticket, in which case replace "XFINITY" with getFriendlyName().)
+               if (!result)
+               {
+                   fprintf(stderr,"Failed to open the device xml file %s\n", xmlfilename);
+                   exit(1);
+               }
+               else
+               {
+                   g_message("Updated the device xml file:%s uuid: %s", xmlfilename,struuid);
+               }
            }
            g_free(keyFile);
            g_free(certFile);
