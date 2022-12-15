@@ -53,6 +53,7 @@
 #define ACCOUNTID_SIZE 30
 char clientIp[IPv4_ADDR_SIZE],bcastMacaddress[MAC_ADDR_SIZE],gwyIpv6[IPv6_ADDR_SIZE],interface[IPv4_ADDR_SIZE],accountId[ACCOUNTID_SIZE],uUid[256];
 GString *bcastmacaddress,*serial_num,*recv_id;
+GUPnPContext *server_upnpContext,*server_upnpContextDeviceProtect;
 void free_server_memory();
 int check_file_presence();
 BOOL check_empty_idm(char *str)
@@ -218,13 +219,15 @@ void free_server_memory()
 {
     g_message("Inside %s",__FUNCTION__);
 #ifdef IDM_DEBUG
+    gupnp_root_device_set_available (baseDev, FALSE);
     g_object_unref (upnpService);
     g_object_unref (baseDev);
-    g_object_unref (upnpContext);
+    g_object_unref (server_upnpContext);
 #else
+    gupnp_root_device_set_available (dev, FALSE);
     g_object_unref (upnpIdService);
     g_object_unref (dev);
-    g_object_unref (upnpContextDeviceProtect);
+    g_object_unref (server_upnpContextDeviceProtect);
 #endif
 }
 BOOL getUidfromRecvId()
@@ -279,7 +282,7 @@ int idm_server_start(char* Interface, char * base_mac)
     getserialnum(serial_num);
     getipaddress((const char *)interface,gwyIpv6,TRUE);
     strcpy_s(bcastMacaddress, MAC_ADDR_SIZE, base_mac);
-#ifndef IDM_DEBUG    
+#ifndef IDM_DEBUG
     char certFile[24],keyFile[24],caFile[24]=IDM_CA_FILE;
     strcpy(certFile,IDM_CERT_FILE);
     strcpy(keyFile,IDM_KEY_FILE);
@@ -293,9 +296,9 @@ int idm_server_start(char* Interface, char * base_mac)
             fprintf(stderr,"Failed to open the device xml file /etc/xupnp/IDM_DP.xml\n");
         }
 #ifndef GUPNP_1_2
-        upnpContextDeviceProtect = gupnp_context_new_s ( NULL,interface,DEVICE_PROTECTION_CONTEXT_PORT,certFile,keyFile, &error);
+        server_upnpContextDeviceProtect = gupnp_context_new_s ( NULL,interface,DEVICE_PROTECTION_CONTEXT_PORT,certFile,keyFile, &error);
 #else
-        upnpContextDeviceProtect = gupnp_context_new_s ( interface,DEVICE_PROTECTION_CONTEXT_PORT,certFile,keyFile, &error);
+        server_upnpContextDeviceProtect = gupnp_context_new_s ( interface,DEVICE_PROTECTION_CONTEXT_PORT,certFile,keyFile, &error);
 #endif
         g_message("created new upnpContext");
         if (error)
@@ -307,13 +310,13 @@ int idm_server_start(char* Interface, char * base_mac)
         }
         else
         {
-            gupnp_context_set_subscription_timeout(upnpContextDeviceProtect, 0);
+            gupnp_context_set_subscription_timeout(server_upnpContextDeviceProtect, 0);
             // Set TLS config params here.
-            gupnp_context_set_tls_params(upnpContextDeviceProtect,caFile,keyFile, NULL);
+            gupnp_context_set_tls_params(server_upnpContextDeviceProtect,caFile,keyFile, NULL);
 #ifndef GUPNP_1_2
-            dev = gupnp_root_device_new (upnpContextDeviceProtect, "/etc/xupnp/IDM_DP.xml", "/etc/xupnp/");
+            dev = gupnp_root_device_new (server_upnpContextDeviceProtect, "/etc/xupnp/IDM_DP.xml", "/etc/xupnp/");
 #else
-            dev = gupnp_root_device_new (upnpContextDeviceProtect, "/etc/xupnp/IDM_DP.xml", "/etc/xupnp/", &error);
+            dev = gupnp_root_device_new (server_upnpContextDeviceProtect, "/etc/xupnp/IDM_DP.xml", "/etc/xupnp/", &error);
 #endif
             gupnp_root_device_set_available (dev, TRUE);
             upnpIdService = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dev), IDM_DP_SERVICE);
@@ -354,9 +357,9 @@ int idm_server_start(char* Interface, char * base_mac)
         g_message("Updated the device xml file:IDM.XML uuid: %s",struuid);
     }
 #ifndef GUPNP_1_2
-    upnpContext = gupnp_context_new (NULL, interface, SERVER_CONTEXT_PORT, &error);
+    server_upnpContext = gupnp_context_new (NULL, interface, SERVER_CONTEXT_PORT, &error);
 #else
-    upnpContext = gupnp_context_new (interface, SERVER_CONTEXT_PORT, &error);
+    server_upnpContext = gupnp_context_new (interface, SERVER_CONTEXT_PORT, &error);
 #endif
     if (error) {
         g_message("Error creating the Broadcast context: %s",
@@ -365,11 +368,11 @@ int idm_server_start(char* Interface, char * base_mac)
         g_clear_error(&error);
         return 1;
     }
-    gupnp_context_set_subscription_timeout(upnpContext, 0);
+    gupnp_context_set_subscription_timeout(server_upnpContext, 0);
 #ifndef GUPNP_1_2
-    baseDev = gupnp_root_device_new (upnpContext, "/etc/xupnp/IDM.xml", "/etc/xupnp/");
+    baseDev = gupnp_root_device_new (server_upnpContext, "/etc/xupnp/IDM.xml", "/etc/xupnp/");
 #else
-    baseDev = gupnp_root_device_new (upnpContext, "/etc/xupnp/IDM.xml", "/etc/xupnp/", &error);
+    baseDev = gupnp_root_device_new (server_upnpContext, "/etc/xupnp/IDM.xml", "/etc/xupnp/", &error);
 #endif
     gupnp_root_device_set_available (baseDev, TRUE);
     upnpService = gupnp_device_info_get_service(GUPNP_DEVICE_INFO (baseDev), IDM_SERVICE);

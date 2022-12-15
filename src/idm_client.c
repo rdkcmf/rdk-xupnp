@@ -65,6 +65,7 @@
 #define IDM_KEY_FILE "/tmp/idm_xpki_key"
 #define IDM_CA_FILE "/tmp/idm_UPnP_CA"
 static int fd = -1;
+int idm_upnp_restart_triggered = 0;
 typedef GTlsInteraction XupnpTlsInteraction;
 typedef GTlsInteractionClass XupnpTlsInteractionClass;
 static void xupnp_tls_interaction_init (XupnpTlsInteraction *interaction);
@@ -617,6 +618,51 @@ static void device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *
     g_message("Exiting from device_proxy_available_cb deviceAddNo = %u",deviceAddNo);
 }
 #endif
+
+void remove_entries_in_list()
+{
+    g_message("%s:%d Entered.",__FUNCTION__,__LINE__);
+    if (g_list_length(xdevlist) > 0)
+    {
+        GList *element = NULL;
+        element = g_list_first(xdevlist);
+        while(element)
+        {
+            GwyDeviceData *gwydata = element->data;
+            g_mutex_lock(mutex);
+            xdevlist = g_list_remove_link(xdevlist,element);
+            g_message("%s:%d Deleting %s from the list",__FUNCTION__,__LINE__,gwydata->bcastmacaddress->str);
+            g_string_free(gwydata->serial_num, TRUE);
+            g_string_free(gwydata->bcastmacaddress, TRUE);
+            g_string_free(gwydata->gwyipv6,TRUE);
+            g_string_free(gwydata->clientip,TRUE);
+            g_string_free(gwydata->receiverid,TRUE);
+            if(gwydata->sproxy)
+            {
+                g_clear_object(&(gwydata->sproxy));
+            }
+            if(gwydata->sproxy_i)
+            {
+                g_clear_object(&(gwydata->sproxy_i));
+            }
+            g_free(gwydata);
+            g_mutex_unlock(mutex);
+            element = g_list_next(element);
+        }
+    }
+}
+
+int stop_discovery()
+{
+    g_message("%s:%d Called.",__FUNCTION__,__LINE__);
+    if(g_main_loop_is_running(main_loop))
+    {
+        idm_upnp_restart_triggered = 1;
+        g_main_loop_quit(main_loop);
+    }
+    g_message("%s:%d completed",__FUNCTION__,__LINE__);
+    return 0;
+}
 void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info_t*,uint,uint))
 {
     int rvalue=0;
@@ -684,11 +730,14 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
             g_message("tls interaction object created");
             // Set TLS config params here.
             gupnp_context_set_tls_params(upnpContextDeviceProtect,caFile,keyFile, xupnp_tlsinteraction);
-            pthread_t event_handle_thread;
-            int err = pthread_create(&event_handle_thread, NULL,&EventHandler,NULL);
-            if(0 != err)
+            if(idm_upnp_restart_triggered == 0) //Start event_handle_thread only for first time.
             {
-                g_message("%s: create the event handle thread error!\n", __FUNCTION__);
+                pthread_t event_handle_thread;
+                int err = pthread_create(&event_handle_thread, NULL,&EventHandler,NULL);
+                if(0 != err)
+                {
+                    g_message("%s: create the event handle thread error!\n", __FUNCTION__);
+                }
             }
             cp_bgw = gupnp_control_point_new(upnpContextDeviceProtect, IDM_DP_CLIENT_DEVICE);
             g_signal_connect (cp_bgw,"device-proxy-available", G_CALLBACK (device_proxy_available_cb_bgw), NULL);
@@ -740,10 +789,22 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     dc_obj->discovery_interval=dc_obj->discovery_interval*1000;
     discovery_interval_configuration(dc_obj->discovery_interval,dc_obj->loss_detection_window);
     g_message("done timeout source assigning\n");
-    g_thread_create(verify_devices, NULL,FALSE, NULL);
+    if(idm_upnp_restart_triggered == 0) //Start verify_devices thread only for first time.
+    {
+        g_thread_create(verify_devices, NULL,FALSE, NULL);
+    }
     g_main_loop_run (main_loop);
+    g_message("%s:%d main loop broken",__FUNCTION__,__LINE__);
+    /* emit unavailable signal for the resource connected devices */
+#ifndef IDM_DEBUG
+    gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp_bgw), FALSE);
+#else
+    gssdp_resource_browser_set_active (GSSDP_RESOURCE_BROWSER (cp), FALSE);
+#endif
     g_message("invoke free_server_memory");
     free_server_memory();
+    g_message("Invoke remove_entries_in_list");
+    remove_entries_in_list();
     g_main_loop_unref (main_loop);
 #ifdef IDM_DEBUG
     g_object_unref (cp);
@@ -753,4 +814,7 @@ void start_discovery(discovery_config_t* dc_obj,int (*func_callback)(device_info
     g_object_unref (upnpContextDeviceProtect);
     g_object_unref (xupnp_tlsinteraction);
 #endif
+    /* upnp needs four seconds before restarting for avoiding port bind issues */
+    sleep(4);
+    g_message("%s:%d Completed.",__FUNCTION__,__LINE__);
 }
