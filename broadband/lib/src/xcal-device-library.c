@@ -630,39 +630,6 @@ BOOL getFogTsbUrl(char *outValue)
  * @return Returns an integer value '1' if successfully gets the IP address else returns '0'.
  * @ingroup XUPNP_XCALDEV_FUNC
  */
-BOOL getIpv6Prefix(char *outValue)
-{
-    BOOL result = FALSE;
-    errno_t rc = -1;
-    if  (!check_null(outValue)) {
-        g_message("getIpv6Prefix : NULL string !");
-        return result;
-    }
-    if (parseipv6prefix()) {
-        rc = strcpy_s(outValue,MAX_OUTVALUE,ipv6prefix->str);
-        if(rc == EOK)
-        {
-            result = TRUE;
-        }
-        else
-        {
-            ERR_CHK(rc);
-        }
-    } else {
-        g_message("getIpv6Prefix : No ipv6 prefix  !");
-    }
-    return result;
-}
-/**
- * @brief This function is used to get the IP address based on IPv6 or IPv4 is enabled.
- *
- * @param[in] ifname Name of the network interface.
- * @param[out] ipAddressBuffer Character buffer to hold the IP address.
- * @param[in] ipv6Enabled Flag to check whether IPV6 is enabled
- *
- * @return Returns an integer value '1' if successfully gets the IP address else returns '0'.
- * @ingroup XUPNP_XCALDEV_FUNC
- */
 BOOL getDeviceName(char *outValue)
 {
     BOOL result = FALSE;
@@ -958,29 +925,6 @@ BOOL getHostMacAddress(char *outValue)
         }
     }
 #endif
-    return result;
-}
-BOOL getDnsConfig(char *outValue)
-{
-    BOOL result = FALSE;
-    errno_t rc = -1;
-    if (!check_null(outValue)) {
-        g_message("getDnsConfig : NULL string !");
-        return result;
-    }
-    if (parsednsconfig()) {
-         rc = strcpy_s(outValue,MAX_OUTVALUE,dnsconfig->str);
-         if(rc == EOK)
-         {
-             result = TRUE;
-         }
-         else
-         {
-             ERR_CHK(rc);
-         }
-    } else {
-        g_message("getDnsConfig : no dns config !");
-    }
     return result;
 }
 BOOL getSystemsIds(char *outValue)

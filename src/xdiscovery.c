@@ -1147,7 +1147,6 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     GList* xdevlistitem = g_list_find_custom(xdevlist,sno,(GCompareFunc)g_list_find_sno);
     if(xdevlistitem!=NULL)
     {
-#ifndef BROADBAND
         GwyDeviceData *gwdata = xdevlistitem->data;
         gchar *temp=NULL;
         if ( processStringRequest((GUPnPServiceProxy *)gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE), "GetIpv6Prefix", "Ipv6Prefix" , &temp, FALSE ))
@@ -1159,7 +1158,6 @@ device_proxy_available_cb (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
             }
             g_free(temp);
         }
-#endif
         deviceAddNo--;
         g_message("Existing as SNO is present in list so no update of devices %s device no %u",sno,deviceAddNo);
         g_free(sno);
@@ -1371,7 +1369,6 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
     GList* xdevlistitem = g_list_find_custom(xdevlist,sno,(GCompareFunc)g_list_find_sno);
     if(xdevlistitem!=NULL)
     {
-#ifndef BROADBAND
         GwyDeviceData *gwdata = xdevlistitem->data;
         gchar *temp=NULL;
         if ( processStringRequest((GUPnPServiceProxy *)gupnp_device_info_get_service(GUPNP_DEVICE_INFO (dproxy), XDISC_SERVICE_GW_CFG), "GetIpv6Prefix", "Ipv6Prefix" , &temp, FALSE ))
@@ -1383,7 +1380,6 @@ device_proxy_available_cb_gw (GUPnPControlPoint *cp, GUPnPDeviceProxy *dproxy)
             }
             g_free(temp);
         }
-#endif
         deviceAddNo--;
         g_message("Existing available_cb_gw as SNO is present in list so no update of devices %s device no %u",sno,deviceAddNo);
         g_free(sno);
@@ -2268,7 +2264,6 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 	    g_string_assign(gwData->gatewaystbip,temp);
 	    g_free(temp);
 	}
-#ifndef BROADBAND
         if ( processStringRequest(sproxy, "GetIpv6Prefix", "Ipv6Prefix" , &temp, FALSE))
         {
 	    g_string_assign(gwData->ipv6prefix,temp);
@@ -2288,7 +2283,6 @@ gboolean process_gw_services(GUPnPServiceProxy *sproxy, GwyDeviceData* gwData)
 	    g_string_assign(gwData->dnsconfig,temp);
 	    g_free(temp);
 	}
-#endif
 	if ( processStringRequest(sproxy,"GetPlaybackUrl","PlaybackUrl", &temp, TRUE))
         {
 	    g_string_assign(gwData->playbackurl,temp);
@@ -2545,7 +2539,6 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
         g_string_assign(gwData->gatewaystbip, temp);
         g_free(temp);
     }
-#ifndef BROADBAND
     if ( processStringRequest(sproxy, "GetIpv6Prefix", "Ipv6Prefix" , &temp, FALSE ))
     {
         g_string_assign(gwData->ipv6prefix, temp);
@@ -2556,7 +2549,6 @@ gboolean process_gw_services_gateway_config(GUPnPServiceProxy *sproxy, GwyDevice
         g_string_assign(gwData->dnsconfig, temp);
         g_free(temp);
     }
-#endif
     if ( processStringRequest(sproxy, "GetDeviceName", "DeviceName" , &temp, FALSE))
     {
         g_string_assign(gwData->devicename, temp);

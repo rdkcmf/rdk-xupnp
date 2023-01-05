@@ -390,6 +390,7 @@ get_gwystbip_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer use
     gupnp_service_action_set (action, "GatewayStbIP", G_TYPE_STRING, gwystbIp, NULL);
     gupnp_service_action_return (action);
 }
+#ifndef BROADBAND
 /**
  * @brief Callback function which is invoked when getIpv6Prefix action is invoked and this sets
  * the state variable for IPv6 Prefix.
@@ -409,6 +410,7 @@ get_ipv6prefix_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer u
     gupnp_service_action_set (action, "Ipv6Prefix", G_TYPE_STRING, ipv6preFix, NULL);
     gupnp_service_action_return (action);
 }
+#endif
 /**
  * @brief Callback function which is invoked when getHostMacAddress action is invoked and this sets
  * the state variable for Host MAC Address.
@@ -491,6 +493,7 @@ get_buildversion_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer
     gupnp_service_action_set (action, "BuildVersion", G_TYPE_STRING, buildVersion, NULL);
     gupnp_service_action_return (action);
 }
+#ifndef BROADBAND
 /**
  * @brief Callback function which is invoked when getDnsConfig action is invoked and this sets
  * the state variable for DNS Config.
@@ -508,6 +511,7 @@ get_dnsconfig_cb (GUPnPService *service, GUPnPServiceAction *action, gpointer us
     gupnp_service_action_set (action, "DnsConfig", G_TYPE_STRING, dnsConfig, NULL);
     gupnp_service_action_return (action);
 }
+#endif
 /**
  * @brief Callback function which is invoked when getSystemIds action is invoked and this sets
  * the state variable for System Id.
@@ -1051,6 +1055,7 @@ query_gwystbip_cb (GUPnPService *service, char *variable, GValue *value, gpointe
     g_value_init (value, G_TYPE_STRING);
     g_value_set_string (value, gwystbIp);
 }
+#ifndef BROADBAND
 /**
  * @brief Callback function which is invoked when Ipv6Prefix action is invoked and this sets
  * the state variable with a new value.
@@ -1068,6 +1073,7 @@ query_ipv6prefix_cb (GUPnPService *service, char *variable, GValue *value, gpoin
     g_value_init (value, G_TYPE_STRING);
     g_value_set_string (value, ipv6preFix);
 }
+#endif
 /**
  * @brief Callback function which is invoked when HostMacAddress action is invoked and this sets
  * the state variable with a new value.
@@ -1143,6 +1149,7 @@ query_buildversion_cb (GUPnPService *service, char *variable, GValue *value, gpo
     g_value_init (value, G_TYPE_STRING);
     g_value_set_string (value, buildVersion);
 }
+#ifndef BROADBAND
 /**
  * @brief Callback function which is invoked when DnsConfig action is invoked and this sets
  * the state variable with a new value.
@@ -1160,6 +1167,7 @@ query_dnsconfig_cb (GUPnPService *service, char *variable, GValue *value, gpoint
     g_value_init (value, G_TYPE_STRING);
     g_value_set_string (value, dnsConfig);
 }
+#endif
 /**
  * @brief Callback function which is invoked when SystemIds action is invoked and this sets
  * the state variable with a new value.
@@ -1477,8 +1485,10 @@ int registerGatewayConfigurationService(GUPnPServiceInfo *upnpGatewayConf)
 {
     g_signal_connect (upnpGatewayConf, "action-invoked::GetGatewayIP", G_CALLBACK (get_gwyip_cb), NULL);
     g_signal_connect (upnpGatewayConf, "action-invoked::GetGatewayIPv6", G_CALLBACK (get_gwyipv6_cb), NULL);
+#ifndef BROADBAND
     g_signal_connect (upnpGatewayConf, "action-invoked::GetIpv6Prefix", G_CALLBACK (get_ipv6prefix_cb), NULL);
     g_signal_connect (upnpGatewayConf, "action-invoked::GetDnsConfig", G_CALLBACK (get_dnsconfig_cb), NULL);
+#endif
     g_signal_connect (upnpGatewayConf, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
     g_signal_connect (upnpGatewayConf, "action-invoked::GetHosts", G_CALLBACK (get_hosts_cb), NULL);
     g_signal_connect (upnpGatewayConf, "action-invoked::GetHostMacAddress", G_CALLBACK (get_hostmacaddress_cb), NULL);
@@ -1487,9 +1497,11 @@ int registerGatewayConfigurationService(GUPnPServiceInfo *upnpGatewayConf)
     g_signal_connect (upnpGatewayConf, "action-invoked::GetIPSubNet", G_CALLBACK (get_ipsubnet_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::GatewayIP", G_CALLBACK (query_gwyip_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::GatewayIPv6", G_CALLBACK (query_gwyipv6_cb), NULL);
+#ifndef BROADBAND
     g_signal_connect (upnpGatewayConf, "query-variable::Ipv6Prefix", G_CALLBACK (query_ipv6prefix_cb), NULL);
-    g_signal_connect (upnpGatewayConf, "query-variable::GatewayStbIP", G_CALLBACK (query_gwystbip_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::DnsConfig", G_CALLBACK (query_dnsconfig_cb), NULL);
+#endif
+    g_signal_connect (upnpGatewayConf, "query-variable::GatewayStbIP", G_CALLBACK (query_gwystbip_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::Hosts", G_CALLBACK (query_hosts_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::HostMacAddress", G_CALLBACK (query_hostmacaddress_cb), NULL);
     g_signal_connect (upnpGatewayConf, "query-variable::DataGatewayIPaddress", G_CALLBACK (query_dataGatewayIPaddress_cb), NULL);
@@ -1665,7 +1677,7 @@ main (int argc, char **argv)
 #ifndef BROADBAND
         }
 #endif
-            if ((g_file_test(certFile, G_FILE_TEST_EXISTS)) && (g_file_test(keyFile, G_FILE_TEST_EXISTS))
+            if ( (certFile != NULL) && (keyFile != NULL) && (g_file_test(certFile, G_FILE_TEST_EXISTS)) && (g_file_test(keyFile, G_FILE_TEST_EXISTS))
                     && (g_file_test(caFile, G_FILE_TEST_EXISTS))) 
             {
                 result = updatexmldata(xmlfilename_new, uuid_new, serial_Num, "XFINITY");
@@ -1824,9 +1836,11 @@ main (int argc, char **argv)
     g_signal_connect (upnpService, "action-invoked::GetBaseTrmUrl", G_CALLBACK (get_trm_url_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetGatewayIP", G_CALLBACK (get_gwyip_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetGatewayIPv6", G_CALLBACK (get_gwyipv6_cb), NULL);
+#ifndef BROADBAND
     g_signal_connect (upnpService, "action-invoked::GetIpv6Prefix", G_CALLBACK (get_ipv6prefix_cb), NULL);
-    g_signal_connect (upnpService, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetDnsConfig", G_CALLBACK (get_dnsconfig_cb), NULL);
+#endif
+    g_signal_connect (upnpService, "action-invoked::GetGatewayStbIP", G_CALLBACK (get_gwystbip_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetSystemIds", G_CALLBACK (get_systemids_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetTimeZone", G_CALLBACK (get_timezone_cb), NULL);
     g_signal_connect (upnpService, "action-invoked::GetHosts", G_CALLBACK (get_hosts_cb), NULL);
@@ -1849,9 +1863,11 @@ main (int argc, char **argv)
     g_signal_connect (upnpService, "query-variable::TrmUrl", G_CALLBACK (query_trm_url_cb), NULL);
     g_signal_connect (upnpService, "query-variable::GatewayIP", G_CALLBACK (query_gwyip_cb), NULL);
     g_signal_connect (upnpService, "query-variable::GatewayIPv6", G_CALLBACK (query_gwyipv6_cb), NULL);
+#ifndef BROADBAND
     g_signal_connect (upnpService, "query-variable::Ipv6Prefix", G_CALLBACK (query_ipv6prefix_cb), NULL);
-    g_signal_connect (upnpService, "query-variable::GatewayStbIP", G_CALLBACK (query_gwystbip_cb), NULL);
     g_signal_connect (upnpService, "query-variable::DnsConfig", G_CALLBACK (query_dnsconfig_cb), NULL);
+#endif
+    g_signal_connect (upnpService, "query-variable::GatewayStbIP", G_CALLBACK (query_gwystbip_cb), NULL);
     g_signal_connect (upnpService, "query-variable::SystemIds", G_CALLBACK (query_systemids_cb), NULL);
     g_signal_connect (upnpService, "query-variable::TimeZone", G_CALLBACK (query_timezone_cb), NULL);
     g_signal_connect (upnpService, "query-variable::Hosts", G_CALLBACK (query_hosts_cb), NULL);
